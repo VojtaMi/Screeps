@@ -1,10 +1,8 @@
+const creepActions = require('creepActions');
 module.exports = {
     run: function (creep) {
         if (creep.store.getFreeCapacity() > 0) {
-            const source = creep.pos.findClosestByPath(FIND_SOURCES);
-            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(source);
-            }
+            creepActions.goToSource(creep);
         } else {
             const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                 filter: structure => {

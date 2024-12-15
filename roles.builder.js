@@ -1,3 +1,4 @@
+const creepActions = require('creepActions');
 module.exports = {
     run: function (creep) {
         // Decide the action based on the creep's state
@@ -45,10 +46,7 @@ module.exports = {
     // Function to gather energy from the nearest source
     gatherEnergy: function (creep) {
         creep.memory.working = false; // Reset working state
-        const source = creep.pos.findClosestByPath(FIND_SOURCES);
-        if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-        }
+        creepActions.goToSource(creep);
     },
 
     // Function to switch to working state
