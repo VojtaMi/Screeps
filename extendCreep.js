@@ -39,15 +39,13 @@ module.exports = function () {
         }
     };
 
-    module.exports = function () {
-        Creep.prototype.moveAndUpgrade = function () {
-            const controller = this.room.controller;
-            if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-                this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
-            }
-        };
+    Creep.prototype.moveAndUpgrade = function () {
+        const controller = this.room.controller;
+        if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+            this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
+        }
     };
-
+   
     Creep.prototype.goToFlag = function (flagName, range = 0, pathStyle = { stroke: '#ffffff' }) {
         const flag = Game.flags[flagName];
         if (flag) {
