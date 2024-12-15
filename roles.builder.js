@@ -1,4 +1,3 @@
-const creepActions = require('creepActions');
 module.exports = {
     run: function (creep) {
         // Decide the action based on the creep's state
@@ -46,7 +45,7 @@ module.exports = {
     // Function to gather energy from the nearest source
     gatherEnergy: function (creep) {
         creep.memory.working = false; // Reset working state
-        creepActions.goToSource(creep);
+        creep.goToSource();
     },
 
     // Function to switch to working state

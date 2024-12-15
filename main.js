@@ -1,3 +1,6 @@
+const extendCreep = require('./extendCreep');
+extendCreep(); // This must be called to extend the prototy
+
 const managers = {
     memory: require('managers.memoryManager'),
     spawn: require('managers.spawnManager'),

@@ -1,8 +1,7 @@
-const creepActions = require('creepActions');
 module.exports = {
     run: function (creep) {
-        if (creep.store.getFreeCapacity() > 0) {
-            creepActions.goToSource(creep);
+        if (creep.needsEnergy()) {
+            creep.goToSource();
         } else {
             const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                 filter: structure => {
