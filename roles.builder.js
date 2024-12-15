@@ -1,17 +1,17 @@
 module.exports = {
     run: function (creep) {
-        // Decide the action based on the creep's state
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] > 0) {
-            this.performTask(creep); // Keep working on a task
-        } else if (creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-            this.gatherEnergy(creep); // Go to gather energy
-        } else {
-            this.switchToWorking(creep); // Switch to working state
-        }
+        // If creep is working and has energy, keep working
+        if (creep.hasEnergy()) {
+            this.work(creep); 
+        } 
+        // Else if he needs energy, go get it
+        else if (creep.needsEnergy()) {
+           creep.goToSource()
+        } 
     },
 
     // Function to perform tasks: repair, build, or upgrade
-    performTask: function (creep) {
+    work: function (creep) {
         // Priority 1: Repair
         const repairTarget = creep.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: structure =>
@@ -36,20 +36,6 @@ module.exports = {
             return;
         }
 
-        // Priority 3: Upgrade controller
-        if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#00ff00' } });
-        }
+        creep.memory.role='upgrader';
     },
-
-    // Function to gather energy from the nearest source
-    gatherEnergy: function (creep) {
-        creep.memory.working = false; // Reset working state
-        creep.goToSource();
-    },
-
-    // Function to switch to working state
-    switchToWorking: function (creep) {
-        creep.memory.working = true; // Mark creep as working
-    }
 };
