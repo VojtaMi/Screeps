@@ -29,4 +29,20 @@ module.exports = function () {
             }
         }
     };
+
+    // Methods
+    
+      /**
+     * Finds the closest refuelable structure (e.g., spawn or extension).
+     * @returns {Structure | null} The closest refuelable structure or null if none are found.
+     */
+      Creep.prototype.findRefuelStructure = function () {
+        return this.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: structure => {
+                return (structure.structureType === STRUCTURE_SPAWN ||
+                        structure.structureType === STRUCTURE_EXTENSION) &&
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+            }
+        });
+    };
 };
