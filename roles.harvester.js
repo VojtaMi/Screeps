@@ -9,13 +9,7 @@ module.exports = {
         } 
         // If creep has no energy, stop working and go harvest
         else {
-            creep.stopWorking();
-            creep.goToSource();
-        }
-
-        // If creep is full, start working
-        if (creep.hasFullEnergy()) {
-            creep.startWorking();
+            creep.reFuel();
         }
     }
 };

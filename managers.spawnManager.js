@@ -1,7 +1,7 @@
 const roleCounts = {
     harvester: 2,
-    upgrader: 3,
     builder: 4,
+    upgrader: 3,
 };
 
 const spawnManager = {

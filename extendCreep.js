@@ -35,6 +35,20 @@ module.exports = function () {
 
 
     // Actions
+
+    Creep.prototype.reFuel = function () {
+         // Else if he needs energy, go get it
+         if (this.needsEnergy()) {
+            this.stopWorking();
+            this.goToSource();
+        }
+
+        // If creep is full, start working
+        else {
+            this.startWorking();
+        }
+    };
+
     Creep.prototype.goToSource = function () {
         const source = this.pos.findClosestByPath(FIND_SOURCES);
         if (source) {
