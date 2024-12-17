@@ -10,32 +10,10 @@ module.exports = {
         } 
     },
 
-    // Function to perform tasks: repair, build, or upgrade
+    // Repair and build, switch to upgrader if nothing to do
     work: function (creep) {
-        // Priority 1: Repair
-        const repairTarget = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-            filter: structure =>
-                (structure.structureType === STRUCTURE_ROAD ||
-                 structure.structureType === STRUCTURE_CONTAINER ||
-                 structure.structureType === STRUCTURE_RAMPART) &&
-                structure.hits < structure.hitsMax
-        });
-        if (repairTarget) {
-            if (creep.repair(repairTarget) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(repairTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-            return;
-        }
-
-        // Priority 2: Build
-        const buildTarget = creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
-        if (buildTarget) {
-            if (creep.build(buildTarget) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(buildTarget, { visualizePathStyle: { stroke: '#ffffff' } });
-            }
-            return;
-        }
-
+        if (creep.repair()) {return;}
+        if (creep.build()) {return;}
         creep.memory.role='upgrader';
     },
 };

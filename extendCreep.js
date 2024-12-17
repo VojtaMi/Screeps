@@ -19,7 +19,7 @@ module.exports = function () {
         }
         return this.pos.inRangeTo(flag.pos, range); // Check range dynamically
     };
-    
+
 
     // Actions
     Creep.prototype.goToSource = function () {
@@ -45,7 +45,45 @@ module.exports = function () {
             this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
         }
     };
-   
+
+    Creep.prototype.findRepairTarget = function () {
+        return this.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: structure =>
+                (structure.structureType === STRUCTURE_ROAD ||
+                    structure.structureType === STRUCTURE_CONTAINER ||
+                    structure.structureType === STRUCTURE_RAMPART) &&
+                structure.hits < structure.hitsMax
+        });
+    };
+
+    Creep.prototype.repair = function () {
+        const target = this.findRepairTarget();
+        if (target) {
+            if (this.repair(target) === ERR_NOT_IN_RANGE) {
+                this.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+            }
+            return true; // Found and initiated repair
+        }
+        return false; // No targets found
+    };
+
+    // Find closest construction site
+    Creep.prototype.findBuildTarget = function () {
+        return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    };
+
+    Creep.prototype.build = function () {
+        const target = this.findBuildTarget();
+        if (target) {
+            if (this.build(target) === ERR_NOT_IN_RANGE) {
+                this.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+            }
+            return true; // Found and initiated build
+        }
+        return false; // No targets found
+    };
+
+
     Creep.prototype.goToFlag = function (flagName, range = 0, pathStyle = { stroke: '#ffffff' }) {
         const flag = Game.flags[flagName];
         if (flag) {
@@ -56,21 +94,21 @@ module.exports = function () {
             this.say(`No flag: ${flagName}`);
         }
     };
-    
-    
+
+
 
     // Methods
 
-      /**
-     * Finds the closest refuelable structure (e.g., spawn or extension).
-     * @returns {Structure | null} The closest refuelable structure or null if none are found.
-     */
-      Creep.prototype.findRefuelStructure = function () {
+    /**
+   * Finds the closest refuelable structure (e.g., spawn or extension).
+   * @returns {Structure | null} The closest refuelable structure or null if none are found.
+   */
+    Creep.prototype.findRefuelStructure = function () {
         return this.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: structure => {
                 return (structure.structureType === STRUCTURE_SPAWN ||
-                        structure.structureType === STRUCTURE_EXTENSION) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    structure.structureType === STRUCTURE_EXTENSION) &&
+                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
         });
     };
