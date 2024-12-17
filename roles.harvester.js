@@ -8,7 +8,7 @@ module.exports = {
             }
         } 
         // If creep has no energy, stop working and go harvest
-        else if (!creep.hasEnergy()) {
+        else {
             creep.stopWorking();
             creep.goToSource();
         }
