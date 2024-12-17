@@ -50,7 +50,9 @@ module.exports = function () {
     };
 
     Creep.prototype.goToSource = function () {
-        const source = this.pos.findClosestByPath(FIND_SOURCES);
+        let source = this.pos.findClosestByPath(FIND_SOURCES, {
+            filter: s => s.energy > 0 // Filter out drained sources
+        });
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
                 this.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
