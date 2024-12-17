@@ -1,13 +1,21 @@
 module.exports = {
     run: function (creep) {
-        if (creep.hasEnergy()){
+        // If creep is working and has energy, transfer energy
+        if (creep.isWorking() && creep.hasEnergy()) {
             const target = creep.findRefuelStructure();
             if (target) {
                 creep.transferEnergyTo(target);
             }
-        }
-        else {
+        } 
+        // If creep has no energy, stop working and go harvest
+        else if (!creep.hasEnergy()) {
+            creep.stopWorking();
             creep.goToSource();
+        }
+
+        // If creep is full, start working
+        if (creep.hasFullEnergy()) {
+            creep.startWorking();
         }
     }
 };

@@ -20,6 +20,19 @@ module.exports = function () {
         return this.pos.inRangeTo(flag.pos, range); // Check range dynamically
     };
 
+    // Working State Management
+    Creep.prototype.isWorking = function () {
+        return this.memory.working === true;
+    };
+
+    Creep.prototype.startWorking = function () {
+        this.memory.working = true;
+    };
+
+    Creep.prototype.stopWorking = function () { 
+        this.memory.working = false;
+    };
+
 
     // Actions
     Creep.prototype.goToSource = function () {
