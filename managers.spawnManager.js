@@ -1,5 +1,5 @@
 const roleCounts = {
-    harvester: 2,
+    harvester: 1,
     upgrader: 3,
     builder: 7,
 };
@@ -8,8 +8,8 @@ const spawnManager = {
     manageSpawning: function () {
         const spawn = Game.spawns['Spawn1']; // Replace with your spawn name
         const bodyParts = [
-            ...Array(5).fill(WORK),  // 5 WORK parts
-            ...Array(3).fill(CARRY), // 3 CARRY parts
+            ...Array(4).fill(WORK),  // 5 WORK parts
+            ...Array(2).fill(CARRY), // 3 CARRY parts
             ...Array(2).fill(MOVE)   // 2 MOVE parts
         ];
 
