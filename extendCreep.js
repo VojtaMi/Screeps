@@ -56,7 +56,7 @@ module.exports = function () {
         });
     };
 
-    Creep.prototype.repair = function () {
+    Creep.prototype.findAndRepair = function () {
         const target = this.findRepairTarget();
         if (target) {
             if (this.repair(target) === ERR_NOT_IN_RANGE) {
@@ -72,7 +72,7 @@ module.exports = function () {
         return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
     };
 
-    Creep.prototype.build = function () {
+    Creep.prototype.findAndBuild = function () {
         const target = this.findBuildTarget();
         if (target) {
             if (this.build(target) === ERR_NOT_IN_RANGE) {

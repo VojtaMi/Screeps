@@ -12,8 +12,8 @@ module.exports = {
 
     // Repair and build, switch to upgrader if nothing to do
     work: function (creep) {
-        if (creep.repair()) {return;}
-        if (creep.build()) {return;}
+        if (creep.findAndRepair()) {return;}
+        if (creep.findAndBuild()) {return;}
         creep.memory.role='upgrader';
     },
 };
