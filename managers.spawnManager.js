@@ -1,6 +1,6 @@
 const roleCounts = {
     harvester: 2,
-    builder: 5,
+    builder: 4,
     upgrader: 2,
 };
 
