@@ -40,13 +40,31 @@ module.exports = function () {
          // Else if he needs energy, go get it
          if (this.needsEnergy()) {
             this.stopWorking();
-            this.goToSource();
+            if (!this.goToFuelTank()){
+                this.goToSource();
+            }
         }
 
         // If creep is full, start working
         else {
             this.startWorking();
         }
+    };
+
+    Creep.prototype.goToFuelTank = function () {
+        let fuelTank = this.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: (structure) => 
+                (structure.structureType === STRUCTURE_CONTAINER || 
+                 structure.structureType === STRUCTURE_STORAGE) &&
+                structure.store[RESOURCE_ENERGY] > 100
+        });
+        if (fuelTank) {
+            if (this.withdraw(fuelTank, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveTo(fuelTank, { visualizePathStyle: { stroke: '#ffaa00' } });
+            }
+            return true;
+        }
+        return false;
     };
 
     Creep.prototype.goToSource = function () {
@@ -57,7 +75,9 @@ module.exports = function () {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
                 this.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
+            return true;
         }
+        return false;
     };
 
     Creep.prototype.transferEnergyTo = function (target) {
