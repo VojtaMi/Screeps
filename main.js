@@ -1,6 +1,8 @@
 const extendCreep = require('./extendCreep');
 extendCreep(); // This must be called to extend the prototy
 
+const towerLogic = require('structures.tower');
+
 const managers = {
     memory: require('managers.memoryManager'),
     spawn: require('managers.spawnManager'),
@@ -28,5 +30,11 @@ module.exports.loop = function () {
         } else {
             console.log(`Creep ${name} has an undefined role: ${creep.memory.role}`);
         }
+    }
+
+    // Run tower logic for each tower in the game
+    const towers = _.filter(Game.structures, structure => structure.structureType === STRUCTURE_TOWER);
+    for (const tower of towers) {
+        towerLogic.run(tower);
     }
 };
