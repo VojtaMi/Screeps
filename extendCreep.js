@@ -40,6 +40,10 @@ module.exports = function () {
          // Else if he needs energy, go get it
          if (this.needsEnergy()) {
             this.stopWorking();
+            if (this.memory.role === 'harvester'){
+                this.goToSource();
+                return;
+            }
             if (!this.goToFuelTank()){
                 this.goToSource();
             }
