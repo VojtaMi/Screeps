@@ -14,6 +14,8 @@ const roles = {
     builder: require('roles.builder'),
 };
 
+// test comment development
+
 module.exports.loop = function () {
     // Step 1: Clean up memory
     managers.memory.cleanUpCreepMemory();
