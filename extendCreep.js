@@ -133,12 +133,36 @@ module.exports = function () {
    * @returns {Structure | null} The closest refuelable structure or null if none are found.
    */
     Creep.prototype.findRefuelStructure = function () {
-        return this.pos.findClosestByPath(FIND_STRUCTURES, {
+        // Find extensions or spawns with free capacity
+        let target = this.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: structure => {
-                return (structure.structureType === STRUCTURE_SPAWN ||
-                    structure.structureType === STRUCTURE_EXTENSION) &&
+                return (structure.structureType === STRUCTURE_EXTENSION ||
+                    structure.structureType === STRUCTURE_SPAWN) &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
         });
+    
+        // If no extensions or spawns are found, check for towers
+        if (!target) {
+            target = this.pos.findClosestByPath(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.structureType === STRUCTURE_TOWER &&
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                }
+            });
+        }
+    
+        // If no towers are found, check for containers
+        if (!target) {
+            target = this.pos.findClosestByPath(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.structureType === STRUCTURE_CONTAINER &&
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                }
+            });
+        }
+    
+        return target;
     };
+    
 };
