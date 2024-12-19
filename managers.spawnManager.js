@@ -35,11 +35,7 @@ function spawnHarvesters(spawn) {
         );
 
         if (!existingHarvester) {
-            const name = `Harvester_${source.x}_${source.y}`;
-            if (Game.creeps[name]) {
-                console.log(`Creep with name ${name} already exists!`);
-                return false;
-            }
+            const name = `harvester${Game.time}`;
 
             console.log(`Spawning new harvester: ${name} for source (${source.x}, ${source.y})`);
             const result = spawn.spawnCreep(
