@@ -64,7 +64,7 @@ module.exports = function () {
         });
         if (fuelTank) {
             if (this.withdraw(fuelTank, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveOnRoads(fuelTank);
+                this.myMoveTo(fuelTank);
             }
             return true;
         }
@@ -77,7 +77,7 @@ module.exports = function () {
         });
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.moveOnRoads(source);
+                this.myMoveTo(source);
             }
             return true;
         }
@@ -87,7 +87,7 @@ module.exports = function () {
     Creep.prototype.transferEnergyTo = function (target) {
         if (target) {
             if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveOnRoads(target);
+                this.myMoveTo(target);
                 
             }
         }
@@ -96,7 +96,7 @@ module.exports = function () {
     Creep.prototype.moveAndUpgrade = function () {
         const controller = this.room.controller;
         if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-            this.moveOnRoads(controller);
+            this.myMoveTo(controller);
         }
     };
 
@@ -130,7 +130,7 @@ module.exports = function () {
         const target = this.findBuildTarget();
         if (target) {
             if (this.build(target) === ERR_NOT_IN_RANGE) {
-                this.moveOnRoads(target);
+                this.myMoveTo(target);
             }
             return true; // Found and initiated build
         }
@@ -149,33 +149,30 @@ module.exports = function () {
         }
     };
 
-    Creep.prototype.moveOnRoads = function (target) {
-        return this.moveTo(target, {
+    Creep.prototype.myMoveTo = function (target) {
+        const specialRoomName = 'E53S44';
+        const walkablePositions = [
+            { x: 18, y: 11 },
+            { x: 19, y: 12 }
+        ];
+    
+        this.moveTo(target, {
             costCallback: (roomName, costMatrix) => {
                 const room = Game.rooms[roomName];
-                if (!room) return; // No vision, return default matrix
+                if (!room) return; // No vision of this room
     
-                room.find(FIND_STRUCTURES).forEach(structure => {
-                    // Default: Mark everything impassable
-                    costMatrix.set(structure.pos.x, structure.pos.y, 255);
-                
-                    // Special case: Roads are passable
-                    if (structure.structureType === STRUCTURE_ROAD) {
-                        costMatrix.set(structure.pos.x, structure.pos.y, 1);
-                    }
-                
-                    // Allow containers and friendly ramparts
-                    if (structure.structureType === STRUCTURE_CONTAINER ||
-                        (structure.structureType === STRUCTURE_RAMPART && structure.my)) {
-                        costMatrix.set(structure.pos.x, structure.pos.y, 1); // Treat as passable
-                    }
-                });
-                
+                // Apply special handling only in Room E53S44
+                if (roomName === specialRoomName) {
+                    walkablePositions.forEach(pos => {
+                        costMatrix.set(pos.x, pos.y, 1); // Make these tiles walkable with low cost
+                    });
+                }
     
                 return costMatrix;
             }
         });
     };
+    
     
 
 
