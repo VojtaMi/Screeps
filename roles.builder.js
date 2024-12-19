@@ -14,6 +14,6 @@ module.exports = {
     work: function (creep) {
         if (creep.findAndBuild()) { return; }
         if (creep.findAndRepair()) { return; }
-        creep.memory.role = 'upgrader';
+        creep.moveAndUpgrade();
     },
 };
