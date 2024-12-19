@@ -54,9 +54,20 @@ function spawnHarvesters(spawn) {
             );
 
             if (result !== OK) {
-                console.log(`Failed to spawn harvester ${name}: ${result}`);
+                const errorMessages = {
+                    [ERR_NOT_OWNER]: "You don't own this spawn.",
+                    [ERR_NAME_EXISTS]: "A creep with this name already exists.",
+                    [ERR_BUSY]: "The spawn is busy.",
+                    [ERR_NOT_ENOUGH_ENERGY]: "Not enough energy available.",
+                    [ERR_INVALID_ARGS]: "Invalid arguments provided.",
+                    [ERR_RCL_NOT_ENOUGH]: "Room Controller level too low.",
+                };
+            
+                const errorMessage = errorMessages[result] || "Unknown error.";
+                console.log(`Failed to spawn harvester ${name}: ${errorMessage} (Error Code: ${result})`);
                 return false;
             }
+            
             return true;
         }
     });
