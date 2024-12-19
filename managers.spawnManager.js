@@ -38,7 +38,7 @@ function spawnHarvesters(spawn) {
             const name = `Harvester_${source.x}_${source.y}`;
             if (Game.creeps[name]) {
                 console.log(`Creep with name ${name} already exists!`);
-                return;
+                return false;
             }
 
             console.log(`Spawning new harvester: ${name} for source (${source.x}, ${source.y})`);
@@ -55,7 +55,9 @@ function spawnHarvesters(spawn) {
 
             if (result !== OK) {
                 console.log(`Failed to spawn harvester ${name}: ${result}`);
+                return false;
             }
+            return true;
         }
     });
 }
@@ -63,11 +65,14 @@ function spawnHarvesters(spawn) {
 const spawnManager = {
     manageSpawning: function () {
         for (const spawnName in Game.spawns) {
+            console.log(`Spawn name: ${spawnName}`);
             const spawn = Game.spawns[spawnName];
 
             if (spawn.spawning) continue; // Skip if already spawning
 
-            spawnHarvesters(spawn);
+            if (spawnHarvesters(spawn)) {
+                break; // Stop further spawning for this spawn
+            }
 
             for (const role in roleCounts) {
                 const creeps = _.filter(Game.creeps, creep => creep.memory.role === role);
