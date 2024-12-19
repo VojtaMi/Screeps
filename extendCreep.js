@@ -64,7 +64,7 @@ module.exports = function () {
         });
         if (fuelTank) {
             if (this.withdraw(fuelTank, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveTo(fuelTank, { visualizePathStyle: { stroke: '#ffaa00' } });
+                this.moveTo(fuelTank);
             }
             return true;
         }
@@ -77,7 +77,7 @@ module.exports = function () {
         });
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                this.moveTo(source);
             }
             return true;
         }
@@ -87,7 +87,8 @@ module.exports = function () {
     Creep.prototype.transferEnergyTo = function (target) {
         if (target) {
             if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                this.moveTo(target);
+                
             }
         }
     };
@@ -95,7 +96,7 @@ module.exports = function () {
     Creep.prototype.moveAndUpgrade = function () {
         const controller = this.room.controller;
         if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-            this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
+            this.moveTo(controller);
         }
     };
 
@@ -129,7 +130,7 @@ module.exports = function () {
         const target = this.findBuildTarget();
         if (target) {
             if (this.build(target) === ERR_NOT_IN_RANGE) {
-                this.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                this.moveTo(target);
             }
             return true; // Found and initiated build
         }
@@ -147,6 +148,8 @@ module.exports = function () {
             this.say(`No flag: ${flagName}`);
         }
     };
+    
+    
 
 
 
@@ -187,6 +190,20 @@ module.exports = function () {
         }
     
         return target;
+    };
+
+       /**
+     * Generates a body part array based on a dictionary.
+     * @param {Object} partsDict - A dictionary where the keys are body part types (WORK, CARRY, MOVE, etc.)
+     *                             and the values are the count for each part.
+     * @returns {Array} - An array of body parts.
+     */
+       global.generateBodyParts = function (partsDict) {
+        const bodyParts = [];
+        for (const [part, count] of Object.entries(partsDict)) {
+            bodyParts.push(...Array(count).fill(part));
+        }
+        return bodyParts;
     };
     
 };
