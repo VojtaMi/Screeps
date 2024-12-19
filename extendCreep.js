@@ -150,23 +150,24 @@ module.exports = function () {
     };
 
     Creep.prototype.moveOnRoads = function (target) {
-        return this.moveTo(target, {
-            costCallback: (roomName, costMatrix) => {
-                const room = Game.rooms[roomName];
-                if (!room) return; // No vision, return default matrix
+        // return this.moveTo(target, {
+        //     costCallback: (roomName, costMatrix) => {
+        //         const room = Game.rooms[roomName];
+        //         if (!room) return; // No vision, return default matrix
     
-                room.find(FIND_STRUCTURES).forEach(structure => {
-                    if (structure.structureType === STRUCTURE_ROAD) {
-                        costMatrix.set(structure.pos.x, structure.pos.y, 1); // Lowest cost for roads
-                    } else if (structure.structureType !== STRUCTURE_CONTAINER &&
-                               (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
-                        costMatrix.set(structure.pos.x, structure.pos.y, 255); // Impassable
-                    }
-                });
+        //         room.find(FIND_STRUCTURES).forEach(structure => {
+        //             if (structure.structureType === STRUCTURE_ROAD) {
+        //                 costMatrix.set(structure.pos.x, structure.pos.y, 1); // Lowest cost for roads
+        //             } else if (structure.structureType !== STRUCTURE_CONTAINER &&
+        //                        (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
+        //                 costMatrix.set(structure.pos.x, structure.pos.y, 255); // Impassable
+        //             }
+        //         });
     
-                return costMatrix;
-            }
-        });
+        //         return costMatrix;
+        //     }
+        // });
+        return this.moveTo(target);
     };
     
 
@@ -209,6 +210,20 @@ module.exports = function () {
         }
     
         return target;
+    };
+
+       /**
+     * Generates a body part array based on a dictionary.
+     * @param {Object} partsDict - A dictionary where the keys are body part types (WORK, CARRY, MOVE, etc.)
+     *                             and the values are the count for each part.
+     * @returns {Array} - An array of body parts.
+     */
+       global.generateBodyParts = function (partsDict) {
+        const bodyParts = [];
+        for (const [part, count] of Object.entries(partsDict)) {
+            bodyParts.push(...Array(count).fill(part));
+        }
+        return bodyParts;
     };
     
 };

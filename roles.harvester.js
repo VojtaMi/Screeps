@@ -11,5 +11,6 @@ module.exports = {
         else {
             creep.reFuel();
         }
-    }
+    },
+    bodyParts : generateBodyParts({ WORK: 4, CARRY: 2, MOVE: 2 }),
 };
