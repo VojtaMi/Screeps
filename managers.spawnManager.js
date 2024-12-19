@@ -15,7 +15,17 @@ function spawnHarvesters(spawn) {
     const harvesterRole = roles.harvester;
     console.log('Body Parts:', harvesterRole.bodyParts);
 
+    if (!Array.isArray(harvesterRole.sourceAssignments)) {
+        console.log('Invalid sourceAssignments:', harvesterRole.sourceAssignments);
+        return;
+    }
+
     harvesterRole.sourceAssignments.forEach(source => {
+        if (!source || typeof source.x !== 'number' || typeof source.y !== 'number' || !source.roomName) {
+            console.log(`Invalid source location: ${JSON.stringify(source)}`);
+            return;
+        }
+
         const existingHarvester = _.find(Game.creeps, creep =>
             creep.memory.role === 'harvester' &&
             creep.memory.sourceLocation &&
@@ -26,8 +36,12 @@ function spawnHarvesters(spawn) {
 
         if (!existingHarvester) {
             const name = `Harvester_${source.x}_${source.y}`;
-            console.log(`Spawning new harvester: ${name} for source (${source.x}, ${source.y})`);
+            if (Game.creeps[name]) {
+                console.log(`Creep with name ${name} already exists!`);
+                return;
+            }
 
+            console.log(`Spawning new harvester: ${name} for source (${source.x}, ${source.y})`);
             const result = spawn.spawnCreep(
                 harvesterRole.bodyParts,
                 name,
