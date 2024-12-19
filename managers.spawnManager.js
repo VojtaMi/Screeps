@@ -1,30 +1,75 @@
+const roles = {
+    harvester: require('roles.harvester'),
+    upgrader: require('roles.upgrader'),
+    builder: require('roles.builder'),
+    carrier: require('roles.carrier')
+};
+
 const roleCounts = {
-    harvester: 2,
     builder: 4,
     upgrader: 2,
+    carrier: 1,
 };
+
+function spawnHarvesters(spawn) {
+    const harvesterRole = roles.harvester;
+
+    harvesterRole.sourceAssignments.forEach(source => {
+        const existingHarvester = _.find(Game.creeps, creep =>
+            creep.memory.role === 'harvester' &&
+            creep.memory.sourceLocation &&
+            creep.memory.sourceLocation.x === source.x &&
+            creep.memory.sourceLocation.y === source.y &&
+            creep.memory.sourceLocation.roomName === source.roomName
+        );
+
+        if (!existingHarvester) {
+            const name = `Harvester_${source.x}_${source.y}`;
+            console.log(`Spawning new harvester: ${name} for source (${source.x}, ${source.y})`);
+
+            const result = spawn.spawnCreep(
+                harvesterRole.bodyParts,
+                name,
+                {
+                    memory: {
+                        role: 'harvester',
+                        sourceLocation: source
+                    }
+                }
+            );
+
+            if (result !== OK) {
+                console.log(`Failed to spawn harvester ${name}: ${result}`);
+            }
+        }
+    });
+}
 
 const spawnManager = {
     manageSpawning: function () {
-        const spawn = Game.spawns['Spawn1']; // Replace with your spawn name
-        const bodyParts = [
-            ...Array(4).fill(WORK),  // 5 WORK parts
-            ...Array(2).fill(CARRY), // 3 CARRY parts
-            ...Array(2).fill(MOVE)   // 2 MOVE parts
-        ];
+        for (const spawnName in Game.spawns) {
+            const spawn = Game.spawns[spawnName];
 
-        for (const role in roleCounts) {
-            const creeps = _.filter(Game.creeps, creep => creep.memory.role === role);
+            if (spawn.spawning) continue; // Skip if already spawning
 
+            spawnHarvesters(spawn);
 
+            for (const role in roleCounts) {
+                const creeps = _.filter(Game.creeps, creep => creep.memory.role === role);
 
-if (creeps.length < roleCounts[role]) {
-    const newName = `${role}${Game.time}`;
-    if (spawn.spawnCreep(bodyParts, newName, { memory: { role: role } }) === OK) {
-        console.log(`Spawning new ${role}: ${newName}`);
-    }
-    break; // Only spawn one creep per tick
-}
+                if (creeps.length < roleCounts[role]) {
+                    const newName = `${role}${Game.time}`;
+                    const bodyParts = roles[role].bodyParts;
+
+                    const result = spawn.spawnCreep(bodyParts, newName, { memory: { role: role } });
+                    if (result === OK) {
+                        console.log(`Spawning new ${role}: ${newName}`);
+                    } else {
+                        console.log(`Failed to spawn ${role}: ${result}`);
+                    }
+                    break; // Spawn only one creep per tick per spawn
+                }
+            }
         }
     }
 };

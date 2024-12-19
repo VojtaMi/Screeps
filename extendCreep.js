@@ -36,17 +36,11 @@ module.exports = function () {
 
     // Actions
 
-    Creep.prototype.reFuel = function () {
+    Creep.prototype.getEnergy = function () {
          // Else if he needs energy, go get it
          if (this.needsEnergy()) {
             this.stopWorking();
-            if (this.memory.role === 'harvester'){
-                this.goToSource();
-                return;
-            }
-            if (!this.goToFuelTank()){
-                this.goToSource();
-            }
+            this.goToFuelTank();
         }
 
         // If creep is full, start working
@@ -71,17 +65,18 @@ module.exports = function () {
         return false;
     };
 
-    Creep.prototype.goToSource = function () {
-        let source = this.pos.findClosestByPath(FIND_SOURCES, {
-            filter: s => s.energy > 0 // Filter out drained sources
-        });
+    Creep.prototype.harvestAssignedSource = function () {
+        const targetPos = new RoomPosition(this.memory.targetPosition.x, this.memory.targetPosition.y, this.memory.targetPosition.roomName);
+    
+        // Find the source closest to the assigned position
+        const source = targetPos.findClosestByRange(FIND_SOURCES);
+    
         if (source) {
+            // Try to harvest; if not in range, move closer
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
                 this.moveTo(source);
             }
-            return true;
         }
-        return false;
     };
 
     Creep.prototype.transferEnergyTo = function (target) {
@@ -93,7 +88,7 @@ module.exports = function () {
         }
     };
 
-    Creep.prototype.moveAndUpgrade = function () {
+    Creep.prototype.goUpgradeController = function () {
         const controller = this.room.controller;
         if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
             this.moveTo(controller);
@@ -147,6 +142,22 @@ module.exports = function () {
         } else {
             this.say(`No flag: ${flagName}`);
         }
+    };
+
+    Creep.prototype.refillStructure = function (structureType) {
+        const target = this.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: (s) => 
+                s.structureType === structureType &&
+                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 // Works for all structures
+        });
+    
+        if (target) {
+            if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveTo(target);
+            }
+            return true; // Successfully found a target and acted
+        }
+        return false; // No valid target found
     };
     
     

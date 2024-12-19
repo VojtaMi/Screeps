@@ -6,7 +6,7 @@ module.exports = {
         }
         // Else if he needs energy, go get it
         else {
-            creep.reFuel();
+            creep.getEnergy();
         }
     },
 
@@ -16,4 +16,5 @@ module.exports = {
         if (creep.findAndRepair()) { return; }
         creep.memory.role = 'upgrader';
     },
+    bodyParts : generateBodyParts({ WORK: 4, CARRY: 4, MOVE: 8 }),
 };
