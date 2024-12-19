@@ -64,7 +64,7 @@ module.exports = function () {
         });
         if (fuelTank) {
             if (this.withdraw(fuelTank, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveTo(fuelTank, { visualizePathStyle: { stroke: '#ffaa00' } });
+                this.moveOnRoads(fuelTank);
             }
             return true;
         }
@@ -77,7 +77,7 @@ module.exports = function () {
         });
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                this.moveOnRoads(source);
             }
             return true;
         }
@@ -87,7 +87,8 @@ module.exports = function () {
     Creep.prototype.transferEnergyTo = function (target) {
         if (target) {
             if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                this.moveOnRoads(target);
+                
             }
         }
     };
@@ -95,7 +96,7 @@ module.exports = function () {
     Creep.prototype.moveAndUpgrade = function () {
         const controller = this.room.controller;
         if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-            this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
+            this.moveOnRoads(controller);
         }
     };
 
@@ -129,7 +130,7 @@ module.exports = function () {
         const target = this.findBuildTarget();
         if (target) {
             if (this.build(target) === ERR_NOT_IN_RANGE) {
-                this.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                this.moveOnRoads(target);
             }
             return true; // Found and initiated build
         }
@@ -147,6 +148,27 @@ module.exports = function () {
             this.say(`No flag: ${flagName}`);
         }
     };
+
+    Creep.prototype.moveOnRoads = function (target) {
+        return this.moveTo(target, {
+            costCallback: (roomName, costMatrix) => {
+                const room = Game.rooms[roomName];
+                if (!room) return; // No vision, return default matrix
+    
+                room.find(FIND_STRUCTURES).forEach(structure => {
+                    if (structure.structureType === STRUCTURE_ROAD) {
+                        costMatrix.set(structure.pos.x, structure.pos.y, 1); // Lowest cost for roads
+                    } else if (structure.structureType !== STRUCTURE_CONTAINER &&
+                               (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
+                        costMatrix.set(structure.pos.x, structure.pos.y, 255); // Impassable
+                    }
+                });
+    
+                return costMatrix;
+            }
+        });
+    };
+    
 
 
 
