@@ -50,9 +50,10 @@ function spawnHarvesters(spawn) {
             );
 
             if (result !== OK) {
+                console.log(`Failed to spawn harvester: ${name}`);
                 return false;
             }
-            
+
             return true;
         }
     });
@@ -77,6 +78,10 @@ const spawnManager = {
                     const bodyParts = roles[role].bodyParts;
 
                     const result = spawn.spawnCreep(bodyParts, newName, { memory: { role: role } });
+                    console.log('Spawn Attempt Details:');
+                    console.log(`Body Parts: ${JSON.stringify(bodyParts)}`);
+                    console.log(`Name: ${newName}`);
+                    console.log(`Memory: ${JSON.stringify({ role: role })}`);
                     if (result === OK) {
                         console.log(`Spawning new ${role}: ${newName}`);
                     } else {
