@@ -64,7 +64,7 @@ module.exports = function () {
         });
         if (fuelTank) {
             if (this.withdraw(fuelTank, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.myMoveTo(fuelTank);
+                this.moveTo(fuelTank);
             }
             return true;
         }
@@ -77,7 +77,7 @@ module.exports = function () {
         });
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.myMoveTo(source);
+                this.moveTo(source);
             }
             return true;
         }
@@ -87,7 +87,7 @@ module.exports = function () {
     Creep.prototype.transferEnergyTo = function (target) {
         if (target) {
             if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.myMoveTo(target);
+                this.moveTo(target);
                 
             }
         }
@@ -96,7 +96,7 @@ module.exports = function () {
     Creep.prototype.moveAndUpgrade = function () {
         const controller = this.room.controller;
         if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-            this.myMoveTo(controller);
+            this.moveTo(controller);
         }
     };
 
@@ -130,7 +130,7 @@ module.exports = function () {
         const target = this.findBuildTarget();
         if (target) {
             if (this.build(target) === ERR_NOT_IN_RANGE) {
-                this.myMoveTo(target);
+                this.moveTo(target);
             }
             return true; // Found and initiated build
         }
@@ -147,30 +147,6 @@ module.exports = function () {
         } else {
             this.say(`No flag: ${flagName}`);
         }
-    };
-
-    Creep.prototype.myMoveTo = function (target) {
-        const specialRoomName = 'E53S44';
-        const walkablePositions = [
-            { x: 18, y: 11 },
-            { x: 19, y: 12 }
-        ];
-    
-        this.moveTo(target, {
-            costCallback: (roomName, costMatrix) => {
-                const room = Game.rooms[roomName];
-                if (!room) return; // No vision of this room
-    
-                // Apply special handling only in Room E53S44
-                if (roomName === specialRoomName) {
-                    walkablePositions.forEach(pos => {
-                        costMatrix.set(pos.x, pos.y, 1); // Make these tiles walkable with low cost
-                    });
-                }
-    
-                return costMatrix;
-            }
-        });
     };
     
     
