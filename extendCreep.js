@@ -150,24 +150,31 @@ module.exports = function () {
     };
 
     Creep.prototype.moveOnRoads = function (target) {
-        // return this.moveTo(target, {
-        //     costCallback: (roomName, costMatrix) => {
-        //         const room = Game.rooms[roomName];
-        //         if (!room) return; // No vision, return default matrix
+        return this.moveTo(target, {
+            costCallback: (roomName, costMatrix) => {
+                const room = Game.rooms[roomName];
+                if (!room) return; // No vision, return default matrix
     
-        //         room.find(FIND_STRUCTURES).forEach(structure => {
-        //             if (structure.structureType === STRUCTURE_ROAD) {
-        //                 costMatrix.set(structure.pos.x, structure.pos.y, 1); // Lowest cost for roads
-        //             } else if (structure.structureType !== STRUCTURE_CONTAINER &&
-        //                        (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
-        //                 costMatrix.set(structure.pos.x, structure.pos.y, 255); // Impassable
-        //             }
-        //         });
+                room.find(FIND_STRUCTURES).forEach(structure => {
+                    // Default: Mark everything impassable
+                    costMatrix.set(structure.pos.x, structure.pos.y, 255);
+                
+                    // Special case: Roads are passable
+                    if (structure.structureType === STRUCTURE_ROAD) {
+                        costMatrix.set(structure.pos.x, structure.pos.y, 1);
+                    }
+                
+                    // Allow containers and friendly ramparts
+                    if (structure.structureType === STRUCTURE_CONTAINER ||
+                        (structure.structureType === STRUCTURE_RAMPART && structure.my)) {
+                        costMatrix.set(structure.pos.x, structure.pos.y, 1); // Treat as passable
+                    }
+                });
+                
     
-        //         return costMatrix;
-        //     }
-        // });
-        return this.moveTo(target);
+                return costMatrix;
+            }
+        });
     };
     
 
