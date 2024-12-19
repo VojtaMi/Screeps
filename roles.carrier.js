@@ -13,5 +13,6 @@ module.exports = {
         }
     },
 
-    bodyParts: generateBodyParts({ CARRY: 4, MOVE: 2 }),
+    // bodyParts: generateBodyParts({ CARRY: 4, MOVE: 2 }),
+    bodyParts : generateBodyParts({ CARRY: 2, MOVE: 1 }),
 };

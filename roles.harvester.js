@@ -12,5 +12,6 @@ module.exports = {
             creep.harvestAssignedSource();
         }
     },
-    bodyParts : generateBodyParts({ WORK: 6, CARRY: 1, MOVE: 1 }),
+    // bodyParts : generateBodyParts({ WORK: 6, CARRY: 1, MOVE: 1 }),
+    bodyParts : generateBodyParts({ WORK: 2, CARRY: 1, MOVE: 1 }),
 };
