@@ -13,6 +13,7 @@ const roleCounts = {
 
 function spawnHarvesters(spawn) {
     const harvesterRole = roles.harvester;
+    console.log('Body Parts:', harvesterRole.bodyParts);
 
     harvesterRole.sourceAssignments.forEach(source => {
         const existingHarvester = _.find(Game.creeps, creep =>
