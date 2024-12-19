@@ -13,7 +13,7 @@ const roleCounts = {
 
 function spawnHarvesters(spawn) {
     const harvesterRole = roles.harvester;
-    console.log('Body Parts:', harvesterRole.bodyParts);
+    console.log('Body Parts:', JSON.stringify(harvesterRole.bodyParts));
 
     if (!Array.isArray(harvesterRole.sourceAssignments)) {
         console.log('Invalid sourceAssignments:', harvesterRole.sourceAssignments);
@@ -54,17 +54,6 @@ function spawnHarvesters(spawn) {
             );
 
             if (result !== OK) {
-                const errorMessages = {
-                    [ERR_NOT_OWNER]: "You don't own this spawn.",
-                    [ERR_NAME_EXISTS]: "A creep with this name already exists.",
-                    [ERR_BUSY]: "The spawn is busy.",
-                    [ERR_NOT_ENOUGH_ENERGY]: "Not enough energy available.",
-                    [ERR_INVALID_ARGS]: "Invalid arguments provided.",
-                    [ERR_RCL_NOT_ENOUGH]: "Room Controller level too low.",
-                };
-            
-                const errorMessage = errorMessages[result] || "Unknown error.";
-                console.log(`Failed to spawn harvester ${name}: ${errorMessage} (Error Code: ${result})`);
                 return false;
             }
             
@@ -76,7 +65,6 @@ function spawnHarvesters(spawn) {
 const spawnManager = {
     manageSpawning: function () {
         for (const spawnName in Game.spawns) {
-            console.log(`Spawn name: ${spawnName}`);
             const spawn = Game.spawns[spawnName];
 
             if (spawn.spawning) continue; // Skip if already spawning
