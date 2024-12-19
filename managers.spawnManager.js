@@ -6,9 +6,9 @@ const roles = {
 };
 
 const roleCounts = {
+    carrier: 1,
     builder: 4,
     upgrader: 2,
-    carrier: 1,
 };
 
 function spawnHarvesters(spawn) {
