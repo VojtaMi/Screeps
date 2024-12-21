@@ -1,16 +1,18 @@
 module.exports = {
+    containerLocations: [
+        { x: 22, y: 13, roomName: 'E53S44' },
+        { x: 24, y: 22, roomName: 'E53S44' }
+    ],
+
     run: function (creep) {
-        // If creep is working and has energy, transfer energy
-        if (creep.isWorking() && creep.hasEnergy()) {
-            const target = creep.findRefuelStructure();
-            if (target) {
-                creep.transferEnergyTo(target);
-            }
+        if (creep.hasFullEnergy()) {
+
+            creep.refillStructure(STRUCTURE_CONTAINER)
         } 
-        // If creep has no energy, stop working and go harvest
         else {
-            creep.reFuel();
+            creep.harvestAssignedSource();
         }
     },
-    bodyParts : generateBodyParts({ WORK: 4, CARRY: 2, MOVE: 2 }),
+    bodyParts : generateBodyParts({ WORK: 6, CARRY: 1, MOVE: 1 }),
+    // bodyParts : generateBodyParts({ WORK: 2, CARRY: 1, MOVE: 1 }),
 };

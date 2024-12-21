@@ -12,6 +12,7 @@ const roles = {
     harvester: require('roles.harvester'),
     upgrader: require('roles.upgrader'),
     builder: require('roles.builder'),
+    carrier: require('roles.carrier'),
 };
 
 module.exports.loop = function () {
@@ -19,7 +20,7 @@ module.exports.loop = function () {
     managers.memory.cleanUpCreepMemory();
 
     // Step 2: Manage spawning
-    managers.spawn.manageSpawning();
+    managers.spawn.manageSpawning(roles);
 
     // Step 3: Run creep roles
     for (let name in Game.creeps) {

@@ -6,7 +6,7 @@ module.exports = {
         }
         // Else if he needs energy, go get it
         else {
-            creep.reFuel();
+            creep.getEnergy();
         }
     },
 
@@ -14,6 +14,7 @@ module.exports = {
     work: function (creep) {
         if (creep.findAndBuild()) { return; }
         if (creep.findAndRepair()) { return; }
-        creep.moveAndUpgrade();
+        creep.goUpgradeController();
     },
+    bodyParts : generateBodyParts({ WORK: 4, CARRY: 4, MOVE: 8 }),
 };
