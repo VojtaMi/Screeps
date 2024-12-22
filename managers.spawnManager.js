@@ -1,45 +1,60 @@
+const rolesRemoteBuilder = require("./roles.remoteBuilder");
+
 const roleCounts = {
     carrier: 1,
     builder: 1,
     upgrader: 1,
+    soldier: 0,
+    remoteBuilder: 1,
+    remoteWorker: 0,
+    settler: 1,
 };
 
-function spawnHarvesters(spawn, roles) {
-    const harvesterRole = roles.harvester;
-    harvesterRole.containerLocations.forEach(containerLoc => {
+function spawnContainerBasedRoles(spawn, roles) {
+    // Handle only roles that use container-based spawning
+    const containerBasedRoles = ['harvester', 'remoteCarrier'];
 
-        const existingHarvester = _.find(Game.creeps, creep =>
-            creep.memory.role === 'harvester' &&
-            creep.memory.containerLocation &&
-            creep.memory.containerLocation.x === containerLoc.x &&
-            creep.memory.containerLocation.y === containerLoc.y &&
-            creep.memory.containerLocation.roomName === containerLoc.roomName
-        );
+    containerBasedRoles.forEach(roleName => {
+        const role = roles[roleName];
 
-        if (!existingHarvester) {
-            const name = `harvester${Game.time}`;
+        if (role && role.containerLocations && role.containerLocations.length > 0) {
+            role.containerLocations.forEach(containerLoc => {
+                // Check if a creep is already assigned to this container
+                const existingCreep = _.find(Game.creeps, creep =>
+                    creep.memory.role === roleName &&
+                    creep.memory.containerLocation &&
+                    creep.memory.containerLocation.x === containerLoc.x &&
+                    creep.memory.containerLocation.y === containerLoc.y &&
+                    creep.memory.containerLocation.roomName === containerLoc.roomName
+                );
 
-            console.log(`Spawning new harvester: ${name} for container location (${containerLoc.x}, ${containerLoc.y})`);
-            const result = spawn.spawnCreep(
-                harvesterRole.bodyParts,
-                name,
-                {
-                    memory: {
-                        role: 'harvester',
-                        containerLocation: containerLoc
+                // If no creep is assigned, spawn a new one
+                if (!existingCreep) {
+                    const name = `${roleName}${Game.time}`;
+                    console.log(`Spawning new ${roleName}: ${name} for container location (${containerLoc.x}, ${containerLoc.y})`);
+
+                    const result = spawn.spawnCreep(
+                        role.bodyParts,
+                        name,
+                        {
+                            memory: {
+                                role: roleName,
+                                containerLocation: containerLoc
+                            }
+                        }
+                    );
+
+                    if (result !== OK) {
+                        console.log(`Failed to spawn ${roleName}: ${name} - Error: ${result}`);
+                    } else {
+                        console.log(`Successfully spawning ${roleName}: ${name}`);
                     }
                 }
-            );
-
-            if (result !== OK) {
-                console.log(`Failed to spawn harvester: ${name}`);
-                return false;
-            }
-
-            return true;
+            });
         }
     });
 }
+
 
 const spawnManager = {
     manageSpawning: function (roles) {
@@ -48,7 +63,7 @@ const spawnManager = {
 
             if (spawn.spawning) continue; // Skip if already spawning
 
-            if (spawnHarvesters(spawn, roles)) {
+            if (spawnContainerBasedRoles(spawn, roles)) {
                 break; // Stop further spawning for this spawn
             }
 

@@ -15,7 +15,9 @@ module.exports = function () {
         Creep.prototype.getEnergy = function () {
             if (this.needsEnergy()) {
                 this.stopWorking();
-                this.refuelFrom(STRUCTURE_STORAGE);
+                if (!this.refuelFrom(STRUCTURE_STORAGE)) {
+                    this.refuelFrom(STRUCTURE_CONTAINER);
+                }
             } else {
                 this.startWorking();
             }
@@ -39,9 +41,43 @@ module.exports = function () {
         Creep.prototype.refuelFrom = function (structureType) {
             let fuelTank = this.findFuelTank(structureType, 100);
             if (fuelTank) {
-                this.withdrawFuelTank(fuelTank)
+                this.withdrawFuelTank(fuelTank);
+                return true;
             }
+            return false;
         }
+
+        Creep.prototype.collectDroppedEnergy = function () {
+            // Combine tombstones and dropped resources into one list
+            const targets = this.room.find(FIND_TOMBSTONES)
+                .filter(tomb => tomb.store[RESOURCE_ENERGY] > 0)
+                .concat(this.room.find(FIND_DROPPED_RESOURCES)
+                    .filter(resource => resource.resourceType === RESOURCE_ENERGY));
+
+            // Find the closest target from the combined list
+            const target = this.pos.findClosestByPath(targets);
+
+            if (target) {
+                if (target instanceof Resource) {
+                    // Pickup dropped energy
+                    if (this.pickup(target) === ERR_NOT_IN_RANGE) {
+                        this.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+                    }
+                } else if (target instanceof Tombstone) {
+                    // Withdraw energy from the tombstone
+                    if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        this.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+                    }
+                }
+                return true; // Successfully found a target to collect energy
+            }
+
+            // No energy found
+            return false;
+        };
+
+
+
 
         // Section: Working State Management{
     }
@@ -66,7 +102,7 @@ module.exports = function () {
                         structure.structureType === STRUCTURE_CONTAINER) &&
                     structure.hits < structure.hitsMax
             });
-            if (!target){
+            if (!target) {
                 target = this.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: structure =>
                         (structure.structureType === STRUCTURE_RAMPART ||
@@ -104,6 +140,43 @@ module.exports = function () {
             return false; // No targets found
         };
     }
+
+    Creep.prototype.stepIfOnPortal = function () {
+        if (this.pos.x === 0) {
+            this.move(RIGHT);
+        } else if (this.pos.x === 49) {
+            this.move(LEFT);
+        } else if (this.pos.y === 0) {
+            this.move(BOTTOM);
+        } else if (this.pos.y === 49) {
+            this.move(TOP);
+        }
+    }
+    Creep.prototype.goToRoom = function (targetRoom) {
+        // Find the exit to the target room and move to it
+        const exitDir = this.room.findExitTo(targetRoom);
+        const exit = this.pos.findClosestByRange(exitDir);
+        this.moveTo(exit, { visualizePathStyle: { stroke: '#ffaa00' } });
+    };
+
+
+    Creep.prototype.isInRoom = function (room) {
+        return (this.room.name === room);
+    }
+
+    Creep.prototype.goIfNotCorrectRoom = function (targetRoom) {
+        if (!this.isInRoom(targetRoom)) {
+            this.goToRoom(targetRoom, {
+                reusePath: 10, // Cache path for 10 ticks
+                ignoreCreeps: true // Allow pathfinding through other creeps);
+            });
+        }
+        else {
+            this.stepIfOnPortal();
+        }
+    }
+
+
     /* Section: Flag Management */{
         Creep.prototype.isAtFlag = function (flagName, range = 1) {
             const flag = Game.flags[flagName];
@@ -177,22 +250,60 @@ module.exports = function () {
 
             if (target) {
                 if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    this.moveTo(target);
+                    this.moveTo(target,
+                        {
+                            reusePath: 10, // Cache path for 10 ticks
+                            ignoreCreeps: true // Allow pathfinding through other creeps);
+                        }
+                    );
                 }
                 return true; // Successfully found a target and acted
             }
             return false; // No valid target found
         };
 
-    }
-    /* Section: Utility */{
-        global.generateBodyParts = function (partsDict) {
-            const bodyParts = [];
-            for (const [part, count] of Object.entries(partsDict)) {
-                bodyParts.push(...Array(count).fill(global[part]));
+        Creep.prototype.withdrawAssignedContainer = function () {
+            // Get the container position from memory
+            const targetPos = new RoomPosition(
+                this.memory.containerLocation.x,
+                this.memory.containerLocation.y,
+                this.memory.containerLocation.roomName
+            );
+
+            // Find the container at the target position
+            const container = targetPos.lookFor(LOOK_STRUCTURES).find(
+                structure => structure.structureType === STRUCTURE_CONTAINER
+            );
+
+            if (!container) {
+                console.log(`${this.name}: No container found at assigned position.`);
+                return;
             }
-            return bodyParts;
-        };
-    }
-    
-};
+
+            // Attempt to withdraw from the container
+            if (this.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                // Use cached path if available
+                this.moveTo(container);
+            }
+
+            // Follow the cached path
+            const moveResult = this.moveByPath(this.memory.cachedPath);
+
+            // Clear the cache if the path becomes invalid
+            if (moveResult === ERR_INVALID_ARGS || moveResult === ERR_NOT_FOUND) {
+                delete this.memory.cachedPath;
+            }
+        }
+    };
+
+
+}
+    /* Section: Utility */{
+    global.generateBodyParts = function (partsDict) {
+        const bodyParts = [];
+        for (const [part, count] of Object.entries(partsDict)) {
+            bodyParts.push(...Array(count).fill(global[part]));
+        }
+        return bodyParts;
+    };
+}

@@ -1,18 +1,27 @@
 module.exports = {
     run: function (creep) {
-        // If the creep is empty, fetch energy from a container or storage
-        if (!creep.hasEnergy()) {
+        // if the creep does not have energy, stop distributing
+        if (!creep.hasEnergy()){
+            creep.stopWorking();
+        }
+        if (creep.hasFullEnergy()){
+            creep.startWorking();
+        }
+        // If the creep is not working, refuel
+        if (!creep.isWorking()) {
+            if (creep.collectDroppedEnergy()) {return;}
             creep.refuelFrom(STRUCTURE_CONTAINER);
         } 
-        // Otherwise, refill structures in priority order
-        else {
+        if (creep.isWorking()){
+            // Otherwise, refill structures in priority order
             if (creep.refillStructure(STRUCTURE_SPAWN)) { return; }
             if (creep.refillStructure(STRUCTURE_EXTENSION)) { return; }
             if (creep.refillStructure(STRUCTURE_TOWER)) { return; }
             if (creep.refillStructure(STRUCTURE_STORAGE)) { return; }
         }
+        
     },
 
-    bodyParts: generateBodyParts({ CARRY: 4, MOVE: 2 }),
+    bodyParts: generateBodyParts({ CARRY: 8, MOVE: 4 }),
     // bodyParts : generateBodyParts({ CARRY: 2, MOVE: 1 }),
 };

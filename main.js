@@ -13,6 +13,12 @@ const roles = {
     upgrader: require('roles.upgrader'),
     builder: require('roles.builder'),
     carrier: require('roles.carrier'),
+    soldier: require('roles.soldier'),
+    settler: require('roles.settler'),
+
+    remoteBuilder: require('roles.remoteBuilder'),
+    remoteWorker: require('roles.remoteWorker'),
+    remoteCarrier: require('roles.remoteCarrier'),
 };
 
 module.exports.loop = function () {

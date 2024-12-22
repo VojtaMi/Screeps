@@ -13,7 +13,7 @@ roleUpgrader = {
             creep.goToFlag('ControllerAccessFlag')
         }
     },
-    bodyParts : generateBodyParts({ WORK: 6, CARRY: 2, MOVE: 2 }),
+    bodyParts : generateBodyParts({ WORK: 6, CARRY: 2, MOVE: 1 }),
 };
 
 module.exports = roleUpgrader;

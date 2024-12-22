@@ -1,5 +1,11 @@
 module.exports = {
     run: function (creep) {
+        let targetRoom = 'E52S44';
+
+        if (!creep.isInRoom(targetRoom)) {
+            creep.goToRoom(targetRoom);
+            return;
+        }
         // If creep is working and has energy, keep working
         if (creep.isWorking() && creep.hasEnergy()) {
             this.work(creep);
@@ -16,5 +22,5 @@ module.exports = {
         if (creep.findAndRepair()) { return; }
         creep.goUpgradeController();
     },
-    bodyParts : generateBodyParts({ WORK: 4, CARRY: 4, MOVE: 4 }),
+    bodyParts : generateBodyParts({ WORK: 2, CARRY: 2, MOVE: 2 }),
 };
