@@ -22,9 +22,12 @@ module.exports = {
 
         // Attack the closest hostile extension or structure
         const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (structure) => structure.structureType === STRUCTURE_EXTENSION ||
-             structure.structureType === STRUCTURE_SPAWN
+            filter: (structure) =>
+                (structure.structureType === STRUCTURE_EXTENSION ||
+                    structure.structureType === STRUCTURE_SPAWN) &&
+                (!structure.my) // Exclude your own structures
         });
+
         if (target) {
             if (creep.attack(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000' } });

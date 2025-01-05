@@ -1,6 +1,6 @@
 module.exports = {
     run: function (creep) {
-        const targetRoom = 'E53S43';
+        let targetRoom = 'E52S44';
 
         if (!creep.isInRoom(targetRoom)) {
             creep.goToRoom(targetRoom);
@@ -23,7 +23,6 @@ module.exports = {
     work: function (creep) {
         if (creep.findAndBuild()) { return; }
         if (creep.findAndRepair()) { return; }
-        creep.goUpgradeController()
     },
 
     harvest: function (creep) {

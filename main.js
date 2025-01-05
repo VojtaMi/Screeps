@@ -18,7 +18,13 @@ const roles = {
 
     remoteBuilder: require('roles.remoteBuilder'),
     remoteWorker: require('roles.remoteWorker'),
+    remoteWorker2: require('roles.remoteWorker2'),
     remoteCarrier: require('roles.remoteCarrier'),
+    remoteBuilder2: require('roles.remoteBuilder2'),
+    remoteUpgrader: require('roles.remoteUpgrader'),
+
+    emergencyHarvester: require('roles.emergencyHarvester'),
+    emergencyCarrier: require('roles.emergencyCarrier'),
 };
 
 module.exports.loop = function () {

@@ -16,13 +16,17 @@ const towerLogic = {
             return; // Exit after healing
         }
 
-        // Repair damaged structures
-        const closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: structure => structure.hits < structure.hitsMax &&
-                structure.structureType !== STRUCTURE_WALL // Exclude walls unless desired
+        // Find all damaged structures
+        const damagedStructures = tower.room.find(FIND_STRUCTURES, {
+            filter: structure => structure.hits < structure.hitsMax && structure.hits < 1000000
         });
-        if (closestDamagedStructure) {
-            tower.repair(closestDamagedStructure);
+
+        // Sort damaged structures by hits in ascending order
+        damagedStructures.sort((a, b) => a.hits - b.hits);
+
+        // Repair the structure with the lowest hits
+        if (damagedStructures.length > 0) {
+            tower.repair(damagedStructures[0]);
         }
     }
 };

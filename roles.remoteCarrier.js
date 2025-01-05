@@ -1,6 +1,8 @@
 module.exports = {
     containerLocations: [
         { x: 12, y: 6, roomName: 'E52S44' },
+        { x: 25, y: 40, roomName: 'E53S43' },
+        // { x: 6, y: 8, roomName: 'E53S43' },
     ],
     run: function (creep) {
         let homeRoom = 'E53S44';

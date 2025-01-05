@@ -21,7 +21,6 @@ module.exports = {
             if (this.refillTower(creep)) { return; }
             if (creep.refillStructure(STRUCTURE_STORAGE)) { return; }
         }
-        
     },
 
     refillTower: function (creep) {
@@ -36,5 +35,6 @@ module.exports = {
         return false; // Return false if no suitable tower is found
     },
 
-    bodyParts: generateBodyParts({ CARRY: 20, MOVE: 10 }),
+    
+    bodyParts : generateBodyParts({ CARRY: 2, MOVE: 2 }),
 };

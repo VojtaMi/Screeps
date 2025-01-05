@@ -1,6 +1,7 @@
 module.exports = {
     run: function (creep) {
         const targetRoom = 'E52S44';
+        // const targetRoom = 'E53S43';
 
         // Move to the target room if not already there
         if (creep.room.name !== targetRoom) {

@@ -39,7 +39,7 @@ module.exports = function () {
         }
 
         Creep.prototype.refuelFrom = function (structureType) {
-            let fuelTank = this.findFuelTank(structureType, 100);
+            let fuelTank = this.findFuelTank(structureType, 400);
             if (fuelTank) {
                 this.withdrawFuelTank(fuelTank);
                 return true;
@@ -105,8 +105,14 @@ module.exports = function () {
             if (!target) {
                 target = this.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: structure =>
-                        (structure.structureType === STRUCTURE_RAMPART ||
-                            structure.structureType === STRUCTURE_WALL) &&
+                        structure.structureType === STRUCTURE_RAMPART &&
+                        structure.hits < structure.hitsMax
+                });
+            }
+            if (!target) {
+                target = this.pos.findClosestByPath(FIND_STRUCTURES, {
+                    filter: structure =>
+                        structure.structureType === STRUCTURE_WALL &&
                         structure.hits < structure.hitsMax
                 });
             }
@@ -166,13 +172,12 @@ module.exports = function () {
 
     Creep.prototype.goIfNotCorrectRoom = function (targetRoom) {
         if (!this.isInRoom(targetRoom)) {
-            this.goToRoom(targetRoom, {
-                reusePath: 10, // Cache path for 10 ticks
-                ignoreCreeps: true // Allow pathfinding through other creeps);
-            });
+            this.goToRoom(targetRoom);
+            return false;
         }
         else {
             this.stepIfOnPortal();
+            return true;
         }
     }
 

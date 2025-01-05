@@ -3,6 +3,8 @@ module.exports = {
         { x: 22, y: 13, roomName: 'E53S44' },
         { x: 24, y: 22, roomName: 'E53S44' },
         {x:12, y: 6, roomName: 'E52S44'},
+        { x: 25, y: 40, roomName: 'E53S43' },
+        { x: 6, y: 8, roomName: 'E53S43' },
     ],
 
     run: function (creep) {
