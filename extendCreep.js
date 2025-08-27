@@ -39,10 +39,13 @@ module.exports = function () {
         }
     };
 
-    Creep.prototype.moveAndUpgrade = function () {
+    Creep.prototype.goUpdateController = function () {
         const controller = this.room.controller;
-        if (controller && this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+        if (this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
             this.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
+        }
+        else{
+            this.upgradeController(controller);
         }
     };
 
