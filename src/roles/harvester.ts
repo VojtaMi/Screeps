@@ -9,11 +9,11 @@ export const harvester: Role = {
       return;
     }
 
-    if (creep.hasEnergy()) {
-      const container = creep.findAdjacentSourceContainer(source);
+    const container = creep.findAdjacentSourceContainer(source);
+    if (creep.hasFullEnergy()) {
       if (container && container.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
         creep.transferEnergyTo(container);
-      } else if (creep.hasFullEnergy()) {
+      } else {
         creep.drop(RESOURCE_ENERGY);
       }
       return;
