@@ -19,5 +19,11 @@ export const upgrader: Role = {
     if (collectLocalEnergy(creep)) {
       return;
     }
+
+    if (creep.hasEnergy()) {
+      creep.memory.working = true;
+      creep.clearEnergyTarget();
+      creep.goUpgradeController();
+    }
   },
 };

@@ -23,6 +23,12 @@ export const builder: BuilderRole = {
     if (collectLocalEnergy(creep)) {
       return;
     }
+
+    if (creep.hasEnergy()) {
+      creep.memory.working = true;
+      creep.clearEnergyTarget();
+      this.work(creep);
+    }
   },
 
   work(creep: Creep): void {
