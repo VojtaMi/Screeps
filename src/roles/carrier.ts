@@ -2,8 +2,6 @@ import type { Role } from "../types";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 
-type CarrierDeliveryTarget = StructureSpawn | StructureExtension | StructureContainer | AnyCreep;
-
 function getEnergyRatio(creep: Creep): number {
   return creep.store[RESOURCE_ENERGY] / creep.store.getCapacity(RESOURCE_ENERGY);
 }
@@ -22,48 +20,113 @@ function collectEnergy(creep: Creep, energyTarget: EnergyRefillTarget | null = c
   return false;
 }
 
-function findCarrierDeliveryTarget(creep: Creep): CarrierDeliveryTarget | null {
-  const refuelTarget = creep.findRefuelStructure();
+function getReservedDeliveryEnergy(creep: Creep, target: EnergyDeliveryTarget): number {
+  return Object.values(Game.creeps)
+    .filter(otherCreep => otherCreep.name !== creep.name && otherCreep.memory.deliveryTargetId === target.id)
+    .reduce((total, otherCreep) => total + otherCreep.store[RESOURCE_ENERGY], 0);
+}
+
+function isDeliveryTargetAvailable(creep: Creep, target: EnergyDeliveryTarget): boolean {
+  const freeCapacity = target.store.getFreeCapacity(RESOURCE_ENERGY);
+  return freeCapacity > 0 && getReservedDeliveryEnergy(creep, target) < freeCapacity;
+}
+
+function clearDeliveryTarget(creep: Creep): void {
+  delete creep.memory.deliveryTargetId;
+}
+
+function findSavedDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
+  if (!creep.memory.deliveryTargetId || !creep.hasEnergy()) {
+    clearDeliveryTarget(creep);
+    return null;
+  }
+
+  const savedTarget = Game.getObjectById(creep.memory.deliveryTargetId);
+  if (savedTarget && isDeliveryTargetAvailable(creep, savedTarget)) {
+    return savedTarget;
+  }
+
+  clearDeliveryTarget(creep);
+  return null;
+}
+
+function rememberDeliveryTarget(creep: Creep, target: EnergyDeliveryTarget | null): EnergyDeliveryTarget | null {
+  if (target) {
+    creep.memory.deliveryTargetId = target.id;
+  }
+
+  return target;
+}
+
+function findRefuelDeliveryTarget(creep: Creep): StructureSpawn | StructureExtension | null {
+  return creep.pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: (structure): structure is StructureSpawn | StructureExtension =>
+      (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_EXTENSION) &&
+      isDeliveryTargetAvailable(creep, structure),
+  });
+}
+
+function findControllerDeliveryContainer(creep: Creep): StructureContainer | null {
+  const controller = creep.room.controller;
+  if (!controller) {
+    return null;
+  }
+
+  return creep.pos.findClosestByPath(
+    controller.pos.findInRange(FIND_STRUCTURES, 3, {
+      filter: (structure): structure is StructureContainer =>
+        structure.structureType === STRUCTURE_CONTAINER && isDeliveryTargetAvailable(creep, structure),
+    }),
+  );
+}
+
+function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
+  const savedTarget = findSavedDeliveryTarget(creep);
+  if (savedTarget) {
+    return savedTarget;
+  }
+
+  const refuelTarget = findRefuelDeliveryTarget(creep);
   if (refuelTarget) {
-    return refuelTarget;
+    return rememberDeliveryTarget(creep, refuelTarget);
   }
 
   if (hasBuilderWork(creep.room)) {
     const builder = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
       filter: target =>
-        target.memory.role === "builder" && !target.hasEnergy(),
+        target.memory.role === "builder" && !target.hasEnergy() && isDeliveryTargetAvailable(creep, target),
     });
     if (builder) {
-      return builder;
+      return rememberDeliveryTarget(creep, builder);
     }
   }
 
   if (hasRepairerWork(creep.room)) {
     const repairer = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
       filter: target =>
-        target.memory.role === "repairer" && !target.hasEnergy(),
+        target.memory.role === "repairer" && !target.hasEnergy() && isDeliveryTargetAvailable(creep, target),
     });
     if (repairer) {
-      return repairer;
+      return rememberDeliveryTarget(creep, repairer);
     }
   }
 
   const upgrader = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
     filter: target =>
-      target.memory.role === "upgrader" && !target.hasEnergy(),
+      target.memory.role === "upgrader" && !target.hasEnergy() && isDeliveryTargetAvailable(creep, target),
   });
   if (upgrader) {
-    return upgrader;
+    return rememberDeliveryTarget(creep, upgrader);
   }
 
-  return creep.findControllerContainer();
+  return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
 }
 
 function shouldDeliverPartialEnergy(
   creep: Creep,
   refillTarget: EnergyRefillTarget | null,
-  deliveryTarget: CarrierDeliveryTarget | null
-): deliveryTarget is CarrierDeliveryTarget {
+  deliveryTarget: EnergyDeliveryTarget | null
+): deliveryTarget is EnergyDeliveryTarget {
   if (!deliveryTarget || !creep.hasEnergy() || getEnergyRatio(creep) <= MIN_DELIVERY_ENERGY_RATIO) {
     return false;
   }
@@ -75,8 +138,9 @@ function shouldDeliverPartialEnergy(
   return creep.pos.getRangeTo(deliveryTarget) <= creep.pos.getRangeTo(refillTarget);
 }
 
-function deliverEnergy(creep: Creep, deliveryTarget: CarrierDeliveryTarget | null = findCarrierDeliveryTarget(creep)): boolean {
+function deliverEnergy(creep: Creep, deliveryTarget: EnergyDeliveryTarget | null = findCarrierDeliveryTarget(creep)): boolean {
   if (!deliveryTarget) {
+    clearDeliveryTarget(creep);
     return false;
   }
 
@@ -104,10 +168,12 @@ export const carrier: Role = {
   run(creep: Creep): void {
     if (creep.memory.working && !creep.hasEnergy()) {
       creep.memory.working = false;
+      clearDeliveryTarget(creep);
     }
     if (!creep.memory.working && creep.hasFullEnergy()) {
       creep.memory.working = true;
       creep.clearEnergyTarget();
+      clearDeliveryTarget(creep);
     }
 
     if (creep.memory.working) {
@@ -117,6 +183,7 @@ export const carrier: Role = {
 
       if (creep.needsEnergy() && collectEnergy(creep)) {
         creep.memory.working = false;
+        clearDeliveryTarget(creep);
         return;
       }
 
@@ -137,6 +204,8 @@ export const carrier: Role = {
       return;
     }
 
+    clearDeliveryTarget(creep);
+
     if (collectEnergy(creep, refillTarget)) {
       return;
     }
@@ -144,6 +213,7 @@ export const carrier: Role = {
     if (creep.hasEnergy()) {
       creep.memory.working = true;
       creep.clearEnergyTarget();
+      clearDeliveryTarget(creep);
     }
   },
 };

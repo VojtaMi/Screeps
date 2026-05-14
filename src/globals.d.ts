@@ -4,11 +4,13 @@ declare global {
   type DecayingEnergyTarget = Resource<RESOURCE_ENERGY> | Ruin | Tombstone;
   type EnergyWithdrawTarget = StructureContainer | Ruin | Tombstone;
   type EnergyRefillTarget = DecayingEnergyTarget | StructureContainer;
+  type EnergyDeliveryTarget = StructureSpawn | StructureExtension | StructureContainer | AnyCreep;
 
   interface CreepMemory {
     role: CreepRole;
     sourceId?: Id<Source>;
     energyTargetId?: Id<EnergyRefillTarget>;
+    deliveryTargetId?: Id<EnergyDeliveryTarget>;
     working?: boolean;
   }
 
