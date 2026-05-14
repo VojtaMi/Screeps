@@ -11,8 +11,8 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
     plan: [
       { x: 42, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 41, y: 19, structureType: STRUCTURE_EXTENSION },
-      { x: 34, y: 23, structureType: STRUCTURE_EXTENSION },
-      { x: 35, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 29, y: 19, structureType: STRUCTURE_EXTENSION },
+      { x: 30, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 31, y: 18, structureType: STRUCTURE_EXTENSION },
       { x: 39, y: 23, structureType: STRUCTURE_CONTAINER },
       { x: 29, y: 27, structureType: STRUCTURE_CONTAINER },
