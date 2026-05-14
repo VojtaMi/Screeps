@@ -20,6 +20,5 @@ export const builder: BuilderRole = {
     if (creep.findAndBuild()) {
       return;
     }
-    creep.memory.role = "upgrader";
   },
 };

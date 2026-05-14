@@ -38,6 +38,22 @@ export function extendCreep(): void {
     }
   };
 
+  Creep.prototype.withdrawEnergyFrom = function (target: StructureContainer | null): void {
+    if (target) {
+      if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+        this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+      }
+    }
+  };
+
+  Creep.prototype.pickUpEnergy = function (target: Resource<RESOURCE_ENERGY> | null): void {
+    if (target) {
+      if (this.pickup(target) === ERR_NOT_IN_RANGE) {
+        this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+      }
+    }
+  };
+
   Creep.prototype.goUpgradeController = function (): void {
     const controller = this.room.controller;
     if (!controller) {
@@ -100,6 +116,43 @@ export function extendCreep(): void {
     } else {
       this.say(`No flag: ${flagName}`);
     }
+  };
+
+  Creep.prototype.findDroppedEnergy = function (): Resource<RESOURCE_ENERGY> | null {
+    return this.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+      filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+        resource.resourceType === RESOURCE_ENERGY && resource.amount > 0,
+    });
+  };
+
+  Creep.prototype.findAdjacentSourceContainer = function (source: Source): StructureContainer | null {
+    const containers = source.pos.findInRange(FIND_STRUCTURES, 1, {
+      filter: (structure): structure is StructureContainer => structure.structureType === STRUCTURE_CONTAINER,
+    });
+
+    return containers[0] ?? null;
+  };
+
+  Creep.prototype.findEnergyContainer = function (): StructureContainer | null {
+    return this.pos.findClosestByPath(FIND_STRUCTURES, {
+      filter: (structure): structure is StructureContainer =>
+        structure.structureType === STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0,
+    });
+  };
+
+  Creep.prototype.findControllerContainer = function (): StructureContainer | null {
+    const controller = this.room.controller;
+    if (!controller) {
+      return null;
+    }
+
+    const containers = controller.pos.findInRange(FIND_STRUCTURES, 3, {
+      filter: (structure): structure is StructureContainer =>
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+    });
+
+    return containers[0] ?? null;
   };
 
   Creep.prototype.findRefuelStructure = function (): StructureSpawn | StructureExtension | null {

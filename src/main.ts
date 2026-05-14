@@ -2,14 +2,20 @@ import { extendCreep } from "./extendCreep";
 import { memoryManager } from "./managers/memoryManager";
 import { spawnManager } from "./managers/spawnManager";
 import { builder } from "./roles/builder";
+import { carrier } from "./roles/carrier";
+import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
+import { pioneer } from "./roles/pioneer";
 import { upgrader } from "./roles/upgrader";
 import type { CreepRole, Role } from "./types";
 
 extendCreep();
 
 const roles: Record<CreepRole, Role> = {
+  pioneer,
   harvester,
+  carrier,
+  defender,
   upgrader,
   builder,
 };
