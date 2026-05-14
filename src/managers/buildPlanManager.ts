@@ -2,11 +2,45 @@ interface BuildPlanItem extends RoomBuildPlanItem {
   priority: number;
 }
 
+interface DefaultBuildPlan {
+  version: number;
+  plan: RoomBuildPlanItem[];
+}
+
+const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
+  E59S28: {
+    version: 1,
+    plan: [
+      { x: 42, y: 18, structureType: STRUCTURE_EXTENSION },
+      { x: 42, y: 19, structureType: STRUCTURE_EXTENSION },
+      { x: 41, y: 19, structureType: STRUCTURE_EXTENSION },
+      { x: 34, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 35, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 39, y: 23, structureType: STRUCTURE_CONTAINER },
+      { x: 29, y: 27, structureType: STRUCTURE_CONTAINER },
+      { x: 40, y: 12, structureType: STRUCTURE_CONTAINER },
+      { x: 34, y: 24, structureType: STRUCTURE_ROAD },
+    ],
+  },
+};
+
 function getBuildPlan(room: Room): BuildPlanItem[] {
+  syncDefaultBuildPlan(room);
+
   return (room.memory.buildPlan ?? []).map((item, index) => ({
     ...item,
     priority: item.priority ?? index,
   }));
+}
+
+function syncDefaultBuildPlan(room: Room): void {
+  const defaultBuildPlan = DEFAULT_BUILD_PLANS[room.name];
+  if (!defaultBuildPlan || room.memory.buildPlanVersion === defaultBuildPlan.version) {
+    return;
+  }
+
+  room.memory.buildPlan = defaultBuildPlan.plan;
+  room.memory.buildPlanVersion = defaultBuildPlan.version;
 }
 
 function hasConstructionSite(room: Room): boolean {
@@ -23,6 +57,25 @@ function hasConstructionSiteAt(room: Room, plan: RoomBuildPlanItem): boolean {
   const sites = room.lookForAt(LOOK_CONSTRUCTION_SITES, plan.x, plan.y);
 
   return sites.some(site => site.structureType === plan.structureType);
+}
+
+function countStructures(room: Room, structureType: BuildableStructureConstant): number {
+  return room.find(FIND_STRUCTURES, {
+    filter: structure => structure.structureType === structureType,
+  }).length;
+}
+
+function countConstructionSites(room: Room, structureType: BuildableStructureConstant): number {
+  return room.find(FIND_CONSTRUCTION_SITES, {
+    filter: site => site.structureType === structureType,
+  }).length;
+}
+
+function canBuildAtCurrentControllerLevel(room: Room, plan: RoomBuildPlanItem): boolean {
+  const controllerLevel = room.controller?.level ?? 0;
+  const allowed = CONTROLLER_STRUCTURES[plan.structureType][controllerLevel] ?? 0;
+
+  return countStructures(room, plan.structureType) + countConstructionSites(room, plan.structureType) < allowed;
 }
 
 export const buildPlanManager = {
@@ -58,7 +111,12 @@ export const buildPlanManager = {
     const buildPlan = getBuildPlan(room).sort((a, b) => a.priority - b.priority);
 
     return (
-      buildPlan.find(plan => !isBuilt(room, plan) && !hasConstructionSiteAt(room, plan)) ?? null
+      buildPlan.find(
+        plan =>
+          !isBuilt(room, plan) &&
+          !hasConstructionSiteAt(room, plan) &&
+          canBuildAtCurrentControllerLevel(room, plan)
+      ) ?? null
     );
   },
 };
