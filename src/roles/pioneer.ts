@@ -2,7 +2,14 @@ import type { Role } from "../types";
 
 export const pioneer: Role = {
   run(creep: Creep): void {
-    if (creep.hasEnergy()) {
+    if (creep.memory.working && !creep.hasEnergy()) {
+      creep.memory.working = false;
+    }
+    if (!creep.memory.working && creep.hasFullEnergy()) {
+      creep.memory.working = true;
+    }
+
+    if (creep.memory.working) {
       const target = creep.findRefuelStructure();
       if (target) {
         creep.transferEnergyTo(target);
