@@ -9,11 +9,11 @@ interface DefaultBuildPlan {
 const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
   E59S28: {
     plan: [
-      { x: 42, y: 18, structureType: STRUCTURE_EXTENSION },
       { x: 42, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 41, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 34, y: 23, structureType: STRUCTURE_EXTENSION },
       { x: 35, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 34, y: 22, structureType: STRUCTURE_EXTENSION },
       { x: 39, y: 23, structureType: STRUCTURE_CONTAINER },
       { x: 29, y: 27, structureType: STRUCTURE_CONTAINER },
       { x: 40, y: 12, structureType: STRUCTURE_CONTAINER },
