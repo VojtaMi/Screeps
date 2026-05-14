@@ -55,6 +55,41 @@ function buildDefenderBody(energyCapacity: number): BodyPartConstant[] {
   return body.length > 0 ? body : MINIMUM_DEFENDER_BODY;
 }
 
+function buildWorkerBody(energyCapacity: number): BodyPartConstant[] {
+  const workParts: BodyPartConstant[] = [WORK];
+  const carryParts: BodyPartConstant[] = [CARRY];
+  const moveParts: BodyPartConstant[] = [MOVE];
+  let remainingEnergy = energyCapacity - bodyCost(MINIMUM_WORKER_BODY);
+  let addWorkNext = true;
+
+  while (workParts.length + carryParts.length + moveParts.length < MAX_CREEP_SIZE) {
+    const nonMoveParts = workParts.length + carryParts.length;
+    const nextPart = nonMoveParts >= 4 && moveParts.length < Math.ceil(nonMoveParts / 4)
+      ? MOVE
+      : addWorkNext
+        ? WORK
+        : CARRY;
+
+    if (remainingEnergy < BODYPART_COST[nextPart]) {
+      break;
+    }
+
+    if (nextPart === WORK) {
+      workParts.push(nextPart);
+      addWorkNext = false;
+    } else if (nextPart === CARRY) {
+      carryParts.push(nextPart);
+      addWorkNext = true;
+    } else {
+      moveParts.push(nextPart);
+    }
+
+    remainingEnergy -= BODYPART_COST[nextPart];
+  }
+
+  return [...workParts, ...carryParts, ...moveParts];
+}
+
 function buildPioneerBody(energyAvailable: number): BodyPartConstant[] {
   return energyAvailable >= bodyCost(PIONEER_BODY) ? PIONEER_BODY : MINIMUM_WORKER_BODY;
 }
@@ -186,11 +221,11 @@ export const spawnManager = {
     }
 
     if (hasRoomWork(room) && builders.length === 0) {
-      return { role: "builder", body: MINIMUM_WORKER_BODY };
+      return { role: "builder", body: buildWorkerBody(energyCapacity) };
     }
 
     if (harvesters.length >= sources.length && carriers.length > 0 && upgraders.length < 1) {
-      return { role: "upgrader", body: MINIMUM_WORKER_BODY };
+      return { role: "upgrader", body: buildWorkerBody(energyCapacity) };
     }
 
     return null;
