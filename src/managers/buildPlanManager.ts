@@ -3,13 +3,11 @@ interface BuildPlanItem extends RoomBuildPlanItem {
 }
 
 interface DefaultBuildPlan {
-  version: number;
   plan: RoomBuildPlanItem[];
 }
 
 const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
   E59S28: {
-    version: 1,
     plan: [
       { x: 42, y: 18, structureType: STRUCTURE_EXTENSION },
       { x: 42, y: 19, structureType: STRUCTURE_EXTENSION },
@@ -24,6 +22,12 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
   },
 };
 
+function getBuildPlanHash(plan: RoomBuildPlanItem[]): string {
+  return plan
+    .map(item => `${item.priority ?? ""}:${item.structureType}:${item.x}:${item.y}`)
+    .join("|");
+}
+
 function getBuildPlan(room: Room): BuildPlanItem[] {
   syncDefaultBuildPlan(room);
 
@@ -35,12 +39,17 @@ function getBuildPlan(room: Room): BuildPlanItem[] {
 
 function syncDefaultBuildPlan(room: Room): void {
   const defaultBuildPlan = DEFAULT_BUILD_PLANS[room.name];
-  if (!defaultBuildPlan || room.memory.buildPlanVersion === defaultBuildPlan.version) {
+  if (!defaultBuildPlan) {
+    return;
+  }
+
+  const buildPlanHash = getBuildPlanHash(defaultBuildPlan.plan);
+  if (room.memory.buildPlanHash === buildPlanHash) {
     return;
   }
 
   room.memory.buildPlan = defaultBuildPlan.plan;
-  room.memory.buildPlanVersion = defaultBuildPlan.version;
+  room.memory.buildPlanHash = buildPlanHash;
 }
 
 function hasConstructionSite(room: Room): boolean {

@@ -16,7 +16,7 @@ declare global {
 
   interface RoomMemory {
     buildPlan?: RoomBuildPlanItem[];
-    buildPlanVersion?: number;
+    buildPlanHash?: string;
   }
 
   interface Creep {
