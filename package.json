@@ -1,0 +1,14 @@
+{
+  "name": "screeps-bot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js"
+  },
+  "devDependencies": {
+    "@types/screeps": "^3.3.13",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.9.3"
+  }
+}
