@@ -40,7 +40,7 @@ export const carrier: Role = {
     }
 
     const energyTarget = creep.findEnergyRefillTarget();
-    if (energyTarget instanceof Resource) {
+    if (energyTarget && "amount" in energyTarget) {
       creep.pickUpEnergy(energyTarget);
       return;
     }

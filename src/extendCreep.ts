@@ -35,12 +35,30 @@ function withRoomEdgeAvoidance(creep: Creep, target: Parameters<Creep["moveTo"]>
   };
 }
 
-function hasRefillEnergy(target: EnergyRefillTarget): boolean {
-  if (target instanceof Resource) {
-    return target.resourceType === RESOURCE_ENERGY && target.amount > 0;
+function isDroppedEnergy(target: EnergyRefillTarget): target is Resource<RESOURCE_ENERGY> {
+  return "amount" in target;
+}
+
+function getRefillEnergyAmount(target: EnergyRefillTarget): number {
+  if (isDroppedEnergy(target)) {
+    return target.resourceType === RESOURCE_ENERGY ? target.amount : 0;
   }
 
-  return target.store[RESOURCE_ENERGY] > 0;
+  return target.store[RESOURCE_ENERGY];
+}
+
+function hasRefillEnergy(target: EnergyRefillTarget): boolean {
+  return getRefillEnergyAmount(target) > 0;
+}
+
+function getReservedEnergyCapacity(creep: Creep, target: EnergyRefillTarget): number {
+  return Object.values(Game.creeps)
+    .filter(otherCreep => otherCreep.name !== creep.name && otherCreep.memory.energyTargetId === target.id)
+    .reduce((total, otherCreep) => total + otherCreep.store.getFreeCapacity(RESOURCE_ENERGY), 0);
+}
+
+function isEnergyTargetReservedByOtherCreep(creep: Creep, target: EnergyRefillTarget): boolean {
+  return getReservedEnergyCapacity(creep, target) >= getRefillEnergyAmount(target);
 }
 
 export function extendCreep(): void {
@@ -113,7 +131,7 @@ export function extendCreep(): void {
   Creep.prototype.findEnergyRefillTarget = function (): EnergyRefillTarget | null {
     if (this.memory.energyTargetId) {
       const savedTarget = Game.getObjectById(this.memory.energyTargetId);
-      if (savedTarget && hasRefillEnergy(savedTarget)) {
+      if (savedTarget && hasRefillEnergy(savedTarget) && !isEnergyTargetReservedByOtherCreep(this, savedTarget)) {
         return savedTarget;
       }
 
@@ -195,7 +213,9 @@ export function extendCreep(): void {
   Creep.prototype.findDroppedEnergy = function (): Resource<RESOURCE_ENERGY> | null {
     return this.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
       filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
-        resource.resourceType === RESOURCE_ENERGY && resource.amount > 0,
+        resource.resourceType === RESOURCE_ENERGY &&
+        resource.amount > 0 &&
+        !isEnergyTargetReservedByOtherCreep(this, resource as Resource<RESOURCE_ENERGY>),
     });
   };
 
@@ -210,17 +230,19 @@ export function extendCreep(): void {
   Creep.prototype.findEnergyContainer = function (): StructureContainer | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: (structure): structure is StructureContainer =>
-        structure.structureType === STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0,
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store[RESOURCE_ENERGY] > 0 &&
+        !isEnergyTargetReservedByOtherCreep(this, structure),
     });
   };
 
   Creep.prototype.findWithdrawableEnergy = function (): EnergyWithdrawTarget | null {
     const container = this.findEnergyContainer();
     const ruin = this.pos.findClosestByPath(FIND_RUINS, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0,
+      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
     });
     const tombstone = this.pos.findClosestByPath(FIND_TOMBSTONES, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0,
+      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
     });
 
     const targets = [container, ruin, tombstone].filter((target): target is EnergyWithdrawTarget => !!target);
