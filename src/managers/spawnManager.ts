@@ -19,6 +19,30 @@ function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
 }
 
+function buildBodyFromPattern(
+  energyCapacity: number,
+  baseBody: BodyPartConstant[],
+  scalingPattern: BodyPartConstant[],
+): BodyPartConstant[] {
+  const body = [...baseBody];
+  let remainingEnergy = energyCapacity - bodyCost(body);
+  let nextPartIndex = 0;
+
+  while (body.length < MAX_CREEP_SIZE) {
+    const nextPart = scalingPattern[nextPartIndex % scalingPattern.length];
+
+    if (remainingEnergy < BODYPART_COST[nextPart]) {
+      break;
+    }
+
+    body.push(nextPart);
+    remainingEnergy -= BODYPART_COST[nextPart];
+    nextPartIndex += 1;
+  }
+
+  return body;
+}
+
 function buildHarvesterBody(energyCapacity: number): BodyPartConstant[] {
   const body: BodyPartConstant[] = [CARRY, MOVE];
   let remainingEnergy = energyCapacity - bodyCost(body);
@@ -56,38 +80,7 @@ function buildDefenderBody(energyCapacity: number): BodyPartConstant[] {
 }
 
 function buildWorkerBody(energyCapacity: number): BodyPartConstant[] {
-  const workParts: BodyPartConstant[] = [WORK];
-  const carryParts: BodyPartConstant[] = [CARRY];
-  const moveParts: BodyPartConstant[] = [MOVE];
-  let remainingEnergy = energyCapacity - bodyCost(MINIMUM_WORKER_BODY);
-  let addWorkNext = true;
-
-  while (workParts.length + carryParts.length + moveParts.length < MAX_CREEP_SIZE) {
-    const nonMoveParts = workParts.length + carryParts.length;
-    const nextPart = nonMoveParts >= 4 && moveParts.length < Math.ceil(nonMoveParts / 4)
-      ? MOVE
-      : addWorkNext
-        ? WORK
-        : CARRY;
-
-    if (remainingEnergy < BODYPART_COST[nextPart]) {
-      break;
-    }
-
-    if (nextPart === WORK) {
-      workParts.push(nextPart);
-      addWorkNext = false;
-    } else if (nextPart === CARRY) {
-      carryParts.push(nextPart);
-      addWorkNext = true;
-    } else {
-      moveParts.push(nextPart);
-    }
-
-    remainingEnergy -= BODYPART_COST[nextPart];
-  }
-
-  return [...workParts, ...carryParts, ...moveParts];
+  return buildBodyFromPattern(energyCapacity, MINIMUM_WORKER_BODY, [WORK, CARRY, WORK, MOVE]);
 }
 
 function buildPioneerBody(energyAvailable: number): BodyPartConstant[] {
