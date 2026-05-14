@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js"
+    "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js",
+    "deploy:screeps": "node scripts/deploy-screeps.mjs"
   },
   "devDependencies": {
     "@types/screeps": "^3.3.13",

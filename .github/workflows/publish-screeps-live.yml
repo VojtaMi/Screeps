@@ -1,4 +1,4 @@
-name: Publish Screeps live branch
+name: Publish Screeps live code
 
 on:
   push:
@@ -27,6 +27,12 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+      - name: Deploy to Screeps
+        env:
+          SCREEPS_TOKEN: ${{ secrets.SCREEPS_TOKEN }}
+          SCREEPS_BRANCH: ${{ vars.SCREEPS_BRANCH || 'default' }}
+        run: npm run deploy:screeps
 
       - name: Publish compiled JavaScript
         env:
