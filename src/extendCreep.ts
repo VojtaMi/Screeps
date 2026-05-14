@@ -35,6 +35,14 @@ function withRoomEdgeAvoidance(creep: Creep, target: Parameters<Creep["moveTo"]>
   };
 }
 
+function hasRefillEnergy(target: EnergyRefillTarget): boolean {
+  if (target instanceof Resource) {
+    return target.resourceType === RESOURCE_ENERGY && target.amount > 0;
+  }
+
+  return target.store[RESOURCE_ENERGY] > 0;
+}
+
 export function extendCreep(): void {
   // Properties
   Creep.prototype.needsEnergy = function (): boolean {
@@ -96,6 +104,28 @@ export function extendCreep(): void {
         this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
       }
     }
+  };
+
+  Creep.prototype.clearEnergyTarget = function (): void {
+    delete this.memory.energyTargetId;
+  };
+
+  Creep.prototype.findEnergyRefillTarget = function (): EnergyRefillTarget | null {
+    if (this.memory.energyTargetId) {
+      const savedTarget = Game.getObjectById(this.memory.energyTargetId);
+      if (savedTarget && hasRefillEnergy(savedTarget)) {
+        return savedTarget;
+      }
+
+      this.clearEnergyTarget();
+    }
+
+    const target = this.findDroppedEnergy() ?? this.findWithdrawableEnergy();
+    if (target) {
+      this.memory.energyTargetId = target.id;
+    }
+
+    return target;
   };
 
   Creep.prototype.goUpgradeController = function (): void {

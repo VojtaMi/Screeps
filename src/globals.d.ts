@@ -2,10 +2,12 @@ import type { CreepRole } from "./types";
 
 declare global {
   type EnergyWithdrawTarget = StructureContainer | Ruin | Tombstone;
+  type EnergyRefillTarget = Resource<RESOURCE_ENERGY> | EnergyWithdrawTarget;
 
   interface CreepMemory {
     role: CreepRole;
     sourceId?: Id<Source>;
+    energyTargetId?: Id<EnergyRefillTarget>;
     working?: boolean;
   }
 
@@ -34,6 +36,8 @@ declare global {
     transferEnergyTo(target: Structure | AnyCreep | null): void;
     withdrawEnergyFrom(target: EnergyWithdrawTarget | null): void;
     pickUpEnergy(target: Resource<RESOURCE_ENERGY> | null): void;
+    clearEnergyTarget(): void;
+    findEnergyRefillTarget(): EnergyRefillTarget | null;
     goUpgradeController(): void;
     findRepairTarget(): StructureRoad | StructureContainer | StructureRampart | null;
     findAndRepair(): boolean;

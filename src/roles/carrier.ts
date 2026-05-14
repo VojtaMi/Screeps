@@ -7,6 +7,7 @@ export const carrier: Role = {
     }
     if (!creep.memory.working && creep.hasFullEnergy()) {
       creep.memory.working = true;
+      creep.clearEnergyTarget();
     }
 
     if (creep.memory.working) {
@@ -38,20 +39,20 @@ export const carrier: Role = {
       return;
     }
 
-    const droppedEnergy = creep.findDroppedEnergy();
-    if (droppedEnergy) {
-      creep.pickUpEnergy(droppedEnergy);
+    const energyTarget = creep.findEnergyRefillTarget();
+    if (energyTarget instanceof Resource) {
+      creep.pickUpEnergy(energyTarget);
       return;
     }
 
-    const energyStore = creep.findWithdrawableEnergy();
-    if (energyStore) {
-      creep.withdrawEnergyFrom(energyStore);
+    if (energyTarget) {
+      creep.withdrawEnergyFrom(energyTarget);
       return;
     }
 
     if (creep.hasEnergy()) {
       creep.memory.working = true;
+      creep.clearEnergyTarget();
     }
   },
 };
