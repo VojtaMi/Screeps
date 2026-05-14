@@ -51,7 +51,7 @@ export const carrier: Role = {
       if (hasBuilderWork(creep.room)) {
         const builder = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
           filter: target =>
-            target.memory.role === "builder" && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+            target.memory.role === "builder" && !target.hasEnergy(),
         });
         if (builder) {
           creep.transferEnergyTo(builder);
@@ -61,7 +61,7 @@ export const carrier: Role = {
 
       const upgrader = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
         filter: target =>
-          target.memory.role === "upgrader" && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+          target.memory.role === "upgrader" && !target.hasEnergy(),
       });
       if (upgrader) {
         creep.transferEnergyTo(upgrader);
