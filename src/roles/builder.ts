@@ -1,22 +1,8 @@
 import type { Role } from "../types";
+import { collectLocalEnergy } from "./localEnergy";
 
 interface BuilderRole extends Role {
   work(creep: Creep): void;
-}
-
-function collectEnergy(creep: Creep): boolean {
-  const energyTarget = creep.findEnergyRefillTarget();
-  if (energyTarget && "amount" in energyTarget) {
-    creep.pickUpEnergy(energyTarget);
-    return true;
-  }
-
-  if (energyTarget) {
-    creep.withdrawEnergyFrom(energyTarget);
-    return true;
-  }
-
-  return false;
 }
 
 export const builder: BuilderRole = {
@@ -34,11 +20,9 @@ export const builder: BuilderRole = {
       return;
     }
 
-    if (collectEnergy(creep)) {
+    if (collectLocalEnergy(creep)) {
       return;
     }
-
-    creep.goToSource();
   },
 
   work(creep: Creep): void {

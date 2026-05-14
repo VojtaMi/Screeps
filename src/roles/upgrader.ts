@@ -1,19 +1,5 @@
 import type { Role } from "../types";
-
-function collectEnergy(creep: Creep): boolean {
-  const energyTarget = creep.findEnergyRefillTarget();
-  if (energyTarget && "amount" in energyTarget) {
-    creep.pickUpEnergy(energyTarget);
-    return true;
-  }
-
-  if (energyTarget) {
-    creep.withdrawEnergyFrom(energyTarget);
-    return true;
-  }
-
-  return false;
-}
+import { collectLocalEnergy } from "./localEnergy";
 
 export const upgrader: Role = {
   run(creep: Creep): void {
@@ -30,10 +16,8 @@ export const upgrader: Role = {
       return;
     }
 
-    if (collectEnergy(creep)) {
+    if (collectLocalEnergy(creep)) {
       return;
     }
-
-    creep.goToSource();
   },
 };
