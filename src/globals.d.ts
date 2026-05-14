@@ -7,6 +7,17 @@ declare global {
     working?: boolean;
   }
 
+  interface RoomBuildPlanItem {
+    x: number;
+    y: number;
+    structureType: BuildableStructureConstant;
+    priority?: number;
+  }
+
+  interface RoomMemory {
+    buildPlan?: RoomBuildPlanItem[];
+  }
+
   interface Creep {
     needsEnergy(): boolean;
     hasFullEnergy(): boolean;
