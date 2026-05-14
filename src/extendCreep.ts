@@ -138,7 +138,7 @@ export function extendCreep(): void {
       this.clearEnergyTarget();
     }
 
-    const target = this.findDroppedEnergy() ?? this.findWithdrawableEnergy();
+    const target = this.findDecayingEnergy() ?? this.findEnergyContainer();
     if (target) {
       this.memory.energyTargetId = target.id;
     }
@@ -217,6 +217,23 @@ export function extendCreep(): void {
         resource.amount > 0 &&
         !isEnergyTargetReservedByOtherCreep(this, resource as Resource<RESOURCE_ENERGY>),
     });
+  };
+
+  Creep.prototype.findDecayingEnergy = function (): DecayingEnergyTarget | null {
+    const droppedEnergy = this.room.find(FIND_DROPPED_RESOURCES, {
+      filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+        resource.resourceType === RESOURCE_ENERGY &&
+        resource.amount > 0 &&
+        !isEnergyTargetReservedByOtherCreep(this, resource as Resource<RESOURCE_ENERGY>),
+    });
+    const ruins = this.room.find(FIND_RUINS, {
+      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
+    });
+    const tombstones = this.room.find(FIND_TOMBSTONES, {
+      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
+    });
+
+    return this.pos.findClosestByPath([...droppedEnergy, ...ruins, ...tombstones]);
   };
 
   Creep.prototype.findAdjacentSourceContainer = function (source: Source): StructureContainer | null {

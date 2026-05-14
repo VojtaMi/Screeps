@@ -1,8 +1,9 @@
 import type { CreepRole } from "./types";
 
 declare global {
+  type DecayingEnergyTarget = Resource<RESOURCE_ENERGY> | Ruin | Tombstone;
   type EnergyWithdrawTarget = StructureContainer | Ruin | Tombstone;
-  type EnergyRefillTarget = Resource<RESOURCE_ENERGY> | EnergyWithdrawTarget;
+  type EnergyRefillTarget = DecayingEnergyTarget | StructureContainer;
 
   interface CreepMemory {
     role: CreepRole;
@@ -44,6 +45,7 @@ declare global {
     findBuildTarget(): ConstructionSite | null;
     findAndBuild(): boolean;
     goToFlag(flagName: string, range?: number, pathStyle?: PolyStyle): void;
+    findDecayingEnergy(): DecayingEnergyTarget | null;
     findDroppedEnergy(): Resource<RESOURCE_ENERGY> | null;
     findAdjacentSourceContainer(source: Source): StructureContainer | null;
     findEnergyContainer(): StructureContainer | null;
