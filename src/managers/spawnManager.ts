@@ -4,6 +4,7 @@ const PIONEER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const MINIMUM_WORKER_BODY: BodyPartConstant[] = [WORK, CARRY, MOVE];
 const MINIMUM_CARRIER_BODY: BodyPartConstant[] = [CARRY, CARRY, MOVE];
 const MINIMUM_DEFENDER_BODY: BodyPartConstant[] = [TOUGH, ATTACK, MOVE, MOVE];
+const MAX_HARVESTER_WORK_PARTS = 5;
 
 interface SpawnRequest {
   role: CreepRole;
@@ -46,10 +47,16 @@ function buildBodyFromPattern(
 function buildHarvesterBody(energyCapacity: number): BodyPartConstant[] {
   const body: BodyPartConstant[] = [CARRY, MOVE];
   let remainingEnergy = energyCapacity - bodyCost(body);
+  let workParts = 0;
 
-  while (remainingEnergy >= BODYPART_COST[WORK] && body.length < MAX_CREEP_SIZE) {
+  while (
+    workParts < MAX_HARVESTER_WORK_PARTS &&
+    remainingEnergy >= BODYPART_COST[WORK] &&
+    body.length < MAX_CREEP_SIZE
+  ) {
     body.unshift(WORK);
     remainingEnergy -= BODYPART_COST[WORK];
+    workParts += 1;
   }
 
   return body;
