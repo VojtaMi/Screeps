@@ -33,7 +33,7 @@ export const carrier: Role = {
 
       const spawn = Game.spawns.Spawn1;
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
-        creep.moveTo(spawn, { visualizePathStyle: { stroke: "#ffffff" } });
+        creep.moveToAvoidingRoomEdges(spawn, { visualizePathStyle: { stroke: "#ffffff" } });
       }
       return;
     }

@@ -26,6 +26,10 @@ declare global {
     hasFullEnergy(): boolean;
     hasEnergy(): boolean;
     isAtFlag(flagName: string, range?: number): boolean;
+    moveToAvoidingRoomEdges(
+      target: Parameters<Creep["moveTo"]>[0],
+      opts?: Parameters<Creep["moveTo"]>[1]
+    ): ReturnType<Creep["moveTo"]>;
     goToSource(): void;
     transferEnergyTo(target: Structure | AnyCreep | null): void;
     withdrawEnergyFrom(target: EnergyWithdrawTarget | null): void;

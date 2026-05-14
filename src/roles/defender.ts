@@ -8,7 +8,7 @@ export const defender: Role = {
     }
 
     if (creep.attack(hostile) === ERR_NOT_IN_RANGE) {
-      creep.moveTo(hostile, { visualizePathStyle: { stroke: "#ff0000" } });
+      creep.moveToAvoidingRoomEdges(hostile, { visualizePathStyle: { stroke: "#ff0000" } });
     }
   },
 };

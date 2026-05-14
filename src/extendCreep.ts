@@ -1,3 +1,40 @@
+function getTargetPosition(target: Parameters<Creep["moveTo"]>[0]): RoomPosition {
+  return target instanceof RoomPosition ? target : target.pos;
+}
+
+function shouldAvoidRoomEdges(creep: Creep, target: Parameters<Creep["moveTo"]>[0]): boolean {
+  return getTargetPosition(target).roomName === creep.room.name;
+}
+
+function withRoomEdgeAvoidance(creep: Creep, target: Parameters<Creep["moveTo"]>[0], opts?: MoveToOpts): MoveToOpts {
+  if (!shouldAvoidRoomEdges(creep, target)) {
+    return opts ?? {};
+  }
+
+  const existingCostCallback = opts?.costCallback;
+
+  return {
+    ...opts,
+    maxRooms: 1,
+    costCallback(roomName, matrix) {
+      const costs = existingCostCallback?.(roomName, matrix) ?? matrix;
+
+      if (roomName !== creep.room.name) {
+        return costs;
+      }
+
+      for (let coord = 0; coord < 50; coord += 1) {
+        costs.set(coord, 0, 255);
+        costs.set(coord, 49, 255);
+        costs.set(0, coord, 255);
+        costs.set(49, coord, 255);
+      }
+
+      return costs;
+    },
+  };
+}
+
 export function extendCreep(): void {
   // Properties
   Creep.prototype.needsEnergy = function (): boolean {
@@ -10,6 +47,13 @@ export function extendCreep(): void {
 
   Creep.prototype.hasEnergy = function (): boolean {
     return this.store[RESOURCE_ENERGY] > 0;
+  };
+
+  Creep.prototype.moveToAvoidingRoomEdges = function (
+    target: Parameters<Creep["moveTo"]>[0],
+    opts?: Parameters<Creep["moveTo"]>[1]
+  ): ReturnType<Creep["moveTo"]> {
+    return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
 
   Creep.prototype.isAtFlag = function (flagName: string, range = 1): boolean {
@@ -25,7 +69,7 @@ export function extendCreep(): void {
     const source = this.pos.findClosestByPath(FIND_SOURCES);
     if (source) {
       if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-        this.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(source, { visualizePathStyle: { stroke: "#ffaa00" } });
       }
     }
   };
@@ -33,7 +77,7 @@ export function extendCreep(): void {
   Creep.prototype.transferEnergyTo = function (target: Structure | AnyCreep | null): void {
     if (target) {
       if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        this.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
+        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffffff" } });
       }
     }
   };
@@ -41,7 +85,7 @@ export function extendCreep(): void {
   Creep.prototype.withdrawEnergyFrom = function (target: EnergyWithdrawTarget | null): void {
     if (target) {
       if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
       }
     }
   };
@@ -49,7 +93,7 @@ export function extendCreep(): void {
   Creep.prototype.pickUpEnergy = function (target: Resource<RESOURCE_ENERGY> | null): void {
     if (target) {
       if (this.pickup(target) === ERR_NOT_IN_RANGE) {
-        this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
       }
     }
   };
@@ -61,7 +105,7 @@ export function extendCreep(): void {
     }
 
     if (this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-      this.moveTo(controller, { visualizePathStyle: { stroke: "#ffffff" } });
+      this.moveToAvoidingRoomEdges(controller, { visualizePathStyle: { stroke: "#ffffff" } });
     } else {
       this.upgradeController(controller);
     }
@@ -81,7 +125,7 @@ export function extendCreep(): void {
     const target = this.findRepairTarget();
     if (target) {
       if (this.repair(target) === ERR_NOT_IN_RANGE) {
-        this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
       }
       return true;
     }
@@ -96,7 +140,7 @@ export function extendCreep(): void {
     const target = this.findBuildTarget();
     if (target) {
       if (this.build(target) === ERR_NOT_IN_RANGE) {
-        this.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
+        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffffff" } });
       }
       return true;
     }
@@ -111,7 +155,7 @@ export function extendCreep(): void {
     const flag = Game.flags[flagName];
     if (flag) {
       if (!this.pos.inRangeTo(flag.pos, range)) {
-        this.moveTo(flag, { visualizePathStyle: pathStyle });
+        this.moveToAvoidingRoomEdges(flag, { visualizePathStyle: pathStyle });
       }
     } else {
       this.say(`No flag: ${flagName}`);
