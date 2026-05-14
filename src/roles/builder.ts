@@ -32,10 +32,10 @@ export const builder: BuilderRole = {
   },
 
   work(creep: Creep): void {
-    if (creep.findAndRepair()) {
+    if (creep.findAndBuild()) {
       return;
     }
-    if (creep.findAndBuild()) {
+    if (creep.findAndRepair()) {
       return;
     }
   },

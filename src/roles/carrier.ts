@@ -38,6 +38,16 @@ function findCarrierDeliveryTarget(creep: Creep): CarrierDeliveryTarget | null {
     }
   }
 
+  if (hasRepairerWork(creep.room)) {
+    const repairer = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
+      filter: target =>
+        target.memory.role === "repairer" && !target.hasEnergy(),
+    });
+    if (repairer) {
+      return repairer;
+    }
+  }
+
   const upgrader = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
     filter: target =>
       target.memory.role === "upgrader" && !target.hasEnergy(),
@@ -75,10 +85,10 @@ function deliverEnergy(creep: Creep, deliveryTarget: CarrierDeliveryTarget | nul
 }
 
 function hasBuilderWork(room: Room): boolean {
-  if (room.find(FIND_CONSTRUCTION_SITES).length > 0) {
-    return true;
-  }
+  return room.find(FIND_CONSTRUCTION_SITES).length > 0;
+}
 
+function hasRepairerWork(room: Room): boolean {
   return (
     room.find(FIND_STRUCTURES, {
       filter: (structure): structure is StructureRoad | StructureContainer | StructureRampart =>

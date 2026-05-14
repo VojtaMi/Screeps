@@ -7,6 +7,7 @@ import { carrier } from "./roles/carrier";
 import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
 import { pioneer } from "./roles/pioneer";
+import { repairer } from "./roles/repairer";
 import { upgrader } from "./roles/upgrader";
 import type { CreepRole, Role } from "./types";
 
@@ -19,6 +20,7 @@ const roles: Record<CreepRole, Role> = {
   defender,
   upgrader,
   builder,
+  repairer,
 };
 
 export function loop(): void {

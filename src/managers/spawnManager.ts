@@ -94,19 +94,18 @@ function buildPioneerBody(energyAvailable: number): BodyPartConstant[] {
   return energyAvailable >= bodyCost(PIONEER_BODY) ? PIONEER_BODY : MINIMUM_WORKER_BODY;
 }
 
-function hasRoomWork(room: Room): boolean {
-  const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-  if (constructionSites.length > 0) {
-    return true;
-  }
+function hasConstructionWork(room: Room): boolean {
+  return room.find(FIND_CONSTRUCTION_SITES).length > 0;
+}
 
+function hasCriticalRepairWork(room: Room): boolean {
   return (
     room.find(FIND_STRUCTURES, {
       filter: (structure): structure is StructureRoad | StructureContainer | StructureRampart =>
         (structure.structureType === STRUCTURE_ROAD ||
           structure.structureType === STRUCTURE_CONTAINER ||
           structure.structureType === STRUCTURE_RAMPART) &&
-        structure.hits < structure.hitsMax,
+        structure.hits < structure.hitsMax * 0.5,
     }).length > 0
   );
 }
@@ -153,6 +152,7 @@ export const spawnManager = {
     const harvesters = creeps.filter(creep => creep.memory.role === "harvester");
     const carriers = creeps.filter(creep => creep.memory.role === "carrier");
     const builders = creeps.filter(creep => creep.memory.role === "builder");
+    const repairers = creeps.filter(creep => creep.memory.role === "repairer");
     const upgraders = creeps.filter(creep => creep.memory.role === "upgrader");
     const defenders = creeps.filter(creep => creep.memory.role === "defender");
     const sources = room.find(FIND_SOURCES);
@@ -164,6 +164,7 @@ export const spawnManager = {
       harvesters,
       carriers,
       builders,
+      repairers,
       upgraders,
       defenders,
       sources,
@@ -190,12 +191,13 @@ export const spawnManager = {
     harvesters: Creep[];
     carriers: Creep[];
     builders: Creep[];
+    repairers: Creep[];
     upgraders: Creep[];
     defenders: Creep[];
     sources: Source[];
     hostiles: Creep[];
   }): SpawnRequest | null {
-    const { room, creeps, harvesters, carriers, builders, upgraders, defenders, sources, hostiles } = context;
+    const { room, creeps, harvesters, carriers, builders, repairers, upgraders, defenders, sources, hostiles } = context;
     const energyCapacity = room.energyCapacityAvailable;
 
     if (creeps.length === 0) {
@@ -220,8 +222,12 @@ export const spawnManager = {
       return { role: "carrier", body: buildCarrierBody(energyCapacity), memory: { working: false } };
     }
 
-    if (hasRoomWork(room) && builders.length === 0) {
+    if (hasConstructionWork(room) && builders.length === 0) {
       return { role: "builder", body: buildWorkerBody(energyCapacity) };
+    }
+
+    if (hasCriticalRepairWork(room) && repairers.length === 0) {
+      return { role: "repairer", body: buildWorkerBody(energyCapacity) };
     }
 
     if (harvesters.length >= sources.length && carriers.length > 0 && upgraders.length < 1) {
