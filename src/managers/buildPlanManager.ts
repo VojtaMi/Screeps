@@ -16,7 +16,7 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 31, y: 18, structureType: STRUCTURE_EXTENSION },
       { x: 39, y: 23, structureType: STRUCTURE_CONTAINER },
       { x: 29, y: 27, structureType: STRUCTURE_CONTAINER },
-      { x: 40, y: 12, structureType: STRUCTURE_CONTAINER },
+      { x: 38, y: 13, structureType: STRUCTURE_CONTAINER, purpose: "controllerDelivery" },
       { x: 34, y: 24, structureType: STRUCTURE_ROAD },
       { x: 34, y: 23, structureType: STRUCTURE_ROAD },
       { x: 35, y: 23, structureType: STRUCTURE_ROAD },
@@ -31,8 +31,21 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
 
 function getBuildPlanHash(plan: RoomBuildPlanItem[]): string {
   return plan
-    .map(item => `${item.priority ?? ""}:${item.structureType}:${item.x}:${item.y}`)
+    .map(item => `${item.priority ?? ""}:${item.purpose ?? ""}:${item.structureType}:${item.x}:${item.y}`)
     .join("|");
+}
+
+export function getControllerDeliveryBuildPlan(room: Room): RoomBuildPlanItem | null {
+  return room.memory.buildPlan?.find(item => item.purpose === "controllerDelivery") ?? null;
+}
+
+export function isControllerDeliveryContainer(structure: Structure): structure is StructureContainer {
+  if (structure.structureType !== STRUCTURE_CONTAINER) {
+    return false;
+  }
+
+  const plan = getControllerDeliveryBuildPlan(structure.room);
+  return !!plan && structure.pos.x === plan.x && structure.pos.y === plan.y;
 }
 
 function getBuildPlan(room: Room): BuildPlanItem[] {
@@ -102,6 +115,8 @@ export const buildPlanManager = {
   },
 
   manageRoomBuildPlan(room: Room): void {
+    syncDefaultBuildPlan(room);
+
     if (hasConstructionSite(room)) {
       return;
     }

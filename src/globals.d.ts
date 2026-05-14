@@ -19,6 +19,7 @@ declare global {
     y: number;
     structureType: BuildableStructureConstant;
     priority?: number;
+    purpose?: "controllerDelivery";
   }
 
   interface RoomMemory {
