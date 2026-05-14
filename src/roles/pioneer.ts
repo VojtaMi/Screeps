@@ -23,9 +23,9 @@ export const pioneer: Role = {
       return;
     }
 
-    const container = creep.findEnergyContainer();
-    if (container) {
-      creep.withdrawEnergyFrom(container);
+    const energyStore = creep.findWithdrawableEnergy();
+    if (energyStore) {
+      creep.withdrawEnergyFrom(energyStore);
       return;
     }
 

@@ -38,7 +38,7 @@ export function extendCreep(): void {
     }
   };
 
-  Creep.prototype.withdrawEnergyFrom = function (target: StructureContainer | null): void {
+  Creep.prototype.withdrawEnergyFrom = function (target: EnergyWithdrawTarget | null): void {
     if (target) {
       if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
         this.moveTo(target, { visualizePathStyle: { stroke: "#ffaa00" } });
@@ -138,6 +138,19 @@ export function extendCreep(): void {
       filter: (structure): structure is StructureContainer =>
         structure.structureType === STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0,
     });
+  };
+
+  Creep.prototype.findWithdrawableEnergy = function (): EnergyWithdrawTarget | null {
+    const container = this.findEnergyContainer();
+    const ruin = this.pos.findClosestByPath(FIND_RUINS, {
+      filter: target => target.store[RESOURCE_ENERGY] > 0,
+    });
+    const tombstone = this.pos.findClosestByPath(FIND_TOMBSTONES, {
+      filter: target => target.store[RESOURCE_ENERGY] > 0,
+    });
+
+    const targets = [container, ruin, tombstone].filter((target): target is EnergyWithdrawTarget => !!target);
+    return this.pos.findClosestByPath(targets);
   };
 
   Creep.prototype.findControllerContainer = function (): StructureContainer | null {
