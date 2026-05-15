@@ -1,10 +1,5 @@
+import { CREEP_BODY } from "../creepBodies";
 import { CREEP_ROLE, type CreepRole } from "../types";
-
-const PIONEER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
-const MINIMUM_WORKER_BODY: BodyPartConstant[] = [WORK, CARRY, MOVE];
-const MINIMUM_CARRIER_BODY: BodyPartConstant[] = [CARRY, CARRY, MOVE];
-const MINIMUM_DEFENDER_BODY: BodyPartConstant[] = [TOUGH, ATTACK, MOVE, MOVE];
-const MAX_HARVESTER_WORK_PARTS = 5;
 
 interface SpawnRequest {
   role: CreepRole;
@@ -20,6 +15,12 @@ interface SpawnContext {
   creepsByRole: CreepsByRole;
   sources: Source[];
   hostiles: Creep[];
+}
+
+interface BodyBuildOptions {
+  maxBody: BodyPartConstant[];
+  availableEnergy: number;
+  minimumSize?: number;
 }
 
 // Main spawning coordinator: gather room state, choose the next role, then spawn it.
@@ -70,26 +71,35 @@ export const spawnManager = {
     const upgraders = creepsByRole(CREEP_ROLE.UPGRADER);
     const defenders = creepsByRole(CREEP_ROLE.DEFENDER);
 
-    const energyCapacity = room.energyCapacityAvailable;
+    const availableEnergy = room.energyAvailable;
 
     if (creeps.length === 0) {
       return {
         role: CREEP_ROLE.PIONEER,
-        body: buildPioneerBody(room.energyAvailable),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.PIONEER,
+          availableEnergy,
+        }),
       };
     }
 
     if (hostiles.length > 0 && defenders.length === 0) {
       return {
         role: CREEP_ROLE.DEFENDER,
-        body: buildDefenderBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.DEFENDER,
+          availableEnergy,
+        }),
       };
     }
 
     if (harvesters.length > 0 && carriers.length === 0) {
       return {
         role: CREEP_ROLE.CARRIER,
-        body: buildCarrierBody(room.energyAvailable),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.CARRIER,
+          availableEnergy,
+        }),
         memory: { working: false },
       };
     }
@@ -98,7 +108,10 @@ export const spawnManager = {
     if (unclaimedSource) {
       return {
         role: CREEP_ROLE.HARVESTER,
-        body: buildHarvesterBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.HARVESTER,
+          availableEnergy,
+        }),
         memory: { sourceId: unclaimedSource.id },
       };
     }
@@ -108,7 +121,10 @@ export const spawnManager = {
     if (harvesters.length > 0 && carriers.length < desiredCarriers) {
       return {
         role: CREEP_ROLE.CARRIER,
-        body: buildCarrierBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.CARRIER,
+          availableEnergy,
+        }),
         memory: { working: false },
       };
     }
@@ -116,14 +132,20 @@ export const spawnManager = {
     if (hasConstructionWork(room) && builders.length === 0) {
       return {
         role: CREEP_ROLE.BUILDER,
-        body: buildWorkerBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.WORKER,
+          availableEnergy,
+        }),
       };
     }
 
     if (hasCriticalRepairWork(room) && repairers.length === 0) {
       return {
         role: CREEP_ROLE.REPAIRER,
-        body: buildWorkerBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.WORKER,
+          availableEnergy,
+        }),
       };
     }
 
@@ -134,7 +156,10 @@ export const spawnManager = {
     ) {
       return {
         role: CREEP_ROLE.UPGRADER,
-        body: buildWorkerBody(energyCapacity),
+        body: buildBodyFromMaxPattern({
+          maxBody: CREEP_BODY.WORKER,
+          availableEnergy,
+        }),
       };
     }
 
@@ -163,91 +188,31 @@ function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
 }
 
-function buildBodyFromPattern(
-  energyCapacity: number,
-  baseBody: BodyPartConstant[],
-  scalingPattern: BodyPartConstant[],
-): BodyPartConstant[] {
-  const body = [...baseBody];
-  let remainingEnergy = energyCapacity - bodyCost(body);
-  let nextPartIndex = 0;
+function buildBodyFromMaxPattern({
+  maxBody,
+  availableEnergy,
+  minimumSize = 3,
+}: BodyBuildOptions): BodyPartConstant[] {
+  const minimumBody = maxBody.slice(0, minimumSize);
+  if (availableEnergy < bodyCost(minimumBody)) {
+    return minimumBody;
+  }
 
-  while (body.length < MAX_CREEP_SIZE) {
-    const nextPart = scalingPattern[nextPartIndex % scalingPattern.length];
+  const body = [...minimumBody];
 
-    if (remainingEnergy < BODYPART_COST[nextPart]) {
+  for (const part of maxBody.slice(minimumBody.length)) {
+    const nextBody = [...body, part];
+    if (
+      nextBody.length > MAX_CREEP_SIZE ||
+      bodyCost(nextBody) > availableEnergy
+    ) {
       break;
     }
 
-    body.push(nextPart);
-    remainingEnergy -= BODYPART_COST[nextPart];
-    nextPartIndex += 1;
+    body.push(part);
   }
 
   return body;
-}
-
-function buildHarvesterBody(energyCapacity: number): BodyPartConstant[] {
-  const body: BodyPartConstant[] = [CARRY, MOVE];
-  let remainingEnergy = energyCapacity - bodyCost(body);
-  let workParts = 0;
-
-  while (
-    workParts < MAX_HARVESTER_WORK_PARTS &&
-    remainingEnergy >= BODYPART_COST[WORK] &&
-    body.length < MAX_CREEP_SIZE
-  ) {
-    body.unshift(WORK);
-    remainingEnergy -= BODYPART_COST[WORK];
-    workParts += 1;
-  }
-
-  return body;
-}
-
-function buildCarrierBody(energyCapacity: number): BodyPartConstant[] {
-  const body: BodyPartConstant[] = [];
-  let remainingEnergy = energyCapacity;
-
-  while (
-    remainingEnergy >= bodyCost(MINIMUM_CARRIER_BODY) &&
-    body.length <= MAX_CREEP_SIZE - 3
-  ) {
-    body.push(CARRY, CARRY, MOVE);
-    remainingEnergy -= bodyCost(MINIMUM_CARRIER_BODY);
-  }
-
-  return body.length > 0 ? body : MINIMUM_CARRIER_BODY;
-}
-
-function buildDefenderBody(energyCapacity: number): BodyPartConstant[] {
-  const body: BodyPartConstant[] = [];
-  let remainingEnergy = energyCapacity;
-
-  while (
-    remainingEnergy >= bodyCost(MINIMUM_DEFENDER_BODY) &&
-    body.length <= MAX_CREEP_SIZE - 4
-  ) {
-    body.push(TOUGH, ATTACK, MOVE, MOVE);
-    remainingEnergy -= bodyCost(MINIMUM_DEFENDER_BODY);
-  }
-
-  return body.length > 0 ? body : MINIMUM_DEFENDER_BODY;
-}
-
-function buildWorkerBody(energyCapacity: number): BodyPartConstant[] {
-  return buildBodyFromPattern(energyCapacity, MINIMUM_WORKER_BODY, [
-    WORK,
-    CARRY,
-    WORK,
-    MOVE,
-  ]);
-}
-
-function buildPioneerBody(energyAvailable: number): BodyPartConstant[] {
-  return energyAvailable >= bodyCost(PIONEER_BODY)
-    ? PIONEER_BODY
-    : MINIMUM_WORKER_BODY;
 }
 
 // Room state helpers keep the priority rules in getSpawnRequest readable.
