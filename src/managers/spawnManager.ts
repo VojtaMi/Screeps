@@ -12,6 +12,146 @@ interface SpawnRequest {
   memory?: Partial<CreepMemory>;
 }
 
+interface SpawnContext {
+  room: Room;
+  creeps: Creep[];
+  harvesters: Creep[];
+  carriers: Creep[];
+  builders: Creep[];
+  repairers: Creep[];
+  upgraders: Creep[];
+  defenders: Creep[];
+  sources: Source[];
+  hostiles: Creep[];
+}
+
+// Main spawning coordinator: gather room state, choose the next role, then spawn it.
+export const spawnManager = {
+  manageSpawning(): void {
+    const spawn = Game.spawns.Spawn1;
+    if (!spawn || spawn.spawning) {
+      return;
+    }
+
+    const room = spawn.room;
+    const creeps = Object.values(Game.creeps).filter(
+      (creep) => creep.room.name === room.name,
+    );
+    const harvesters = creeps.filter(
+      (creep) => creep.memory.role === "harvester",
+    );
+    const carriers = creeps.filter((creep) => creep.memory.role === "carrier");
+    const builders = creeps.filter((creep) => creep.memory.role === "builder");
+    const repairers = creeps.filter(
+      (creep) => creep.memory.role === "repairer",
+    );
+    const upgraders = creeps.filter(
+      (creep) => creep.memory.role === "upgrader",
+    );
+    const defenders = creeps.filter(
+      (creep) => creep.memory.role === "defender",
+    );
+    const sources = room.find(FIND_SOURCES);
+    const hostiles = room.find(FIND_HOSTILE_CREEPS);
+
+    const request = this.getSpawnRequest({
+      room,
+      creeps,
+      harvesters,
+      carriers,
+      builders,
+      repairers,
+      upgraders,
+      defenders,
+      sources,
+      hostiles,
+    });
+
+    if (!request || !canAfford(spawn, request.body)) {
+      return;
+    }
+
+    const newName = `${request.role}${Game.time}`;
+    const result = spawn.spawnCreep(request.body, newName, {
+      memory: { role: request.role, ...request.memory },
+    });
+
+    if (result === OK) {
+      console.log(`Spawning new ${request.role}: ${newName}`);
+    }
+  },
+
+  getSpawnRequest(context: SpawnContext): SpawnRequest | null {
+    const {
+      room,
+      creeps,
+      harvesters,
+      carriers,
+      builders,
+      repairers,
+      upgraders,
+      defenders,
+      sources,
+      hostiles,
+    } = context;
+    const energyCapacity = room.energyCapacityAvailable;
+
+    if (creeps.length === 0) {
+      return { role: "pioneer", body: buildPioneerBody(room.energyAvailable) };
+    }
+
+    if (hostiles.length > 0 && defenders.length === 0) {
+      return { role: "defender", body: buildDefenderBody(energyCapacity) };
+    }
+
+    if (harvesters.length > 0 && carriers.length === 0) {
+      return {
+        role: "carrier",
+        body: buildCarrierBody(room.energyAvailable),
+        memory: { working: false },
+      };
+    }
+
+    const missingSource = findMissingHarvesterSource(room, harvesters);
+    if (missingSource) {
+      return {
+        role: "harvester",
+        body: buildHarvesterBody(energyCapacity),
+        memory: { sourceId: missingSource.id },
+      };
+    }
+
+    const desiredCarriers =
+      sources.length > 1 || hasAvailableEnergyForCarriers(room) ? 2 : 1;
+    if (harvesters.length > 0 && carriers.length < desiredCarriers) {
+      return {
+        role: "carrier",
+        body: buildCarrierBody(energyCapacity),
+        memory: { working: false },
+      };
+    }
+
+    if (hasConstructionWork(room) && builders.length === 0) {
+      return { role: "builder", body: buildWorkerBody(energyCapacity) };
+    }
+
+    if (hasCriticalRepairWork(room) && repairers.length === 0) {
+      return { role: "repairer", body: buildWorkerBody(energyCapacity) };
+    }
+
+    if (
+      harvesters.length >= sources.length &&
+      carriers.length > 0 &&
+      upgraders.length < 1
+    ) {
+      return { role: "upgrader", body: buildWorkerBody(energyCapacity) };
+    }
+
+    return null;
+  },
+};
+
+// Body builders scale each role from the room's current or maximum energy budget.
 function bodyCost(body: BodyPartConstant[]): number {
   return body.reduce((total, part) => total + BODYPART_COST[part], 0);
 }
@@ -107,6 +247,7 @@ function buildPioneerBody(energyAvailable: number): BodyPartConstant[] {
     : MINIMUM_WORKER_BODY;
 }
 
+// Room state helpers keep the priority rules in getSpawnRequest readable.
 function hasConstructionWork(room: Room): boolean {
   return room.find(FIND_CONSTRUCTION_SITES).length > 0;
 }
@@ -161,139 +302,3 @@ function findMissingHarvesterSource(
 
   return null;
 }
-
-export const spawnManager = {
-  manageSpawning(): void {
-    const spawn = Game.spawns.Spawn1;
-    if (!spawn || spawn.spawning) {
-      return;
-    }
-
-    const room = spawn.room;
-    const creeps = Object.values(Game.creeps).filter(
-      (creep) => creep.room.name === room.name,
-    );
-    const harvesters = creeps.filter(
-      (creep) => creep.memory.role === "harvester",
-    );
-    const carriers = creeps.filter((creep) => creep.memory.role === "carrier");
-    const builders = creeps.filter((creep) => creep.memory.role === "builder");
-    const repairers = creeps.filter(
-      (creep) => creep.memory.role === "repairer",
-    );
-    const upgraders = creeps.filter(
-      (creep) => creep.memory.role === "upgrader",
-    );
-    const defenders = creeps.filter(
-      (creep) => creep.memory.role === "defender",
-    );
-    const sources = room.find(FIND_SOURCES);
-    const hostiles = room.find(FIND_HOSTILE_CREEPS);
-
-    const request = this.getSpawnRequest({
-      room,
-      creeps,
-      harvesters,
-      carriers,
-      builders,
-      repairers,
-      upgraders,
-      defenders,
-      sources,
-      hostiles,
-    });
-
-    if (!request || !canAfford(spawn, request.body)) {
-      return;
-    }
-
-    const newName = `${request.role}${Game.time}`;
-    const result = spawn.spawnCreep(request.body, newName, {
-      memory: { role: request.role, ...request.memory },
-    });
-
-    if (result === OK) {
-      console.log(`Spawning new ${request.role}: ${newName}`);
-    }
-  },
-
-  getSpawnRequest(context: {
-    room: Room;
-    creeps: Creep[];
-    harvesters: Creep[];
-    carriers: Creep[];
-    builders: Creep[];
-    repairers: Creep[];
-    upgraders: Creep[];
-    defenders: Creep[];
-    sources: Source[];
-    hostiles: Creep[];
-  }): SpawnRequest | null {
-    const {
-      room,
-      creeps,
-      harvesters,
-      carriers,
-      builders,
-      repairers,
-      upgraders,
-      defenders,
-      sources,
-      hostiles,
-    } = context;
-    const energyCapacity = room.energyCapacityAvailable;
-
-    if (creeps.length === 0) {
-      return { role: "pioneer", body: buildPioneerBody(room.energyAvailable) };
-    }
-
-    if (hostiles.length > 0 && defenders.length === 0) {
-      return { role: "defender", body: buildDefenderBody(energyCapacity) };
-    }
-
-    if (harvesters.length > 0 && carriers.length === 0) {
-      return {
-        role: "carrier",
-        body: buildCarrierBody(room.energyAvailable),
-        memory: { working: false },
-      };
-    }
-
-    const missingSource = findMissingHarvesterSource(room, harvesters);
-    if (missingSource) {
-      return {
-        role: "harvester",
-        body: buildHarvesterBody(energyCapacity),
-        memory: { sourceId: missingSource.id },
-      };
-    }
-
-    const desiredCarriers =
-      sources.length > 1 || hasAvailableEnergyForCarriers(room) ? 2 : 1;
-    if (harvesters.length > 0 && carriers.length < desiredCarriers) {
-      return {
-        role: "carrier",
-        body: buildCarrierBody(energyCapacity),
-        memory: { working: false },
-      };
-    }
-
-    if (hasConstructionWork(room) && builders.length === 0) {
-      return { role: "builder", body: buildWorkerBody(energyCapacity) };
-    }
-
-    if (hasCriticalRepairWork(room) && repairers.length === 0) {
-      return { role: "repairer", body: buildWorkerBody(energyCapacity) };
-    }
-
-    if (
-      harvesters.length >= sources.length &&
-      carriers.length > 0 &&
-      upgraders.length < 1
-    ) {
-      return { role: "upgrader", body: buildWorkerBody(energyCapacity) };
-    }
-
-    return null;
-  },
-};
