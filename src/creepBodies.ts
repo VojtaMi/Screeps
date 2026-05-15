@@ -1,18 +1,22 @@
 export const CREEP_BODY = {
   PIONEER: [WORK, CARRY, MOVE, CARRY, MOVE],
-  HARVESTER: [WORK, CARRY, MOVE, WORK, WORK, WORK, WORK],
+  HARVESTER: [WORK, CARRY, MOVE, WORK, WORK, MOVE, WORK, WORK, MOVE],
   CARRIER: [
     MOVE,
     CARRY,
+    MOVE,
     CARRY,
     MOVE,
     CARRY,
+    MOVE,
     CARRY,
     MOVE,
     CARRY,
+    MOVE,
     CARRY,
     MOVE,
     CARRY,
+    MOVE,
     CARRY,
   ],
   DEFENDER: [
