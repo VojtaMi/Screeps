@@ -30,6 +30,17 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 32, y: 27, structureType: STRUCTURE_ROAD },
       { x: 31, y: 27, structureType: STRUCTURE_ROAD },
       { x: 30, y: 27, structureType: STRUCTURE_ROAD },
+      { x: 33, y: 22, structureType: STRUCTURE_ROAD },
+      { x: 36, y: 22, structureType: STRUCTURE_ROAD },
+      { x: 34, y: 21, structureType: STRUCTURE_ROAD },
+      { x: 35, y: 21, structureType: STRUCTURE_ROAD },
+
+      { x: 27, y: 20, structureType: STRUCTURE_EXTENSION },
+      { x: 26, y: 21, structureType: STRUCTURE_EXTENSION },
+      { x: 25, y: 22, structureType: STRUCTURE_EXTENSION },
+      { x: 25, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 26, y: 23, structureType: STRUCTURE_EXTENSION },
+      
     ],
   },
 };
