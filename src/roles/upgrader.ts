@@ -1,29 +1,12 @@
 import type { Role } from "../types";
-import { collectLocalEnergy } from "./localEnergy";
+import { runWorkRefuelLoop } from "./support/workRefuelLoop";
+
+function upgradeController(creep: Creep): void {
+  creep.goUpgradeController();
+}
 
 export const upgrader: Role = {
   run(creep: Creep): void {
-    if (creep.memory.working && !creep.hasEnergy()) {
-      creep.memory.working = false;
-    }
-    if (!creep.memory.working && creep.hasFullEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-    }
-
-    if (creep.memory.working) {
-      creep.goUpgradeController();
-      return;
-    }
-
-    if (collectLocalEnergy(creep)) {
-      return;
-    }
-
-    if (creep.hasEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-      creep.goUpgradeController();
-    }
+    runWorkRefuelLoop(creep, upgradeController);
   },
 };

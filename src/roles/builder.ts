@@ -1,42 +1,17 @@
 import type { Role } from "../types";
-import { collectLocalEnergy } from "./localEnergy";
+import { runWorkRefuelLoop } from "./support/workRefuelLoop";
 
-interface BuilderRole extends Role {
-  work(creep: Creep): void;
+function build(creep: Creep): void {
+  if (creep.findAndBuild()) {
+    return;
+  }
+  if (creep.findAndRepair()) {
+    return;
+  }
 }
 
-export const builder: BuilderRole = {
+export const builder: Role = {
   run(creep: Creep): void {
-    if (creep.memory.working && !creep.hasEnergy()) {
-      creep.memory.working = false;
-    }
-    if (!creep.memory.working && creep.hasFullEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-    }
-
-    if (creep.memory.working) {
-      this.work(creep);
-      return;
-    }
-
-    if (collectLocalEnergy(creep)) {
-      return;
-    }
-
-    if (creep.hasEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-      this.work(creep);
-    }
-  },
-
-  work(creep: Creep): void {
-    if (creep.findAndBuild()) {
-      return;
-    }
-    if (creep.findAndRepair()) {
-      return;
-    }
+    runWorkRefuelLoop(creep, build);
   },
 };

@@ -1,5 +1,5 @@
 import type { Role } from "../types";
-import { collectLocalEnergy } from "./localEnergy";
+import { runWorkRefuelLoop } from "./support/workRefuelLoop";
 
 type RepairTarget = StructureRoad | StructureContainer | StructureRampart;
 
@@ -47,27 +47,6 @@ function repairMostDamagedTarget(creep: Creep): boolean {
 
 export const repairer: Role = {
   run(creep: Creep): void {
-    if (creep.memory.working && !creep.hasEnergy()) {
-      creep.memory.working = false;
-    }
-    if (!creep.memory.working && creep.hasFullEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-    }
-
-    if (creep.memory.working) {
-      repairMostDamagedTarget(creep);
-      return;
-    }
-
-    if (collectLocalEnergy(creep)) {
-      return;
-    }
-
-    if (creep.hasEnergy()) {
-      creep.memory.working = true;
-      creep.clearEnergyTarget();
-      repairMostDamagedTarget(creep);
-    }
+    runWorkRefuelLoop(creep, repairMostDamagedTarget);
   },
 };

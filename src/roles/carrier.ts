@@ -3,7 +3,7 @@ import {
   isControllerDeliveryContainer,
 } from "../managers/buildPlanManager";
 import { CREEP_ROLE, type Role } from "../types";
-import { LOCAL_ENERGY_RANGE } from "./localEnergy";
+import { LOCAL_ENERGY_RANGE } from "./support/localEnergy";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 const WORKER_REFUEL_ROLES = new Set<string>([
