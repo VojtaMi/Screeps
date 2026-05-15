@@ -12,15 +12,12 @@ interface SpawnRequest {
   memory?: Partial<CreepMemory>;
 }
 
+type CreepsByRole = (role: CreepRole) => Creep[];
+
 interface SpawnContext {
   room: Room;
   creeps: Creep[];
-  harvesters: Creep[];
-  carriers: Creep[];
-  builders: Creep[];
-  repairers: Creep[];
-  upgraders: Creep[];
-  defenders: Creep[];
+  creepsByRole: CreepsByRole;
   sources: Source[];
   hostiles: Creep[];
 }
@@ -37,32 +34,14 @@ export const spawnManager = {
     const creeps = Object.values(Game.creeps).filter(
       (creep) => creep.room.name === room.name,
     );
-    const harvesters = creeps.filter(
-      (creep) => creep.memory.role === "harvester",
-    );
-    const carriers = creeps.filter((creep) => creep.memory.role === "carrier");
-    const builders = creeps.filter((creep) => creep.memory.role === "builder");
-    const repairers = creeps.filter(
-      (creep) => creep.memory.role === "repairer",
-    );
-    const upgraders = creeps.filter(
-      (creep) => creep.memory.role === "upgrader",
-    );
-    const defenders = creeps.filter(
-      (creep) => creep.memory.role === "defender",
-    );
+    const creepsByRole = groupCreepsByRole(creeps);
     const sources = room.find(FIND_SOURCES);
     const hostiles = room.find(FIND_HOSTILE_CREEPS);
 
     const request = this.getSpawnRequest({
       room,
       creeps,
-      harvesters,
-      carriers,
-      builders,
-      repairers,
-      upgraders,
-      defenders,
+      creepsByRole,
       sources,
       hostiles,
     });
@@ -82,18 +61,13 @@ export const spawnManager = {
   },
 
   getSpawnRequest(context: SpawnContext): SpawnRequest | null {
-    const {
-      room,
-      creeps,
-      harvesters,
-      carriers,
-      builders,
-      repairers,
-      upgraders,
-      defenders,
-      sources,
-      hostiles,
-    } = context;
+    const { room, creeps, creepsByRole, sources, hostiles } = context;
+    const harvesters = creepsByRole("harvester");
+    const carriers = creepsByRole("carrier");
+    const builders = creepsByRole("builder");
+    const repairers = creepsByRole("repairer");
+    const upgraders = creepsByRole("upgrader");
+    const defenders = creepsByRole("defender");
     const energyCapacity = room.energyCapacityAvailable;
 
     if (creeps.length === 0) {
@@ -150,6 +124,18 @@ export const spawnManager = {
     return null;
   },
 };
+
+function groupCreepsByRole(creeps: Creep[]): CreepsByRole {
+  const creepsByRole = new Map<CreepRole, Creep[]>();
+
+  for (const creep of creeps) {
+    const group = creepsByRole.get(creep.memory.role) ?? [];
+    group.push(creep);
+    creepsByRole.set(creep.memory.role, group);
+  }
+
+  return (role) => creepsByRole.get(role) ?? [];
+}
 
 // Body builders scale each role from the room's current or maximum energy budget.
 function bodyCost(body: BodyPartConstant[]): number {
