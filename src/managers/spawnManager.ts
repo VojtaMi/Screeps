@@ -62,12 +62,14 @@ export const spawnManager = {
 
   getSpawnRequest(context: SpawnContext): SpawnRequest | null {
     const { room, creeps, creepsByRole, sources, hostiles } = context;
+
     const harvesters = creepsByRole(CREEP_ROLE.HARVESTER);
     const carriers = creepsByRole(CREEP_ROLE.CARRIER);
     const builders = creepsByRole(CREEP_ROLE.BUILDER);
     const repairers = creepsByRole(CREEP_ROLE.REPAIRER);
     const upgraders = creepsByRole(CREEP_ROLE.UPGRADER);
     const defenders = creepsByRole(CREEP_ROLE.DEFENDER);
+
     const energyCapacity = room.energyCapacityAvailable;
 
     if (creeps.length === 0) {
@@ -92,12 +94,12 @@ export const spawnManager = {
       };
     }
 
-    const missingSource = findMissingHarvesterSource(room, harvesters);
-    if (missingSource) {
+    const unclaimedSource = findUnclaimedHarvesterSource(room, harvesters);
+    if (unclaimedSource) {
       return {
         role: CREEP_ROLE.HARVESTER,
         body: buildHarvesterBody(energyCapacity),
-        memory: { sourceId: missingSource.id },
+        memory: { sourceId: unclaimedSource.id },
       };
     }
 
@@ -286,7 +288,7 @@ function hasAvailableEnergyForCarriers(room: Room): boolean {
   );
 }
 
-function findMissingHarvesterSource(
+function findUnclaimedHarvesterSource(
   room: Room,
   harvesters: Creep[],
 ): Source | null {
