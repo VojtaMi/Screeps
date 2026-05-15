@@ -3,8 +3,14 @@ import {
   isControllerDeliveryContainer,
 } from "../managers/buildPlanManager";
 import { CREEP_ROLE, type Role } from "../types";
+import { LOCAL_ENERGY_RANGE } from "./localEnergy";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
+const WORKER_REFUEL_ROLES = new Set<string>([
+  CREEP_ROLE.BUILDER,
+  CREEP_ROLE.REPAIRER,
+  CREEP_ROLE.UPGRADER,
+]);
 
 function getEnergyRatio(creep: Creep): number {
   return (
@@ -43,6 +49,26 @@ function hasRefillEnergy(target: EnergyRefillTarget): boolean {
   return getRefillEnergyAmount(target) > 0;
 }
 
+function isWorkerRefuelCreep(target: EnergyDeliveryTarget): target is Creep {
+  return target instanceof Creep && WORKER_REFUEL_ROLES.has(target.memory.role);
+}
+
+function hasNearbyWorker(resource: Resource<RESOURCE_ENERGY>): boolean {
+  return (
+    resource.pos.findInRange(FIND_MY_CREEPS, LOCAL_ENERGY_RANGE, {
+      filter: (creep) => WORKER_REFUEL_ROLES.has(creep.memory.role),
+    }).length > 0
+  );
+}
+
+function isDroppedEnergyReservedForWorker(target: EnergyRefillTarget): boolean {
+  return (
+    "amount" in target &&
+    target.resourceType === RESOURCE_ENERGY &&
+    hasNearbyWorker(target)
+  );
+}
+
 function getReservedRefillCapacity(
   creep: Creep,
   target: EnergyRefillTarget,
@@ -75,6 +101,7 @@ function isCarrierRefillTarget(
 ): boolean {
   return (
     hasRefillEnergy(target) &&
+    !isDroppedEnergyReservedForWorker(target) &&
     !isRefillTargetReservedByOtherCreep(creep, target) &&
     (!("structureType" in target) || !isControllerDeliveryContainer(target))
   );
@@ -99,6 +126,27 @@ function findCarrierEnergyContainer(creep: Creep): StructureContainer | null {
   });
 }
 
+function findCarrierDecayingEnergy(creep: Creep): DecayingEnergyTarget | null {
+  const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
+    filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+      resource.resourceType === RESOURCE_ENERGY &&
+      resource.amount > 0 &&
+      isCarrierRefillTarget(creep, resource as Resource<RESOURCE_ENERGY>),
+  });
+  const ruins = creep.room.find(FIND_RUINS, {
+    filter: (target) => isCarrierRefillTarget(creep, target),
+  });
+  const tombstones = creep.room.find(FIND_TOMBSTONES, {
+    filter: (target) => isCarrierRefillTarget(creep, target),
+  });
+
+  return creep.pos.findClosestByPath([
+    ...droppedEnergy,
+    ...ruins,
+    ...tombstones,
+  ]);
+}
+
 function findCarrierEnergyRefillTarget(
   creep: Creep,
 ): EnergyRefillTarget | null {
@@ -113,7 +161,7 @@ function findCarrierEnergyRefillTarget(
 
   return rememberRefillTarget(
     creep,
-    creep.findDecayingEnergy() ?? findCarrierEnergyContainer(creep),
+    findCarrierDecayingEnergy(creep) ?? findCarrierEnergyContainer(creep),
   );
 }
 
@@ -289,6 +337,25 @@ function shouldDeliverPartialEnergy(
   );
 }
 
+function hasNearbyEnergyContainer(creep: Creep): boolean {
+  return (
+    creep.pos.findInRange(FIND_STRUCTURES, LOCAL_ENERGY_RANGE, {
+      filter: (structure): structure is StructureContainer =>
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store[RESOURCE_ENERGY] > 0,
+    }).length > 0
+  );
+}
+
+function dropLeftoverEnergyForWorker(
+  carrierCreep: Creep,
+  workerCreep: Creep,
+): void {
+  if (carrierCreep.hasEnergy() && !hasNearbyEnergyContainer(workerCreep)) {
+    carrierCreep.drop(RESOURCE_ENERGY);
+  }
+}
+
 function deliverEnergy(
   creep: Creep,
   deliveryTarget: EnergyDeliveryTarget | null = findCarrierDeliveryTarget(
@@ -300,8 +367,28 @@ function deliverEnergy(
     return false;
   }
 
-  creep.transferEnergyTo(deliveryTarget);
-  return true;
+  const amount = Math.min(
+    creep.store[RESOURCE_ENERGY],
+    deliveryTarget.store.getFreeCapacity(RESOURCE_ENERGY),
+  );
+  const result = creep.transfer(deliveryTarget, RESOURCE_ENERGY, amount);
+
+  if (result === ERR_NOT_IN_RANGE) {
+    creep.moveToAvoidingRoomEdges(deliveryTarget, {
+      visualizePathStyle: { stroke: "#ffffff" },
+    });
+    return true;
+  }
+
+  if (result === OK) {
+    if (isWorkerRefuelCreep(deliveryTarget)) {
+      dropLeftoverEnergyForWorker(creep, deliveryTarget);
+    }
+    return true;
+  }
+
+  clearDeliveryTarget(creep);
+  return false;
 }
 
 function hasBuilderWork(room: Room): boolean {
