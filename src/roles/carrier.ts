@@ -2,15 +2,20 @@ import {
   getControllerDeliveryBuildPlan,
   isControllerDeliveryContainer,
 } from "../managers/buildPlanManager";
-import { CREEP_ROLE, type Role } from "../types";
+import { CREEP_ROLE, type CreepRole, type Role } from "../types";
 import { LOCAL_ENERGY_RANGE } from "./support/localEnergy";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
-const WORKER_REFUEL_ROLES = new Set<string>([
+const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.BUILDER,
   CREEP_ROLE.REPAIRER,
   CREEP_ROLE.UPGRADER,
 ]);
+const WORKER_REFUEL_ROLE_PENALTY: Partial<Record<CreepRole, number>> = {
+  [CREEP_ROLE.BUILDER]: 0,
+  [CREEP_ROLE.REPAIRER]: 4,
+  [CREEP_ROLE.UPGRADER]: 8,
+};
 
 function getEnergyRatio(creep: Creep): number {
   return (
@@ -267,6 +272,47 @@ function findControllerDeliveryContainer(
   );
 }
 
+function canRefuelWorkerRole(room: Room, role: CreepRole): boolean {
+  if (role === CREEP_ROLE.BUILDER) {
+    return hasBuilderWork(room);
+  }
+
+  if (role === CREEP_ROLE.REPAIRER) {
+    return hasRepairerWork(room);
+  }
+
+  return role === CREEP_ROLE.UPGRADER;
+}
+
+function getWorkerRefuelScore(carrier: Creep, worker: Creep): number {
+  return (
+    carrier.pos.getRangeTo(worker) +
+    (WORKER_REFUEL_ROLE_PENALTY[worker.memory.role] ?? 0)
+  );
+}
+
+function findWorkerDeliveryTarget(creep: Creep): Creep | null {
+  const workers = creep.room.find(FIND_MY_CREEPS, {
+    filter: (target) =>
+      WORKER_REFUEL_ROLES.has(target.memory.role) &&
+      canRefuelWorkerRole(creep.room, target.memory.role) &&
+      !target.hasEnergy() &&
+      isDeliveryTargetAvailable(creep, target),
+  });
+
+  return workers.reduce<Creep | null>((bestWorker, worker) => {
+    if (
+      !bestWorker ||
+      getWorkerRefuelScore(creep, worker) <
+        getWorkerRefuelScore(creep, bestWorker)
+    ) {
+      return worker;
+    }
+
+    return bestWorker;
+  }, null);
+}
+
 function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   const savedTarget = findSavedDeliveryTarget(creep);
   if (savedTarget) {
@@ -278,38 +324,9 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
     return rememberDeliveryTarget(creep, refuelTarget);
   }
 
-  if (hasBuilderWork(creep.room)) {
-    const builder = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
-      filter: (target) =>
-        target.memory.role === CREEP_ROLE.BUILDER &&
-        !target.hasEnergy() &&
-        isDeliveryTargetAvailable(creep, target),
-    });
-    if (builder) {
-      return rememberDeliveryTarget(creep, builder);
-    }
-  }
-
-  if (hasRepairerWork(creep.room)) {
-    const repairer = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
-      filter: (target) =>
-        target.memory.role === CREEP_ROLE.REPAIRER &&
-        !target.hasEnergy() &&
-        isDeliveryTargetAvailable(creep, target),
-    });
-    if (repairer) {
-      return rememberDeliveryTarget(creep, repairer);
-    }
-  }
-
-  const upgrader = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
-    filter: (target) =>
-      target.memory.role === CREEP_ROLE.UPGRADER &&
-      !target.hasEnergy() &&
-      isDeliveryTargetAvailable(creep, target),
-  });
-  if (upgrader) {
-    return rememberDeliveryTarget(creep, upgrader);
+  const worker = findWorkerDeliveryTarget(creep);
+  if (worker) {
+    return rememberDeliveryTarget(creep, worker);
   }
 
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
