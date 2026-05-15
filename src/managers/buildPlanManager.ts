@@ -16,7 +16,12 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 31, y: 18, structureType: STRUCTURE_EXTENSION },
       { x: 39, y: 23, structureType: STRUCTURE_CONTAINER },
       { x: 29, y: 27, structureType: STRUCTURE_CONTAINER },
-      { x: 38, y: 13, structureType: STRUCTURE_CONTAINER, purpose: "controllerDelivery" },
+      {
+        x: 38,
+        y: 13,
+        structureType: STRUCTURE_CONTAINER,
+        purpose: "controllerDelivery",
+      },
       { x: 34, y: 24, structureType: STRUCTURE_ROAD },
       { x: 34, y: 23, structureType: STRUCTURE_ROAD },
       { x: 35, y: 23, structureType: STRUCTURE_ROAD },
@@ -31,15 +36,26 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
 
 function getBuildPlanHash(plan: RoomBuildPlanItem[]): string {
   return plan
-    .map(item => `${item.priority ?? ""}:${item.purpose ?? ""}:${item.structureType}:${item.x}:${item.y}`)
+    .map(
+      (item) =>
+        `${item.priority ?? ""}:${item.purpose ?? ""}:${item.structureType}:${item.x}:${item.y}`,
+    )
     .join("|");
 }
 
-export function getControllerDeliveryBuildPlan(room: Room): RoomBuildPlanItem | null {
-  return room.memory.buildPlan?.find(item => item.purpose === "controllerDelivery") ?? null;
+export function getControllerDeliveryBuildPlan(
+  room: Room,
+): RoomBuildPlanItem | null {
+  return (
+    room.memory.buildPlan?.find(
+      (item) => item.purpose === "controllerDelivery",
+    ) ?? null
+  );
 }
 
-export function isControllerDeliveryContainer(structure: Structure): structure is StructureContainer {
+export function isControllerDeliveryContainer(
+  structure: Structure,
+): structure is StructureContainer {
   if (structure.structureType !== STRUCTURE_CONTAINER) {
     return false;
   }
@@ -79,32 +95,48 @@ function hasConstructionSite(room: Room): boolean {
 function isBuilt(room: Room, plan: RoomBuildPlanItem): boolean {
   const structures = room.lookForAt(LOOK_STRUCTURES, plan.x, plan.y);
 
-  return structures.some(structure => structure.structureType === plan.structureType);
+  return structures.some(
+    (structure) => structure.structureType === plan.structureType,
+  );
 }
 
 function hasConstructionSiteAt(room: Room, plan: RoomBuildPlanItem): boolean {
   const sites = room.lookForAt(LOOK_CONSTRUCTION_SITES, plan.x, plan.y);
 
-  return sites.some(site => site.structureType === plan.structureType);
+  return sites.some((site) => site.structureType === plan.structureType);
 }
 
-function countStructures(room: Room, structureType: BuildableStructureConstant): number {
+function countStructures(
+  room: Room,
+  structureType: BuildableStructureConstant,
+): number {
   return room.find(FIND_STRUCTURES, {
-    filter: structure => structure.structureType === structureType,
+    filter: (structure) => structure.structureType === structureType,
   }).length;
 }
 
-function countConstructionSites(room: Room, structureType: BuildableStructureConstant): number {
+function countConstructionSites(
+  room: Room,
+  structureType: BuildableStructureConstant,
+): number {
   return room.find(FIND_CONSTRUCTION_SITES, {
-    filter: site => site.structureType === structureType,
+    filter: (site) => site.structureType === structureType,
   }).length;
 }
 
-function canBuildAtCurrentControllerLevel(room: Room, plan: RoomBuildPlanItem): boolean {
+function canBuildAtCurrentControllerLevel(
+  room: Room,
+  plan: RoomBuildPlanItem,
+): boolean {
   const controllerLevel = room.controller?.level ?? 0;
-  const allowed = CONTROLLER_STRUCTURES[plan.structureType][controllerLevel] ?? 0;
+  const allowed =
+    CONTROLLER_STRUCTURES[plan.structureType][controllerLevel] ?? 0;
 
-  return countStructures(room, plan.structureType) + countConstructionSites(room, plan.structureType) < allowed;
+  return (
+    countStructures(room, plan.structureType) +
+      countConstructionSites(room, plan.structureType) <
+    allowed
+  );
 }
 
 export const buildPlanManager = {
@@ -126,27 +158,33 @@ export const buildPlanManager = {
       return;
     }
 
-    const result = room.createConstructionSite(nextPlan.x, nextPlan.y, nextPlan.structureType);
+    const result = room.createConstructionSite(
+      nextPlan.x,
+      nextPlan.y,
+      nextPlan.structureType,
+    );
     if (result === OK) {
       console.log(
-        `Build plan placed ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}`
+        `Build plan placed ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}`,
       );
     } else {
       console.log(
-        `Build plan failed for ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}: ${result}`
+        `Build plan failed for ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}: ${result}`,
       );
     }
   },
 
   getNextBuildPlan(room: Room): RoomBuildPlanItem | null {
-    const buildPlan = getBuildPlan(room).sort((a, b) => a.priority - b.priority);
+    const buildPlan = getBuildPlan(room).sort(
+      (a, b) => a.priority - b.priority,
+    );
 
     return (
       buildPlan.find(
-        plan =>
+        (plan) =>
           !isBuilt(room, plan) &&
           !hasConstructionSiteAt(room, plan) &&
-          canBuildAtCurrentControllerLevel(room, plan)
+          canBuildAtCurrentControllerLevel(room, plan),
       ) ?? null
     );
   },

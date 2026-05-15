@@ -1,12 +1,21 @@
-function getTargetPosition(target: Parameters<Creep["moveTo"]>[0]): RoomPosition {
+function getTargetPosition(
+  target: Parameters<Creep["moveTo"]>[0],
+): RoomPosition {
   return target instanceof RoomPosition ? target : target.pos;
 }
 
-function shouldAvoidRoomEdges(creep: Creep, target: Parameters<Creep["moveTo"]>[0]): boolean {
+function shouldAvoidRoomEdges(
+  creep: Creep,
+  target: Parameters<Creep["moveTo"]>[0],
+): boolean {
   return getTargetPosition(target).roomName === creep.room.name;
 }
 
-function withRoomEdgeAvoidance(creep: Creep, target: Parameters<Creep["moveTo"]>[0], opts?: MoveToOpts): MoveToOpts {
+function withRoomEdgeAvoidance(
+  creep: Creep,
+  target: Parameters<Creep["moveTo"]>[0],
+  opts?: MoveToOpts,
+): MoveToOpts {
   if (!shouldAvoidRoomEdges(creep, target)) {
     return opts ?? {};
   }
@@ -35,7 +44,9 @@ function withRoomEdgeAvoidance(creep: Creep, target: Parameters<Creep["moveTo"]>
   };
 }
 
-function isDroppedEnergy(target: EnergyRefillTarget): target is Resource<RESOURCE_ENERGY> {
+function isDroppedEnergy(
+  target: EnergyRefillTarget,
+): target is Resource<RESOURCE_ENERGY> {
   return "amount" in target;
 }
 
@@ -51,14 +62,41 @@ function hasRefillEnergy(target: EnergyRefillTarget): boolean {
   return getRefillEnergyAmount(target) > 0;
 }
 
-function getReservedEnergyCapacity(creep: Creep, target: EnergyRefillTarget): number {
+function getReservedEnergyCapacity(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): number {
   return Object.values(Game.creeps)
-    .filter(otherCreep => otherCreep.name !== creep.name && otherCreep.memory.energyTargetId === target.id)
-    .reduce((total, otherCreep) => total + otherCreep.store.getFreeCapacity(RESOURCE_ENERGY), 0);
+    .filter(
+      (otherCreep) =>
+        otherCreep.name !== creep.name &&
+        otherCreep.memory.energyTargetId === target.id,
+    )
+    .reduce(
+      (total, otherCreep) =>
+        total + otherCreep.store.getFreeCapacity(RESOURCE_ENERGY),
+      0,
+    );
 }
 
-function isEnergyTargetReservedByOtherCreep(creep: Creep, target: EnergyRefillTarget): boolean {
-  return getReservedEnergyCapacity(creep, target) >= getRefillEnergyAmount(target);
+function isEnergyTargetReservedByOtherCreep(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): boolean {
+  return (
+    getReservedEnergyCapacity(creep, target) >= getRefillEnergyAmount(target)
+  );
+}
+
+function findAdjacentSourceContainer(
+  source: Source,
+): StructureContainer | null {
+  const containers = source.pos.findInRange(FIND_STRUCTURES, 1, {
+    filter: (structure): structure is StructureContainer =>
+      structure.structureType === STRUCTURE_CONTAINER,
+  });
+
+  return containers[0] ?? null;
 }
 
 export function extendCreep(): void {
@@ -77,7 +115,7 @@ export function extendCreep(): void {
 
   Creep.prototype.moveToAvoidingRoomEdges = function (
     target: Parameters<Creep["moveTo"]>[0],
-    opts?: Parameters<Creep["moveTo"]>[1]
+    opts?: Parameters<Creep["moveTo"]>[1],
   ): ReturnType<Creep["moveTo"]> {
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
@@ -95,31 +133,45 @@ export function extendCreep(): void {
     const source = this.pos.findClosestByPath(FIND_SOURCES);
     if (source) {
       if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(source, {
+          visualizePathStyle: { stroke: "#ffaa00" },
+        });
       }
     }
   };
 
-  Creep.prototype.transferEnergyTo = function (target: Structure | AnyCreep | null): void {
+  Creep.prototype.transferEnergyTo = function (
+    target: Structure | AnyCreep | null,
+  ): void {
     if (target) {
       if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffffff" } });
+        this.moveToAvoidingRoomEdges(target, {
+          visualizePathStyle: { stroke: "#ffffff" },
+        });
       }
     }
   };
 
-  Creep.prototype.withdrawEnergyFrom = function (target: EnergyWithdrawTarget | null): void {
+  Creep.prototype.withdrawEnergyFrom = function (
+    target: EnergyWithdrawTarget | null,
+  ): void {
     if (target) {
       if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, {
+          visualizePathStyle: { stroke: "#ffaa00" },
+        });
       }
     }
   };
 
-  Creep.prototype.pickUpEnergy = function (target: Resource<RESOURCE_ENERGY> | null): void {
+  Creep.prototype.pickUpEnergy = function (
+    target: Resource<RESOURCE_ENERGY> | null,
+  ): void {
     if (target) {
       if (this.pickup(target) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, {
+          visualizePathStyle: { stroke: "#ffaa00" },
+        });
       }
     }
   };
@@ -128,23 +180,28 @@ export function extendCreep(): void {
     delete this.memory.energyTargetId;
   };
 
-  Creep.prototype.findEnergyRefillTarget = function (): EnergyRefillTarget | null {
-    if (this.memory.energyTargetId) {
-      const savedTarget = Game.getObjectById(this.memory.energyTargetId);
-      if (savedTarget && hasRefillEnergy(savedTarget) && !isEnergyTargetReservedByOtherCreep(this, savedTarget)) {
-        return savedTarget;
+  Creep.prototype.findEnergyRefillTarget =
+    function (): EnergyRefillTarget | null {
+      if (this.memory.energyTargetId) {
+        const savedTarget = Game.getObjectById(this.memory.energyTargetId);
+        if (
+          savedTarget &&
+          hasRefillEnergy(savedTarget) &&
+          !isEnergyTargetReservedByOtherCreep(this, savedTarget)
+        ) {
+          return savedTarget;
+        }
+
+        this.clearEnergyTarget();
       }
 
-      this.clearEnergyTarget();
-    }
+      const target = this.findDecayingEnergy() ?? this.findEnergyContainer();
+      if (target) {
+        this.memory.energyTargetId = target.id;
+      }
 
-    const target = this.findDecayingEnergy() ?? this.findEnergyContainer();
-    if (target) {
-      this.memory.energyTargetId = target.id;
-    }
-
-    return target;
-  };
+      return target;
+    };
 
   Creep.prototype.goUpgradeController = function (): void {
     const controller = this.room.controller;
@@ -153,15 +210,23 @@ export function extendCreep(): void {
     }
 
     if (this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-      this.moveToAvoidingRoomEdges(controller, { visualizePathStyle: { stroke: "#ffffff" } });
+      this.moveToAvoidingRoomEdges(controller, {
+        visualizePathStyle: { stroke: "#ffffff" },
+      });
     } else {
       this.upgradeController(controller);
     }
   };
 
-  Creep.prototype.findRepairTarget = function (): StructureRoad | StructureContainer | StructureRampart | null {
+  Creep.prototype.findRepairTarget = function ():
+    | StructureRoad
+    | StructureContainer
+    | StructureRampart
+    | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
-      filter: (structure): structure is StructureRoad | StructureContainer | StructureRampart =>
+      filter: (
+        structure,
+      ): structure is StructureRoad | StructureContainer | StructureRampart =>
         (structure.structureType === STRUCTURE_ROAD ||
           structure.structureType === STRUCTURE_CONTAINER ||
           structure.structureType === STRUCTURE_RAMPART) &&
@@ -173,7 +238,9 @@ export function extendCreep(): void {
     const target = this.findRepairTarget();
     if (target) {
       if (this.repair(target) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+        this.moveToAvoidingRoomEdges(target, {
+          visualizePathStyle: { stroke: "#ffaa00" },
+        });
       }
       return true;
     }
@@ -188,7 +255,9 @@ export function extendCreep(): void {
     const target = this.findBuildTarget();
     if (target) {
       if (this.build(target) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffffff" } });
+        this.moveToAvoidingRoomEdges(target, {
+          visualizePathStyle: { stroke: "#ffffff" },
+        });
       }
       return true;
     }
@@ -198,7 +267,7 @@ export function extendCreep(): void {
   Creep.prototype.goToFlag = function (
     flagName: string,
     range = 0,
-    pathStyle: PolyStyle = { stroke: "#ffffff" }
+    pathStyle: PolyStyle = { stroke: "#ffffff" },
   ): void {
     const flag = Game.flags[flagName];
     if (flag) {
@@ -210,39 +279,49 @@ export function extendCreep(): void {
     }
   };
 
-  Creep.prototype.findDroppedEnergy = function (): Resource<RESOURCE_ENERGY> | null {
-    return this.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-      filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
-        resource.resourceType === RESOURCE_ENERGY &&
-        resource.amount > 0 &&
-        !isEnergyTargetReservedByOtherCreep(this, resource as Resource<RESOURCE_ENERGY>),
-    });
-  };
+  Creep.prototype.findDroppedEnergy =
+    function (): Resource<RESOURCE_ENERGY> | null {
+      return this.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+        filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+          resource.resourceType === RESOURCE_ENERGY &&
+          resource.amount > 0 &&
+          !isEnergyTargetReservedByOtherCreep(
+            this,
+            resource as Resource<RESOURCE_ENERGY>,
+          ),
+      });
+    };
 
-  Creep.prototype.findDecayingEnergy = function (): DecayingEnergyTarget | null {
-    const droppedEnergy = this.room.find(FIND_DROPPED_RESOURCES, {
-      filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
-        resource.resourceType === RESOURCE_ENERGY &&
-        resource.amount > 0 &&
-        !isEnergyTargetReservedByOtherCreep(this, resource as Resource<RESOURCE_ENERGY>),
-    });
-    const ruins = this.room.find(FIND_RUINS, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
-    });
-    const tombstones = this.room.find(FIND_TOMBSTONES, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
-    });
+  Creep.prototype.findDecayingEnergy =
+    function (): DecayingEnergyTarget | null {
+      const droppedEnergy = this.room.find(FIND_DROPPED_RESOURCES, {
+        filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+          resource.resourceType === RESOURCE_ENERGY &&
+          resource.amount > 0 &&
+          !isEnergyTargetReservedByOtherCreep(
+            this,
+            resource as Resource<RESOURCE_ENERGY>,
+          ),
+      });
+      const ruins = this.room.find(FIND_RUINS, {
+        filter: (target) =>
+          target.store[RESOURCE_ENERGY] > 0 &&
+          !isEnergyTargetReservedByOtherCreep(this, target),
+      });
+      const tombstones = this.room.find(FIND_TOMBSTONES, {
+        filter: (target) =>
+          target.store[RESOURCE_ENERGY] > 0 &&
+          !isEnergyTargetReservedByOtherCreep(this, target),
+      });
 
-    return this.pos.findClosestByPath([...droppedEnergy, ...ruins, ...tombstones]);
-  };
+      return this.pos.findClosestByPath([
+        ...droppedEnergy,
+        ...ruins,
+        ...tombstones,
+      ]);
+    };
 
-  Creep.prototype.findAdjacentSourceContainer = function (source: Source): StructureContainer | null {
-    const containers = source.pos.findInRange(FIND_STRUCTURES, 1, {
-      filter: (structure): structure is StructureContainer => structure.structureType === STRUCTURE_CONTAINER,
-    });
-
-    return containers[0] ?? null;
-  };
+  Creep.prototype.findAdjacentSourceContainer = findAdjacentSourceContainer;
 
   Creep.prototype.findEnergyContainer = function (): StructureContainer | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -253,38 +332,50 @@ export function extendCreep(): void {
     });
   };
 
-  Creep.prototype.findWithdrawableEnergy = function (): EnergyWithdrawTarget | null {
-    const container = this.findEnergyContainer();
-    const ruin = this.pos.findClosestByPath(FIND_RUINS, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
-    });
-    const tombstone = this.pos.findClosestByPath(FIND_TOMBSTONES, {
-      filter: target => target.store[RESOURCE_ENERGY] > 0 && !isEnergyTargetReservedByOtherCreep(this, target),
-    });
+  Creep.prototype.findWithdrawableEnergy =
+    function (): EnergyWithdrawTarget | null {
+      const container = this.findEnergyContainer();
+      const ruin = this.pos.findClosestByPath(FIND_RUINS, {
+        filter: (target) =>
+          target.store[RESOURCE_ENERGY] > 0 &&
+          !isEnergyTargetReservedByOtherCreep(this, target),
+      });
+      const tombstone = this.pos.findClosestByPath(FIND_TOMBSTONES, {
+        filter: (target) =>
+          target.store[RESOURCE_ENERGY] > 0 &&
+          !isEnergyTargetReservedByOtherCreep(this, target),
+      });
 
-    const targets = [container, ruin, tombstone].filter((target): target is EnergyWithdrawTarget => !!target);
-    return this.pos.findClosestByPath(targets);
-  };
+      const targets = [container, ruin, tombstone].filter(
+        (target): target is EnergyWithdrawTarget => !!target,
+      );
+      return this.pos.findClosestByPath(targets);
+    };
 
-  Creep.prototype.findControllerContainer = function (): StructureContainer | null {
-    const controller = this.room.controller;
-    if (!controller) {
-      return null;
-    }
+  Creep.prototype.findControllerContainer =
+    function (): StructureContainer | null {
+      const controller = this.room.controller;
+      if (!controller) {
+        return null;
+      }
 
-    const containers = controller.pos.findInRange(FIND_STRUCTURES, 3, {
-      filter: (structure): structure is StructureContainer =>
-        structure.structureType === STRUCTURE_CONTAINER &&
-        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-    });
+      const containers = controller.pos.findInRange(FIND_STRUCTURES, 3, {
+        filter: (structure): structure is StructureContainer =>
+          structure.structureType === STRUCTURE_CONTAINER &&
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+      });
 
-    return containers[0] ?? null;
-  };
+      return containers[0] ?? null;
+    };
 
-  Creep.prototype.findRefuelStructure = function (): StructureSpawn | StructureExtension | null {
+  Creep.prototype.findRefuelStructure = function ():
+    | StructureSpawn
+    | StructureExtension
+    | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: (structure): structure is StructureSpawn | StructureExtension =>
-        (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_EXTENSION) &&
+        (structure.structureType === STRUCTURE_SPAWN ||
+          structure.structureType === STRUCTURE_EXTENSION) &&
         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
     });
   };

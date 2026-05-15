@@ -4,7 +4,11 @@ declare global {
   type DecayingEnergyTarget = Resource<RESOURCE_ENERGY> | Ruin | Tombstone;
   type EnergyWithdrawTarget = StructureContainer | Ruin | Tombstone;
   type EnergyRefillTarget = DecayingEnergyTarget | StructureContainer;
-  type EnergyDeliveryTarget = StructureSpawn | StructureExtension | StructureContainer | AnyCreep;
+  type EnergyDeliveryTarget =
+    | StructureSpawn
+    | StructureExtension
+    | StructureContainer
+    | AnyCreep;
 
   interface CreepMemory {
     role: CreepRole;
@@ -34,7 +38,7 @@ declare global {
     isAtFlag(flagName: string, range?: number): boolean;
     moveToAvoidingRoomEdges(
       target: Parameters<Creep["moveTo"]>[0],
-      opts?: Parameters<Creep["moveTo"]>[1]
+      opts?: Parameters<Creep["moveTo"]>[1],
     ): ReturnType<Creep["moveTo"]>;
     goToSource(): void;
     transferEnergyTo(target: Structure | AnyCreep | null): void;
@@ -43,7 +47,11 @@ declare global {
     clearEnergyTarget(): void;
     findEnergyRefillTarget(): EnergyRefillTarget | null;
     goUpgradeController(): void;
-    findRepairTarget(): StructureRoad | StructureContainer | StructureRampart | null;
+    findRepairTarget():
+      | StructureRoad
+      | StructureContainer
+      | StructureRampart
+      | null;
     findAndRepair(): boolean;
     findBuildTarget(): ConstructionSite | null;
     findAndBuild(): boolean;
@@ -57,5 +65,3 @@ declare global {
     findRefuelStructure(): StructureSpawn | StructureExtension | null;
   }
 }
-
-export {};

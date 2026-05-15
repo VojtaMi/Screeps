@@ -17,7 +17,8 @@ function getDamageRatio(structure: RepairTarget): number {
 
 function findMostDamagedRepairTarget(room: Room): RepairTarget | null {
   const repairTargets = room.find(FIND_STRUCTURES, {
-    filter: (structure): structure is RepairTarget => isRepairTarget(structure) && structure.hits < structure.hitsMax,
+    filter: (structure): structure is RepairTarget =>
+      isRepairTarget(structure) && structure.hits < structure.hitsMax,
   });
 
   return repairTargets.reduce<RepairTarget | null>((mostDamaged, target) => {
@@ -36,7 +37,9 @@ function repairMostDamagedTarget(creep: Creep): boolean {
   }
 
   if (creep.repair(target) === ERR_NOT_IN_RANGE) {
-    creep.moveToAvoidingRoomEdges(target, { visualizePathStyle: { stroke: "#ffaa00" } });
+    creep.moveToAvoidingRoomEdges(target, {
+      visualizePathStyle: { stroke: "#ffaa00" },
+    });
   }
 
   return true;

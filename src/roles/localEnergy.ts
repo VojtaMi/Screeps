@@ -16,7 +16,8 @@ export function collectLocalEnergy(creep: Creep): boolean {
   const container = creep.pos.findClosestByRange(
     creep.pos.findInRange(FIND_STRUCTURES, LOCAL_ENERGY_RANGE, {
       filter: (structure): structure is StructureContainer =>
-        structure.structureType === STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0,
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store[RESOURCE_ENERGY] > 0,
     }),
   );
 

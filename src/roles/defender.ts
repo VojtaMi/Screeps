@@ -5,7 +5,10 @@ function getHostilePriority(hostile: Creep): number {
     return 0;
   }
 
-  if (hostile.getActiveBodyparts(ATTACK) > 0 || hostile.getActiveBodyparts(RANGED_ATTACK) > 0) {
+  if (
+    hostile.getActiveBodyparts(ATTACK) > 0 ||
+    hostile.getActiveBodyparts(RANGED_ATTACK) > 0
+  ) {
     return 1;
   }
 
@@ -36,7 +39,9 @@ export const defender: Role = {
     }
 
     if (creep.attack(hostile) === ERR_NOT_IN_RANGE) {
-      creep.moveToAvoidingRoomEdges(hostile, { visualizePathStyle: { stroke: "#ff0000" } });
+      creep.moveToAvoidingRoomEdges(hostile, {
+        visualizePathStyle: { stroke: "#ff0000" },
+      });
     }
   },
 };

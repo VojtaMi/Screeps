@@ -2,7 +2,9 @@ import type { Role } from "../types";
 
 export const harvester: Role = {
   run(creep: Creep): void {
-    const source = creep.memory.sourceId ? Game.getObjectById(creep.memory.sourceId) : null;
+    const source = creep.memory.sourceId
+      ? Game.getObjectById(creep.memory.sourceId)
+      : null;
 
     if (!source) {
       creep.goToSource();
@@ -20,7 +22,9 @@ export const harvester: Role = {
     }
 
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-      creep.moveToAvoidingRoomEdges(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+      creep.moveToAvoidingRoomEdges(source, {
+        visualizePathStyle: { stroke: "#ffaa00" },
+      });
     }
   },
 };

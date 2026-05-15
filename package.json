@@ -3,13 +3,23 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "prepare": "husky",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
+    "check:staged": "biome check --write --staged .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "ci": "npm run typecheck && biome ci .",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js",
     "deploy:screeps": "node scripts/deploy-screeps.mjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@types/screeps": "^3.3.13",
     "esbuild": "^0.27.0",
+    "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
 }
