@@ -2,7 +2,7 @@ import {
   getControllerDeliveryBuildPlan,
   isControllerDeliveryContainer,
 } from "../managers/buildPlanManager";
-import type { Role } from "../types";
+import { CREEP_ROLE, type Role } from "../types";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 
@@ -233,7 +233,7 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   if (hasBuilderWork(creep.room)) {
     const builder = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
       filter: (target) =>
-        target.memory.role === "builder" &&
+        target.memory.role === CREEP_ROLE.BUILDER &&
         !target.hasEnergy() &&
         isDeliveryTargetAvailable(creep, target),
     });
@@ -245,7 +245,7 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   if (hasRepairerWork(creep.room)) {
     const repairer = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
       filter: (target) =>
-        target.memory.role === "repairer" &&
+        target.memory.role === CREEP_ROLE.REPAIRER &&
         !target.hasEnergy() &&
         isDeliveryTargetAvailable(creep, target),
     });
@@ -256,7 +256,7 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
 
   const upgrader = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
     filter: (target) =>
-      target.memory.role === "upgrader" &&
+      target.memory.role === CREEP_ROLE.UPGRADER &&
       !target.hasEnergy() &&
       isDeliveryTargetAvailable(creep, target),
   });

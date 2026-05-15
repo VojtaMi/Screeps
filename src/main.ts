@@ -9,18 +9,18 @@ import { harvester } from "./roles/harvester";
 import { pioneer } from "./roles/pioneer";
 import { repairer } from "./roles/repairer";
 import { upgrader } from "./roles/upgrader";
-import type { CreepRole, Role } from "./types";
+import { CREEP_ROLE, type CreepRole, type Role } from "./types";
 
 extendCreep();
 
 const roles: Record<CreepRole, Role> = {
-  pioneer,
-  harvester,
-  carrier,
-  defender,
-  upgrader,
-  builder,
-  repairer,
+  [CREEP_ROLE.PIONEER]: pioneer,
+  [CREEP_ROLE.HARVESTER]: harvester,
+  [CREEP_ROLE.CARRIER]: carrier,
+  [CREEP_ROLE.DEFENDER]: defender,
+  [CREEP_ROLE.UPGRADER]: upgrader,
+  [CREEP_ROLE.BUILDER]: builder,
+  [CREEP_ROLE.REPAIRER]: repairer,
 };
 
 export function loop(): void {

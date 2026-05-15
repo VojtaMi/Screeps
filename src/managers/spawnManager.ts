@@ -1,4 +1,4 @@
-import type { CreepRole } from "../types";
+import { CREEP_ROLE, type CreepRole } from "../types";
 
 const PIONEER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const MINIMUM_WORKER_BODY: BodyPartConstant[] = [WORK, CARRY, MOVE];
@@ -62,25 +62,31 @@ export const spawnManager = {
 
   getSpawnRequest(context: SpawnContext): SpawnRequest | null {
     const { room, creeps, creepsByRole, sources, hostiles } = context;
-    const harvesters = creepsByRole("harvester");
-    const carriers = creepsByRole("carrier");
-    const builders = creepsByRole("builder");
-    const repairers = creepsByRole("repairer");
-    const upgraders = creepsByRole("upgrader");
-    const defenders = creepsByRole("defender");
+    const harvesters = creepsByRole(CREEP_ROLE.HARVESTER);
+    const carriers = creepsByRole(CREEP_ROLE.CARRIER);
+    const builders = creepsByRole(CREEP_ROLE.BUILDER);
+    const repairers = creepsByRole(CREEP_ROLE.REPAIRER);
+    const upgraders = creepsByRole(CREEP_ROLE.UPGRADER);
+    const defenders = creepsByRole(CREEP_ROLE.DEFENDER);
     const energyCapacity = room.energyCapacityAvailable;
 
     if (creeps.length === 0) {
-      return { role: "pioneer", body: buildPioneerBody(room.energyAvailable) };
+      return {
+        role: CREEP_ROLE.PIONEER,
+        body: buildPioneerBody(room.energyAvailable),
+      };
     }
 
     if (hostiles.length > 0 && defenders.length === 0) {
-      return { role: "defender", body: buildDefenderBody(energyCapacity) };
+      return {
+        role: CREEP_ROLE.DEFENDER,
+        body: buildDefenderBody(energyCapacity),
+      };
     }
 
     if (harvesters.length > 0 && carriers.length === 0) {
       return {
-        role: "carrier",
+        role: CREEP_ROLE.CARRIER,
         body: buildCarrierBody(room.energyAvailable),
         memory: { working: false },
       };
@@ -89,7 +95,7 @@ export const spawnManager = {
     const missingSource = findMissingHarvesterSource(room, harvesters);
     if (missingSource) {
       return {
-        role: "harvester",
+        role: CREEP_ROLE.HARVESTER,
         body: buildHarvesterBody(energyCapacity),
         memory: { sourceId: missingSource.id },
       };
@@ -99,18 +105,24 @@ export const spawnManager = {
       sources.length > 1 || hasAvailableEnergyForCarriers(room) ? 2 : 1;
     if (harvesters.length > 0 && carriers.length < desiredCarriers) {
       return {
-        role: "carrier",
+        role: CREEP_ROLE.CARRIER,
         body: buildCarrierBody(energyCapacity),
         memory: { working: false },
       };
     }
 
     if (hasConstructionWork(room) && builders.length === 0) {
-      return { role: "builder", body: buildWorkerBody(energyCapacity) };
+      return {
+        role: CREEP_ROLE.BUILDER,
+        body: buildWorkerBody(energyCapacity),
+      };
     }
 
     if (hasCriticalRepairWork(room) && repairers.length === 0) {
-      return { role: "repairer", body: buildWorkerBody(energyCapacity) };
+      return {
+        role: CREEP_ROLE.REPAIRER,
+        body: buildWorkerBody(energyCapacity),
+      };
     }
 
     if (
@@ -118,7 +130,10 @@ export const spawnManager = {
       carriers.length > 0 &&
       upgraders.length < 1
     ) {
-      return { role: "upgrader", body: buildWorkerBody(energyCapacity) };
+      return {
+        role: CREEP_ROLE.UPGRADER,
+        body: buildWorkerBody(energyCapacity),
+      };
     }
 
     return null;
