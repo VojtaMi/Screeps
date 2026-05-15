@@ -208,6 +208,10 @@ export const spawnManager = {
       return { role: "defender", body: buildDefenderBody(energyCapacity) };
     }
 
+    if (harvesters.length > 0 && carriers.length === 0) {
+      return { role: "carrier", body: buildCarrierBody(room.energyAvailable), memory: { working: false } };
+    }
+
     const missingSource = findMissingHarvesterSource(room, harvesters);
     if (missingSource) {
       return {
