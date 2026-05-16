@@ -109,7 +109,7 @@ export const spawnManager = {
       return {
         role: CREEP_ROLE.HARVESTER,
         body: buildBodyFromMaxPattern({
-          maxBody: CREEP_BODY.STATIONARY_WORKER,
+          maxBody: CREEP_BODY.HARVESTER,
           availableEnergy,
         }),
         memory: { sourceId: unclaimedSource.id },
@@ -157,7 +157,7 @@ export const spawnManager = {
       return {
         role: CREEP_ROLE.UPGRADER,
         body: buildBodyFromMaxPattern({
-          maxBody: CREEP_BODY.STATIONARY_WORKER,
+          maxBody: CREEP_BODY.UPGRADER,
           availableEnergy,
         }),
       };
