@@ -1,34 +1,10 @@
+import {
+  findBestRepairTarget,
+  getRepairPriority,
+  type RepairTarget,
+} from "../repairPolicy";
 import type { Role } from "../types";
 import { runWorkRefuelLoop } from "./support/workRefuelLoop";
-
-type RepairTarget = StructureRoad | StructureContainer | StructureRampart;
-
-function isRepairTarget(structure: Structure): structure is RepairTarget {
-  return (
-    structure.structureType === STRUCTURE_ROAD ||
-    structure.structureType === STRUCTURE_CONTAINER ||
-    structure.structureType === STRUCTURE_RAMPART
-  );
-}
-
-function getDamageRatio(structure: RepairTarget): number {
-  return structure.hits / structure.hitsMax;
-}
-
-function findMostDamagedRepairTarget(room: Room): RepairTarget | null {
-  const repairTargets = room.find(FIND_STRUCTURES, {
-    filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) && structure.hits < structure.hitsMax,
-  });
-
-  return repairTargets.reduce<RepairTarget | null>((mostDamaged, target) => {
-    if (!mostDamaged || getDamageRatio(target) < getDamageRatio(mostDamaged)) {
-      return target;
-    }
-
-    return mostDamaged;
-  }, null);
-}
 
 function clearRepairTarget(creep: Creep): void {
   delete creep.memory.repairTargetId;
@@ -40,7 +16,7 @@ function getSavedRepairTarget(creep: Creep): RepairTarget | null {
   }
 
   const target = Game.getObjectById(creep.memory.repairTargetId);
-  if (target && target.hits < target.hitsMax) {
+  if (target && getRepairPriority(target) !== null) {
     return target;
   }
 
@@ -50,19 +26,25 @@ function getSavedRepairTarget(creep: Creep): RepairTarget | null {
 
 function findRepairTarget(creep: Creep): RepairTarget | null {
   const savedTarget = getSavedRepairTarget(creep);
-  if (savedTarget) {
+  const bestTarget = findBestRepairTarget(creep.room);
+
+  if (
+    savedTarget &&
+    (!bestTarget ||
+      (getRepairPriority(savedTarget) ?? Number.MAX_SAFE_INTEGER) <=
+        (getRepairPriority(bestTarget) ?? Number.MAX_SAFE_INTEGER))
+  ) {
     return savedTarget;
   }
 
-  const target = findMostDamagedRepairTarget(creep.room);
-  if (target) {
-    creep.memory.repairTargetId = target.id;
+  if (bestTarget) {
+    creep.memory.repairTargetId = bestTarget.id;
   }
 
-  return target;
+  return bestTarget;
 }
 
-function repairMostDamagedTarget(creep: Creep): boolean {
+function repairBestTarget(creep: Creep): boolean {
   const target = findRepairTarget(creep);
   if (!target) {
     creep.moveOffRoad();
@@ -86,6 +68,6 @@ export const repairer: Role = {
       clearRepairTarget(creep);
     }
 
-    runWorkRefuelLoop(creep, repairMostDamagedTarget);
+    runWorkRefuelLoop(creep, repairBestTarget);
   },
 };

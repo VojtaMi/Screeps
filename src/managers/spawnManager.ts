@@ -1,4 +1,5 @@
 import { CREEP_BODY } from "../creepBodies";
+import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 
@@ -6,11 +7,6 @@ const CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS = [
   { energy: 1800, upgraders: 4 },
   { energy: 1500, upgraders: 3 },
   { energy: 1000, upgraders: 2 },
-] as const;
-
-const REPAIRER_DAMAGE_THRESHOLDS = [
-  { damageRatio: 0.5, repairers: 2 },
-  { damageRatio: 0.9, repairers: 1 },
 ] as const;
 
 interface SpawnRequest {
@@ -252,40 +248,10 @@ function hasAvailableEnergyForCarriers(room: Room): boolean {
 }
 
 function getDesiredRepairerCount(room: Room): number {
-  const worstDamageRatio = getWorstRepairDamageRatio(room);
-  if (worstDamageRatio === null) {
-    return 0;
-  }
+  const target = findBestRepairTarget(room);
+  const priority = target ? getRepairPriority(target) : null;
 
-  for (const threshold of REPAIRER_DAMAGE_THRESHOLDS) {
-    if (worstDamageRatio < threshold.damageRatio) {
-      return threshold.repairers;
-    }
-  }
-
-  return 0;
-}
-
-function getWorstRepairDamageRatio(room: Room): number | null {
-  const repairTargets = room.find(FIND_STRUCTURES, {
-    filter: (
-      structure,
-    ): structure is StructureRoad | StructureContainer | StructureRampart =>
-      (structure.structureType === STRUCTURE_ROAD ||
-        structure.structureType === STRUCTURE_CONTAINER ||
-        structure.structureType === STRUCTURE_RAMPART) &&
-      structure.hits < structure.hitsMax,
-  });
-
-  return repairTargets.reduce<number | null>((worstDamageRatio, target) => {
-    const damageRatio = target.hits / target.hitsMax;
-
-    if (worstDamageRatio === null || damageRatio < worstDamageRatio) {
-      return damageRatio;
-    }
-
-    return worstDamageRatio;
-  }, null);
+  return priority === 1 ? 2 : priority === null ? 0 : 1;
 }
 
 function getDesiredUpgraderCount(room: Room): number {

@@ -2,6 +2,7 @@ import {
   getControllerDeliveryBuildPlan,
   isControllerDeliveryContainer,
 } from "../managers/buildPlanManager";
+import { hasRepairWork } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type Role } from "../types";
 import { LOCAL_ENERGY_RANGE } from "./support/localEnergy";
 
@@ -455,17 +456,7 @@ function hasBuilderWork(room: Room): boolean {
 }
 
 function hasRepairerWork(room: Room): boolean {
-  return (
-    room.find(FIND_STRUCTURES, {
-      filter: (
-        structure,
-      ): structure is StructureRoad | StructureContainer | StructureRampart =>
-        (structure.structureType === STRUCTURE_ROAD ||
-          structure.structureType === STRUCTURE_CONTAINER ||
-          structure.structureType === STRUCTURE_RAMPART) &&
-        structure.hits < structure.hitsMax,
-    }).length > 0
-  );
+  return hasRepairWork(room);
 }
 
 export const carrier: Role = {

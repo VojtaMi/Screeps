@@ -15,7 +15,9 @@ declare global {
     role: CreepRole;
     sourceId?: Id<Source>;
     energyTargetId?: Id<EnergyRefillTarget>;
-    repairTargetId?: Id<StructureRoad | StructureContainer | StructureRampart>;
+    repairTargetId?: Id<
+      StructureRoad | StructureContainer | StructureRampart | StructureWall
+    >;
     deliveryTargetId?: Id<EnergyDeliveryTarget>;
     working?: boolean;
   }
@@ -63,6 +65,7 @@ declare global {
       | StructureRoad
       | StructureContainer
       | StructureRampart
+      | StructureWall
       | null;
     findAndRepair(): boolean;
     findBuildTarget(): ConstructionSite | null;

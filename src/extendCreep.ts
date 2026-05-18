@@ -1,3 +1,9 @@
+import {
+  getRepairPriority,
+  isRepairTarget,
+  type RepairTarget,
+} from "./repairPolicy";
+
 function getTargetPosition(
   target: Parameters<Creep["moveTo"]>[0],
 ): RoomPosition {
@@ -359,15 +365,11 @@ export function extendCreep(): void {
     | StructureRoad
     | StructureContainer
     | StructureRampart
+    | StructureWall
     | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
-      filter: (
-        structure,
-      ): structure is StructureRoad | StructureContainer | StructureRampart =>
-        (structure.structureType === STRUCTURE_ROAD ||
-          structure.structureType === STRUCTURE_CONTAINER ||
-          structure.structureType === STRUCTURE_RAMPART) &&
-        structure.hits < structure.hitsMax,
+      filter: (structure): structure is RepairTarget =>
+        isRepairTarget(structure) && getRepairPriority(structure) !== null,
     });
   };
 
