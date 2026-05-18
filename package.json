@@ -10,6 +10,8 @@
     "format": "biome format --write .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
+    "fetch:terrain": "node scripts/fetch-room-terrain.mjs",
+    "visualize:build-plan": "node scripts/generate-build-plan-viewer.mjs",
     "ci": "npm run typecheck && biome ci .",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js",
