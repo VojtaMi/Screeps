@@ -30,16 +30,52 @@ function findMostDamagedRepairTarget(room: Room): RepairTarget | null {
   }, null);
 }
 
-function repairMostDamagedTarget(creep: Creep): boolean {
+function clearRepairTarget(creep: Creep): void {
+  delete creep.memory.repairTargetId;
+}
+
+function getSavedRepairTarget(creep: Creep): RepairTarget | null {
+  if (!creep.memory.repairTargetId) {
+    return null;
+  }
+
+  const target = Game.getObjectById(creep.memory.repairTargetId);
+  if (target && target.hits < target.hitsMax) {
+    return target;
+  }
+
+  clearRepairTarget(creep);
+  return null;
+}
+
+function findRepairTarget(creep: Creep): RepairTarget | null {
+  const savedTarget = getSavedRepairTarget(creep);
+  if (savedTarget) {
+    return savedTarget;
+  }
+
   const target = findMostDamagedRepairTarget(creep.room);
+  if (target) {
+    creep.memory.repairTargetId = target.id;
+  }
+
+  return target;
+}
+
+function repairMostDamagedTarget(creep: Creep): boolean {
+  const target = findRepairTarget(creep);
   if (!target) {
     return false;
   }
 
-  if (creep.repair(target) === ERR_NOT_IN_RANGE) {
+  const result = creep.repair(target);
+  if (result === ERR_NOT_IN_RANGE) {
     creep.moveToAvoidingRoomEdges(target, {
       visualizePathStyle: { stroke: "#ffaa00" },
     });
+  }
+  if (result === OK && !creep.hasEnergy()) {
+    clearRepairTarget(creep);
   }
 
   return true;
@@ -47,6 +83,10 @@ function repairMostDamagedTarget(creep: Creep): boolean {
 
 export const repairer: Role = {
   run(creep: Creep): void {
+    if (!creep.hasEnergy()) {
+      clearRepairTarget(creep);
+    }
+
     runWorkRefuelLoop(creep, repairMostDamagedTarget);
   },
 };

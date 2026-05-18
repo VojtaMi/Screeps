@@ -14,6 +14,7 @@ declare global {
     role: CreepRole;
     sourceId?: Id<Source>;
     energyTargetId?: Id<EnergyRefillTarget>;
+    repairTargetId?: Id<StructureRoad | StructureContainer | StructureRampart>;
     deliveryTargetId?: Id<EnergyDeliveryTarget>;
     working?: boolean;
   }
