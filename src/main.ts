@@ -2,6 +2,7 @@ import { extendCreep } from "./extendCreep";
 import { buildPlanManager } from "./managers/buildPlanManager";
 import { memoryManager } from "./managers/memoryManager";
 import { spawnManager } from "./managers/spawnManager";
+import { spawnRecoveryManager } from "./managers/spawnRecoveryManager";
 import { builder } from "./roles/builder";
 import { carrier } from "./roles/carrier";
 import { defender } from "./roles/defender";
@@ -25,6 +26,7 @@ const roles: Record<CreepRole, Role> = {
 
 export function loop(): void {
   memoryManager.cleanUpCreepMemory();
+  spawnRecoveryManager.manageSpawnRecovery();
   buildPlanManager.manageBuildPlans();
   spawnManager.manageSpawning();
 

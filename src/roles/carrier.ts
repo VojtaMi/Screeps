@@ -7,11 +7,13 @@ import { LOCAL_ENERGY_RANGE } from "./support/localEnergy";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
+  CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
   CREEP_ROLE.REPAIRER,
   CREEP_ROLE.UPGRADER,
 ]);
 const WORKER_REFUEL_ROLE_PENALTY: Partial<Record<CreepRole, number>> = {
+  [CREEP_ROLE.PIONEER]: 0,
   [CREEP_ROLE.BUILDER]: 0,
   [CREEP_ROLE.REPAIRER]: 4,
   [CREEP_ROLE.UPGRADER]: 8,
@@ -273,6 +275,10 @@ function findControllerDeliveryContainer(
 }
 
 function canRefuelWorkerRole(room: Room, role: CreepRole): boolean {
+  if (role === CREEP_ROLE.PIONEER) {
+    return hasBuilderWork(room);
+  }
+
   if (role === CREEP_ROLE.BUILDER) {
     return hasBuilderWork(room);
   }
