@@ -24,8 +24,24 @@ interface TerrainSnapshot {
   terrain: string;
 }
 
+interface TilePickerState {
+  x: number;
+  y: number;
+  left: number;
+  top: number;
+  itemIndexes: number[];
+}
+
 const CELL_SIZE = 15;
 const GRID_SIZE = 50;
+const LEGEND_ORDER = [
+  "STRUCTURE_WALL",
+  "STRUCTURE_CONTAINER",
+  "STRUCTURE_EXTENSION",
+  "STRUCTURE_RAMPART",
+  "STRUCTURE_ROAD",
+  "STRUCTURE_TOWER",
+];
 
 export default function App() {
   const [plans, setPlans] = useState<BuildPlansData>({});
@@ -41,9 +57,13 @@ export default function App() {
     []
   );
   const [terrain, setTerrain] = useState<string>("");
+  const [terrainShard, setTerrainShard] = useState<string>("");
+  const [showCoordinates, setShowCoordinates] = useState(true);
+  const [isEraseMode, setIsEraseMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingSave, setIsConfirmingSave] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [tilePicker, setTilePicker] = useState<TilePickerState | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -54,7 +74,23 @@ export default function App() {
     if (selectedRoom) {
       loadTerrain(selectedRoom);
     }
+    setTilePicker(null);
   }, [selectedRoom]);
+
+  useEffect(() => {
+    setTilePicker(null);
+  }, [currentStep]);
+
+  useEffect(() => {
+    function closeTilePicker(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setTilePicker(null);
+      }
+    }
+
+    window.addEventListener("keydown", closeTilePicker);
+    return () => window.removeEventListener("keydown", closeTilePicker);
+  }, []);
 
   useEffect(() => {
     if (selectedRoom) {
@@ -71,6 +107,7 @@ export default function App() {
     terrain,
     plans,
     validationErrors,
+    showCoordinates,
   ]);
 
   async function loadPlans() {
@@ -80,8 +117,9 @@ export default function App() {
       setPlans(data.plans);
       const roomNames = Object.keys(data.plans);
       if (roomNames.length > 0) {
-        setSelectedRoom(roomNames[0]);
-        setCurrentStep(0);
+        const initialRoom = roomNames[0];
+        setSelectedRoom(initialRoom);
+        setCurrentStep(data.plans[initialRoom].plan.length);
       }
     } catch (error) {
       console.error("Failed to load plans:", error);
@@ -94,12 +132,15 @@ export default function App() {
       if (response.ok) {
         const data: TerrainSnapshot = await response.json();
         setTerrain(data.terrain);
+        setTerrainShard(data.shard);
       } else {
         setTerrain("");
+        setTerrainShard("");
       }
     } catch (error) {
       console.error("Failed to load terrain:", error);
       setTerrain("");
+      setTerrainShard("");
     }
   }
 
@@ -252,61 +293,102 @@ export default function App() {
       ctx.lineTo(GRID_SIZE * CELL_SIZE, pos);
       ctx.stroke();
     }
+
+    if (!showCoordinates) {
+      return;
+    }
+
+    ctx.fillStyle = "#cad1dd";
+    ctx.font = "8px ui-monospace, SFMono-Regular, Menlo, monospace";
+    for (let i = 0; i < GRID_SIZE; i += 5) {
+      ctx.fillText(String(i), i * CELL_SIZE + 2, 9);
+      ctx.fillText(String(i), 2, i * CELL_SIZE + 10);
+    }
   }
 
   function drawPlan(ctx: CanvasRenderingContext2D) {
     if (!selectedRoom) return;
 
     const plan = plans[selectedRoom]?.plan ?? [];
-    for (let i = 0; i < plan.length; i++) {
-      const item = plan[i];
-      const isSelected = i === selectedItemIndex;
-      const hasError = validationErrors.some((e) => e.step === i);
-      const isAfterStep = i >= currentStep;
+    const tileItems = new Map<
+      string,
+      Array<{ item: BuildPlanItem; index: number }>
+    >();
 
-      drawStructure(ctx, item, isSelected, hasError, isAfterStep);
+    for (const [index, item] of plan.entries()) {
+      const key = `${item.x},${item.y}`;
+      tileItems.set(key, [...(tileItems.get(key) ?? []), { item, index }]);
+    }
+
+    for (const items of tileItems.values()) {
+      drawTileStructures(ctx, items);
     }
   }
 
-  function drawStructure(
+  function getStructureColor(item: BuildPlanItem, isAfterStep: boolean): string {
+    const color = STRUCTURE_COLORS[item.structureType] || "#ffffff";
+    return isAfterStep ? adjustBrightness(color, 0.5) : color;
+  }
+
+  function drawTileStructures(
     ctx: CanvasRenderingContext2D,
-    item: BuildPlanItem,
-    isSelected: boolean,
-    hasError: boolean,
-    isAfterStep: boolean
+    items: Array<{ item: BuildPlanItem; index: number }>
   ) {
-    const x = item.x * CELL_SIZE;
-    const y = item.y * CELL_SIZE;
+    const [{ item: firstItem }] = items;
+    const x = firstItem.x * CELL_SIZE;
+    const y = firstItem.y * CELL_SIZE;
     const centerX = x + CELL_SIZE / 2;
     const centerY = y + CELL_SIZE / 2;
+    const rampart = items.find(
+      ({ item }) => item.structureType === "STRUCTURE_RAMPART"
+    );
+    const road = items.find(
+      ({ item }) => item.structureType === "STRUCTURE_ROAD"
+    );
+    const mainStructure = items.find(
+      ({ item }) =>
+        item.structureType !== "STRUCTURE_RAMPART" &&
+        item.structureType !== "STRUCTURE_ROAD"
+    );
+    const selected = items.find(({ index }) => index === selectedItemIndex);
+    const hasError = items.some(({ index }) =>
+      validationErrors.some((error) => error.step === index)
+    );
 
-    let color = STRUCTURE_COLORS[item.structureType] || "#ffffff";
-    if (isAfterStep) {
-      color = adjustBrightness(color, 0.5);
+    if (rampart) {
+      ctx.fillStyle = getStructureColor(
+        rampart.item,
+        rampart.index >= currentStep
+      );
+      ctx.fillRect(x + 2, y + 2, 11, 11);
     }
 
-    ctx.fillStyle = color;
-    ctx.strokeStyle = hasError ? "#ff0000" : isSelected ? "#00ff00" : "#0b0f14";
-    ctx.lineWidth = hasError ? 3 : isSelected ? 2.5 : 2;
-
-    if (item.structureType === "STRUCTURE_ROAD") {
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else if (item.structureType === "STRUCTURE_RAMPART") {
-      ctx.fillRect(x + 2, y + 2, 11, 11);
-      ctx.strokeRect(x + 2, y + 2, 11, 11);
-    } else {
+    if (mainStructure) {
+      ctx.fillStyle = getStructureColor(
+        mainStructure.item,
+        mainStructure.index >= currentStep
+      );
       ctx.beginPath();
       ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
 
-      if (item.purpose) {
+      if (mainStructure.item.purpose) {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
       }
+    }
+
+    if (road) {
+      ctx.fillStyle = getStructureColor(road.item, road.index >= currentStep);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (hasError || selected) {
+      ctx.strokeStyle = hasError ? "#ff0000" : "#00ff00";
+      ctx.lineWidth = hasError ? 3 : 2.5;
+      ctx.strokeRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3);
     }
   }
 
@@ -322,6 +404,7 @@ export default function App() {
     e: React.MouseEvent<HTMLCanvasElement>
   ) {
     if (!canvasRef.current || !selectedRoom) return;
+    e.stopPropagation();
 
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
@@ -330,39 +413,63 @@ export default function App() {
     if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
 
     const plan = plans[selectedRoom].plan;
-    const clickedIndex = plan.findIndex(
-      (item) => item.x === x && item.y === y
-    );
+    const visibleIndexes = plan
+      .map((item, index) => ({ item, index }))
+      .filter(
+        ({ item, index }) =>
+          index < currentStep && item.x === x && item.y === y
+      )
+      .map(({ index }) => index);
 
-    if (clickedIndex >= 0 && clickedIndex < currentStep) {
-      // Clicked on existing structure
-      setSelectedItemIndex(clickedIndex);
-    } else if (clickedIndex < 0 || clickedIndex >= currentStep) {
-      // Add new structure
-      const newItem: BuildPlanItem = {
+    if (visibleIndexes.length === 1) {
+      if (isEraseMode) {
+        deletePlanItem(visibleIndexes[0]);
+      } else {
+        setSelectedItemIndex(visibleIndexes[0]);
+      }
+      setTilePicker(null);
+      return;
+    }
+
+    if (visibleIndexes.length > 1) {
+      setTilePicker({
         x,
         y,
-        structureType: selectedStructureType,
-      };
-
-      const newPlan = [...plan];
-      newPlan.splice(currentStep, 0, newItem);
-
-      setPlans({
-        ...plans,
-        [selectedRoom]: { plan: newPlan },
+        left: x * CELL_SIZE + CELL_SIZE,
+        top: y * CELL_SIZE,
+        itemIndexes: visibleIndexes,
       });
-
-      setCurrentStep(Math.min(currentStep + 1, newPlan.length));
-      setSelectedItemIndex(null);
+      return;
     }
+
+    if (isEraseMode) {
+      setTilePicker(null);
+      return;
+    }
+
+    const newItem: BuildPlanItem = {
+      x,
+      y,
+      structureType: selectedStructureType,
+    };
+
+    const newPlan = [...plan];
+    newPlan.splice(currentStep, 0, newItem);
+
+    setPlans({
+      ...plans,
+      [selectedRoom]: { plan: newPlan },
+    });
+
+    setCurrentStep(Math.min(currentStep + 1, newPlan.length));
+    setSelectedItemIndex(null);
+    setTilePicker(null);
   }
 
-  function removeSelectedItem() {
-    if (selectedItemIndex === null || !selectedRoom) return;
-
+  function deletePlanItem(itemIndex: number) {
+    if (!selectedRoom) return;
     const plan = plans[selectedRoom].plan;
-    const newPlan = plan.filter((_, i) => i !== selectedItemIndex);
+    const newPlan = plan.filter((_, i) => i !== itemIndex);
 
     setPlans({
       ...plans,
@@ -370,6 +477,13 @@ export default function App() {
     });
 
     setSelectedItemIndex(null);
+    setTilePicker(null);
+    setCurrentStep(Math.min(currentStep, newPlan.length));
+  }
+
+  function removeSelectedItem() {
+    if (selectedItemIndex === null) return;
+    deletePlanItem(selectedItemIndex);
   }
 
   async function savePlans() {
@@ -412,23 +526,129 @@ export default function App() {
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
   const visiblePlan = plan.slice(0, currentStep);
+  const legendEntries = LEGEND_ORDER.map((structureType) => ({
+    structureType,
+    count: plan.filter((item) => item.structureType === structureType).length,
+  })).filter((entry) => entry.count > 0);
 
   return (
     <div className="editor">
       <header className="editor-header">
-        <h1>Build Plan Editor</h1>
+        <div>
+          <h1>Screeps Build Plan Builder</h1>
+        </div>
+        <div className="editor-summary">
+          {selectedRoom
+            ? `${selectedRoom} · ${plan.length} planned structures${
+                terrainShard ? ` · terrain ${terrainShard}` : ""
+              }`
+            : ""}
+        </div>
       </header>
 
+      <div className="editor-toolbar">
+        <label>
+          Room
+          <select
+            value={selectedRoom}
+            onChange={(event) => {
+              const nextRoom = event.target.value;
+              setSelectedRoom(nextRoom);
+              setCurrentStep(plans[nextRoom]?.plan.length ?? 0);
+              setSelectedItemIndex(null);
+            }}
+          >
+            {Object.keys(plans).map((room) => (
+              <option key={room} value={room}>
+                {room}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowCoordinates((current) => !current)}
+        >
+          Coordinates
+        </button>
+        <button
+          type="button"
+          className={`tool-button ${isEraseMode ? "active" : ""}`}
+          onClick={() => {
+            setIsEraseMode((current) => !current);
+            setTilePicker(null);
+          }}
+          title="Erase structures"
+          aria-pressed={isEraseMode}
+        >
+          <svg viewBox="0 -1.01 20.244 20.244" aria-hidden="true">
+            <g transform="translate(-1.926 -2.881)">
+              <path d="M3.29,10,9,4.29a1,1,0,0,1,1.41,0l5.4,5.4L8.69,16.76l-5.4-5.4A1,1,0,0,1,3.29,10Z" />
+              <path d="M3.29,10,9,4.29a1,1,0,0,1,1.41,0l10.3,10.35a1,1,0,0,1,0,1.41l-3.66,3.66a1,1,0,0,1-.71.29H11.93L3.29,11.36A1,1,0,0,1,3.29,10Zm12.47-.26,5,5a1,1,0,0,1,0,1.41L17.1,19.81a1,1,0,0,1-.71.29H11.93L8.69,16.76ZM6,20h6" />
+            </g>
+          </svg>
+          <span>Erase</span>
+        </button>
+      </div>
+
       <div className="editor-layout">
-        <section className="canvas-section">
+        <section className="canvas-section" onClick={() => setTilePicker(null)}>
           <div className="map-stack">
-            <canvas
-              ref={canvasRef}
-              width={GRID_SIZE * CELL_SIZE}
-              height={GRID_SIZE * CELL_SIZE}
-              onClick={handleCanvasClick}
-              className="room-canvas"
-            />
+            <div className="map-canvas-wrap">
+              <canvas
+                ref={canvasRef}
+                width={GRID_SIZE * CELL_SIZE}
+                height={GRID_SIZE * CELL_SIZE}
+                onClick={handleCanvasClick}
+                className={`room-canvas ${isEraseMode ? "erase-mode" : ""}`}
+              />
+              {tilePicker && (
+                <div
+                  className="tile-picker"
+                  style={{ left: tilePicker.left, top: tilePicker.top }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="tile-picker-title">
+                    {isEraseMode ? "Erase" : "Select"} ({tilePicker.x},{" "}
+                    {tilePicker.y})
+                  </div>
+                  {tilePicker.itemIndexes.map((itemIndex) => {
+                    const item = plan[itemIndex];
+
+                    return (
+                      <button
+                        key={itemIndex}
+                        type="button"
+                        className="tile-picker-option"
+                        onClick={() => {
+                          if (isEraseMode) {
+                            deletePlanItem(itemIndex);
+                          } else {
+                            setSelectedItemIndex(itemIndex);
+                          }
+                          setTilePicker(null);
+                        }}
+                      >
+                        <span
+                          className="tile-picker-swatch"
+                          style={{
+                            backgroundColor:
+                              STRUCTURE_COLORS[item.structureType] ??
+                              "#ffffff",
+                          }}
+                        />
+                        <span>
+                          Step {itemIndex}:{" "}
+                          {STRUCTURE_TYPE_LABELS[item.structureType] ??
+                            item.structureType}
+                          {item.purpose ? ` (${item.purpose})` : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="map-step-controls">
               <button
                 type="button"
@@ -473,43 +693,39 @@ export default function App() {
 
         <aside className="sidebar">
           <div className="panel">
-            <h2>Room</h2>
+            <h2>Structure</h2>
             <select
-              value={selectedRoom}
-              onChange={(e) => {
-                setSelectedRoom(e.target.value);
-                setCurrentStep(0);
-                setSelectedItemIndex(null);
-              }}
+              value={selectedStructureType}
+              onChange={(event) => setSelectedStructureType(event.target.value)}
             >
-              {Object.keys(plans).map((room) => (
-                <option key={room} value={room}>
-                  {room}
+              {STRUCTURE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {STRUCTURE_TYPE_LABELS[type]}
                 </option>
               ))}
             </select>
+            <p className="hint">Click on canvas to add {STRUCTURE_TYPE_LABELS[selectedStructureType]}</p>
           </div>
 
           <div className="panel">
-            <h2>Structure Palette</h2>
-            <div className="palette">
-              {STRUCTURE_TYPES.map((type) => (
-                <button
-                  key={type}
-                  className={`palette-item ${selectedStructureType === type ? "active" : ""}`}
-                  style={{
-                    backgroundColor: STRUCTURE_COLORS[type],
-                    borderColor:
-                      selectedStructureType === type ? "#00ff00" : "#0b0f14",
-                  }}
-                  onClick={() => setSelectedStructureType(type)}
-                  title={STRUCTURE_TYPE_LABELS[type]}
-                >
-                  {STRUCTURE_TYPE_LABELS[type].substring(0, 3)}
-                </button>
+            <h2>Legend</h2>
+            <div className="legend-list">
+              {legendEntries.map(({ structureType, count }) => (
+                <div className="legend-row" key={structureType}>
+                  <span
+                    className={`legend-symbol legend-symbol-${structureType
+                      .replace("STRUCTURE_", "")
+                      .toLowerCase()}`}
+                    style={{
+                      backgroundColor:
+                        STRUCTURE_COLORS[structureType] ?? "#ffffff",
+                    }}
+                  />
+                  <span>{STRUCTURE_TYPE_LABELS[structureType]}</span>
+                  <strong>{count}</strong>
+                </div>
               ))}
             </div>
-            <p className="hint">Click on canvas to add {STRUCTURE_TYPE_LABELS[selectedStructureType]}</p>
           </div>
 
           {selectedItemIndex !== null && (
