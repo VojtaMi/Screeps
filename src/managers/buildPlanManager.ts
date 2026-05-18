@@ -57,6 +57,22 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 31, y: 19, structureType: STRUCTURE_ROAD },
       { x: 32, y: 20, structureType: STRUCTURE_ROAD },
       { x: 33, y: 21, structureType: STRUCTURE_ROAD },
+
+      { x: 42, y: 9, structureType: STRUCTURE_WALL },
+      { x: 43, y: 9, structureType: STRUCTURE_RAMPART },
+
+      { x: 17, y: 12, structureType: STRUCTURE_WALL },
+      { x: 17, y: 13, structureType: STRUCTURE_RAMPART },
+      { x: 17, y: 14, structureType: STRUCTURE_WALL },
+      { x: 16, y: 14, structureType: STRUCTURE_WALL },
+
+      { x: 43, y: 31, structureType: STRUCTURE_WALL },
+      { x: 43, y: 30, structureType: STRUCTURE_RAMPART },
+
+      { x: 42, y: 36, structureType: STRUCTURE_WALL },
+      { x: 42, y: 35, structureType: STRUCTURE_RAMPART },
+
+      { x: 27, y: 27, structureType: STRUCTURE_RAMPART },
     ],
   },
 };
