@@ -2,9 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-const sourcePath = path.join(root, "src", "managers", "buildPlanManager.ts");
-const terrainDir = path.join(root, "artifacts", "terrain");
-const outputPath = path.join(root, "artifacts", "build-plan-viewer.html");
+const sourcePath = path.join(root, "src", "buildPlans.ts");
+const terrainDir = path.join(root, "tools", "artifacts", "terrain");
+const outputPath = path.join(root, "tools", "artifacts", "build-plan-viewer.html");
 
 const structureConstants = {
   STRUCTURE_CONTAINER: "container",
@@ -19,7 +19,7 @@ const source = await readFile(sourcePath, "utf8");
 
 function parseBuildPlans(text) {
   const plans = {};
-  const defaultPlansIndex = text.indexOf("const DEFAULT_BUILD_PLANS");
+  const defaultPlansIndex = text.indexOf("export const DEFAULT_BUILD_PLANS");
   if (defaultPlansIndex === -1) {
     throw new Error("Could not find DEFAULT_BUILD_PLANS.");
   }

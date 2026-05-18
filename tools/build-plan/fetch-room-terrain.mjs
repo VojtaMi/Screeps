@@ -3,7 +3,7 @@ import path from "node:path";
 
 const roomName = process.argv[2] ?? "E59S28";
 const shard = process.argv[3] ?? process.env.SCREEPS_SHARD ?? "shard3";
-const outputDir = path.join(process.cwd(), "artifacts", "terrain");
+const outputDir = path.join(process.cwd(), "tools", "artifacts", "terrain");
 const outputPath = path.join(outputDir, `${roomName}.json`);
 
 const url = new URL("https://screeps.com/api/game/room-terrain");
