@@ -10,7 +10,9 @@ export const defender: Role = {
         creep.moveToAvoidingRoomEdges(spawn, {
           visualizePathStyle: { stroke: "#ff0000" },
         });
+        return;
       }
+      creep.moveOffRoad();
       return;
     }
 

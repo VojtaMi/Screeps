@@ -496,7 +496,9 @@ export const carrier: Role = {
         creep.moveToAvoidingRoomEdges(spawn, {
           visualizePathStyle: { stroke: "#ffffff" },
         });
+        return;
       }
+      creep.moveOffRoad();
       return;
     }
 
@@ -520,6 +522,9 @@ export const carrier: Role = {
       creep.memory.working = true;
       creep.clearEnergyTarget();
       clearDeliveryTarget(creep);
+      return;
     }
+
+    creep.moveOffRoad();
   },
 };

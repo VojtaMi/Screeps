@@ -8,6 +8,7 @@ function build(creep: Creep): void {
   if (creep.findAndRepair()) {
     return;
   }
+  creep.moveOffRoad();
 }
 
 export const builder: Role = {

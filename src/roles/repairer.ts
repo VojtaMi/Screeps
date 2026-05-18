@@ -65,15 +65,14 @@ function findRepairTarget(creep: Creep): RepairTarget | null {
 function repairMostDamagedTarget(creep: Creep): boolean {
   const target = findRepairTarget(creep);
   if (!target) {
+    creep.moveOffRoad();
     return false;
   }
 
   const result = creep.repair(target);
-  if (result === ERR_NOT_IN_RANGE) {
-    creep.moveToAvoidingRoomEdges(target, {
-      visualizePathStyle: { stroke: "#ffaa00" },
-    });
-  }
+  creep.moveToWorkTarget(target, result, 3, {
+    visualizePathStyle: { stroke: "#ffaa00" },
+  });
   if (result === OK && !creep.hasEnergy()) {
     clearRepairTarget(creep);
   }

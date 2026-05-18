@@ -50,6 +50,7 @@ export const pioneer: Role = {
       if (creep.findAndRepair()) {
         return;
       }
+      creep.moveOffRoad();
       return;
     }
 

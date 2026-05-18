@@ -42,6 +42,16 @@ declare global {
       target: Parameters<Creep["moveTo"]>[0],
       opts?: Parameters<Creep["moveTo"]>[1],
     ): ReturnType<Creep["moveTo"]>;
+    moveOffRoad(): boolean;
+    moveToWorkTarget(
+      target: Parameters<Creep["moveTo"]>[0],
+      actionResult:
+        | ReturnType<Creep["build"]>
+        | ReturnType<Creep["repair"]>
+        | ReturnType<Creep["upgradeController"]>,
+      range?: number,
+      opts?: Parameters<Creep["moveTo"]>[1],
+    ): boolean;
     goToSource(): void;
     transferEnergyTo(target: Structure | AnyCreep | null): void;
     withdrawEnergyFrom(target: EnergyWithdrawTarget | null): void;

@@ -25,5 +25,8 @@ export function runWorkRefuelLoop(
     creep.memory.working = true;
     creep.clearEnergyTarget();
     work(creep);
+    return;
   }
+
+  creep.moveOffRoad();
 }

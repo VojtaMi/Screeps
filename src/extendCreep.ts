@@ -99,6 +99,105 @@ function findAdjacentSourceContainer(
   return containers[0] ?? null;
 }
 
+function isRoomEdge(pos: RoomPosition): boolean {
+  return pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49;
+}
+
+function isRoadPosition(pos: RoomPosition): boolean {
+  return pos
+    .lookFor(LOOK_STRUCTURES)
+    .some((structure) => structure.structureType === STRUCTURE_ROAD);
+}
+
+function isBlockingStructure(structure: Structure): boolean {
+  return (
+    structure.structureType !== STRUCTURE_ROAD &&
+    structure.structureType !== STRUCTURE_CONTAINER &&
+    structure.structureType !== STRUCTURE_RAMPART
+  );
+}
+
+function isSafeNonRoadPosition(creep: Creep, pos: RoomPosition): boolean {
+  if (pos.roomName !== creep.room.name || isRoomEdge(pos)) {
+    return false;
+  }
+
+  const terrain = creep.room.getTerrain();
+  if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+    return false;
+  }
+
+  if (pos.lookFor(LOOK_CREEPS).length > 0) {
+    return false;
+  }
+
+  if (pos.lookFor(LOOK_CONSTRUCTION_SITES).length > 0) {
+    return false;
+  }
+
+  const structures = pos.lookFor(LOOK_STRUCTURES);
+  return (
+    !structures.some(
+      (structure) => structure.structureType === STRUCTURE_ROAD,
+    ) && !structures.some(isBlockingStructure)
+  );
+}
+
+function getPositionsInRange(pos: RoomPosition, range: number): RoomPosition[] {
+  const positions: RoomPosition[] = [];
+
+  for (
+    let x = Math.max(1, pos.x - range);
+    x <= Math.min(48, pos.x + range);
+    x += 1
+  ) {
+    for (
+      let y = Math.max(1, pos.y - range);
+      y <= Math.min(48, pos.y + range);
+      y += 1
+    ) {
+      const candidate = new RoomPosition(x, y, pos.roomName);
+      if (candidate.inRangeTo(pos, range)) {
+        positions.push(candidate);
+      }
+    }
+  }
+
+  return positions;
+}
+
+function findSafeNonRoadPositionInRange(
+  creep: Creep,
+  pos: RoomPosition,
+  range: number,
+): RoomPosition | null {
+  const candidates = getPositionsInRange(pos, range).filter((candidate) =>
+    isSafeNonRoadPosition(creep, candidate),
+  );
+
+  return creep.pos.findClosestByPath(candidates);
+}
+
+function moveToNonRoadWorkPosition(
+  creep: Creep,
+  target: Parameters<Creep["moveTo"]>[0],
+  range: number,
+  opts?: Parameters<Creep["moveTo"]>[1],
+): boolean {
+  const targetPos = getTargetPosition(target);
+  if (targetPos.roomName !== creep.room.name) {
+    return false;
+  }
+
+  const workPosition = findSafeNonRoadPositionInRange(creep, targetPos, range);
+  if (!workPosition || creep.pos.isEqualTo(workPosition)) {
+    return false;
+  }
+
+  creep.moveToAvoidingRoomEdges(workPosition, opts);
+  return true;
+}
+
 export function extendCreep(): void {
   // Properties
   Creep.prototype.needsEnergy = function (): boolean {
@@ -118,6 +217,47 @@ export function extendCreep(): void {
     opts?: Parameters<Creep["moveTo"]>[1],
   ): ReturnType<Creep["moveTo"]> {
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
+  };
+
+  Creep.prototype.moveOffRoad = function (): boolean {
+    if (!isRoadPosition(this.pos)) {
+      return false;
+    }
+
+    const parkingPosition = findSafeNonRoadPositionInRange(this, this.pos, 5);
+    if (!parkingPosition) {
+      return false;
+    }
+
+    this.moveToAvoidingRoomEdges(parkingPosition, {
+      visualizePathStyle: { stroke: "#888888" },
+    });
+    return true;
+  };
+
+  Creep.prototype.moveToWorkTarget = function (
+    target: Parameters<Creep["moveTo"]>[0],
+    actionResult:
+      | ReturnType<Creep["build"]>
+      | ReturnType<Creep["repair"]>
+      | ReturnType<Creep["upgradeController"]>,
+    range = 3,
+    opts?: Parameters<Creep["moveTo"]>[1],
+  ): boolean {
+    if (actionResult === ERR_NOT_IN_RANGE) {
+      if (moveToNonRoadWorkPosition(this, target, range, opts)) {
+        return true;
+      }
+
+      this.moveToAvoidingRoomEdges(target, opts);
+      return true;
+    }
+
+    if (actionResult === OK && isRoadPosition(this.pos)) {
+      return moveToNonRoadWorkPosition(this, target, range, opts);
+    }
+
+    return false;
   };
 
   Creep.prototype.isAtFlag = function (flagName: string, range = 1): boolean {
@@ -206,16 +346,13 @@ export function extendCreep(): void {
   Creep.prototype.goUpgradeController = function (): void {
     const controller = this.room.controller;
     if (!controller) {
+      this.moveOffRoad();
       return;
     }
 
-    if (this.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-      this.moveToAvoidingRoomEdges(controller, {
-        visualizePathStyle: { stroke: "#ffffff" },
-      });
-    } else {
-      this.upgradeController(controller);
-    }
+    this.moveToWorkTarget(controller, this.upgradeController(controller), 3, {
+      visualizePathStyle: { stroke: "#ffffff" },
+    });
   };
 
   Creep.prototype.findRepairTarget = function ():
@@ -237,11 +374,9 @@ export function extendCreep(): void {
   Creep.prototype.findAndRepair = function (): boolean {
     const target = this.findRepairTarget();
     if (target) {
-      if (this.repair(target) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, {
-          visualizePathStyle: { stroke: "#ffaa00" },
-        });
-      }
+      this.moveToWorkTarget(target, this.repair(target), 3, {
+        visualizePathStyle: { stroke: "#ffaa00" },
+      });
       return true;
     }
     return false;
@@ -254,11 +389,9 @@ export function extendCreep(): void {
   Creep.prototype.findAndBuild = function (): boolean {
     const target = this.findBuildTarget();
     if (target) {
-      if (this.build(target) === ERR_NOT_IN_RANGE) {
-        this.moveToAvoidingRoomEdges(target, {
-          visualizePathStyle: { stroke: "#ffffff" },
-        });
-      }
+      this.moveToWorkTarget(target, this.build(target), 3, {
+        visualizePathStyle: { stroke: "#ffffff" },
+      });
       return true;
     }
     return false;
