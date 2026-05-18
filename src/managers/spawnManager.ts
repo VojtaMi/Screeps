@@ -31,7 +31,7 @@ interface SpawnContext {
 
 interface BodyBuildOptions {
   maxBody: BodyPartConstant[];
-  availableEnergy: number;
+  energyBudget: number;
   minimumSize?: number;
 }
 
@@ -82,13 +82,16 @@ export const spawnManager = {
     const repairers = creepsByRole(CREEP_ROLE.REPAIRER);
     const upgraders = creepsByRole(CREEP_ROLE.UPGRADER);
     const availableEnergy = room.energyAvailable;
+    const capacityEnergy = room.energyCapacityAvailable;
+    const harvesterEnergyBudget =
+      harvesters.length === 0 ? availableEnergy : capacityEnergy;
 
     if (creeps.length === 0) {
       return {
         role: CREEP_ROLE.PIONEER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.PIONEER,
-          availableEnergy,
+          energyBudget: availableEnergy,
         }),
       };
     }
@@ -98,7 +101,7 @@ export const spawnManager = {
         role: CREEP_ROLE.DEFENDER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.DEFENDER,
-          availableEnergy,
+          energyBudget: availableEnergy,
         }),
       };
     }
@@ -108,7 +111,7 @@ export const spawnManager = {
         role: CREEP_ROLE.CARRIER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.CARRIER,
-          availableEnergy,
+          energyBudget: availableEnergy,
         }),
         memory: { working: false },
       };
@@ -120,7 +123,7 @@ export const spawnManager = {
         role: CREEP_ROLE.HARVESTER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.HARVESTER,
-          availableEnergy,
+          energyBudget: harvesterEnergyBudget,
         }),
         memory: { sourceId: unclaimedSource.id },
       };
@@ -133,7 +136,7 @@ export const spawnManager = {
         role: CREEP_ROLE.CARRIER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.CARRIER,
-          availableEnergy,
+          energyBudget: capacityEnergy,
         }),
         memory: { working: false },
       };
@@ -144,7 +147,7 @@ export const spawnManager = {
         role: CREEP_ROLE.BUILDER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.WORKER,
-          availableEnergy,
+          energyBudget: capacityEnergy,
         }),
       };
     }
@@ -155,7 +158,7 @@ export const spawnManager = {
         role: CREEP_ROLE.REPAIRER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.WORKER,
-          availableEnergy,
+          energyBudget: capacityEnergy,
         }),
       };
     }
@@ -170,7 +173,7 @@ export const spawnManager = {
         role: CREEP_ROLE.UPGRADER,
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.UPGRADER,
-          availableEnergy,
+          energyBudget: capacityEnergy,
         }),
       };
     }
@@ -202,11 +205,11 @@ function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
 
 function buildBodyFromMaxPattern({
   maxBody,
-  availableEnergy,
+  energyBudget,
   minimumSize = 3,
 }: BodyBuildOptions): BodyPartConstant[] {
   const minimumBody = maxBody.slice(0, minimumSize);
-  if (availableEnergy < bodyCost(minimumBody)) {
+  if (energyBudget < bodyCost(minimumBody)) {
     return minimumBody;
   }
 
@@ -214,10 +217,7 @@ function buildBodyFromMaxPattern({
 
   for (const part of maxBody.slice(minimumBody.length)) {
     const nextBody = [...body, part];
-    if (
-      nextBody.length > MAX_CREEP_SIZE ||
-      bodyCost(nextBody) > availableEnergy
-    ) {
+    if (nextBody.length > MAX_CREEP_SIZE || bodyCost(nextBody) > energyBudget) {
       break;
     }
 
