@@ -7,6 +7,7 @@ declare global {
   type EnergyDeliveryTarget =
     | StructureSpawn
     | StructureExtension
+    | StructureTower
     | StructureContainer
     | AnyCreep;
 

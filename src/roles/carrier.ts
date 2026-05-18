@@ -60,6 +60,16 @@ function isWorkerRefuelCreep(target: EnergyDeliveryTarget): target is Creep {
   return target instanceof Creep && WORKER_REFUEL_ROLES.has(target.memory.role);
 }
 
+function isTowerDeliveryTarget(
+  target: EnergyDeliveryTarget,
+): target is StructureTower {
+  return "structureType" in target && target.structureType === STRUCTURE_TOWER;
+}
+
+function isEmptyTower(target: StructureTower): boolean {
+  return target.store[RESOURCE_ENERGY] === 0;
+}
+
 function hasNearbyWorker(resource: Resource<RESOURCE_ENERGY>): boolean {
   return (
     resource.pos.findInRange(FIND_MY_CREEPS, LOCAL_ENERGY_RANGE, {
@@ -239,6 +249,18 @@ function findRefuelDeliveryTarget(
   });
 }
 
+function findTowerDeliveryTarget(
+  creep: Creep,
+  emptyOnly = false,
+): StructureTower | null {
+  return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+    filter: (structure): structure is StructureTower =>
+      structure.structureType === STRUCTURE_TOWER &&
+      (!emptyOnly || isEmptyTower(structure)) &&
+      isDeliveryTargetAvailable(creep, structure),
+  });
+}
+
 function findControllerDeliveryContainer(
   creep: Creep,
 ): StructureContainer | null {
@@ -320,19 +342,33 @@ function findWorkerDeliveryTarget(creep: Creep): Creep | null {
 }
 
 function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
-  const savedTarget = findSavedDeliveryTarget(creep);
-  if (savedTarget) {
-    return savedTarget;
-  }
-
   const refuelTarget = findRefuelDeliveryTarget(creep);
   if (refuelTarget) {
     return rememberDeliveryTarget(creep, refuelTarget);
   }
 
+  const emptyTower = findTowerDeliveryTarget(creep, true);
+  if (emptyTower) {
+    return rememberDeliveryTarget(creep, emptyTower);
+  }
+
+  const savedTarget = findSavedDeliveryTarget(creep);
+  if (savedTarget && !isTowerDeliveryTarget(savedTarget)) {
+    return savedTarget;
+  }
+
   const worker = findWorkerDeliveryTarget(creep);
   if (worker) {
     return rememberDeliveryTarget(creep, worker);
+  }
+
+  if (savedTarget) {
+    return savedTarget;
+  }
+
+  const tower = findTowerDeliveryTarget(creep);
+  if (tower) {
+    return rememberDeliveryTarget(creep, tower);
   }
 
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
