@@ -60,8 +60,9 @@ export default function App() {
   const [terrainShard, setTerrainShard] = useState<string>("");
   const [showCoordinates, setShowCoordinates] = useState(true);
   const [isEraseMode, setIsEraseMode] = useState(false);
+  const [pastPlans, setPastPlans] = useState<BuildPlansData[]>([]);
+  const [futurePlans, setFuturePlans] = useState<BuildPlansData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isConfirmingSave, setIsConfirmingSave] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [tilePicker, setTilePicker] = useState<TilePickerState | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,15 +83,38 @@ export default function App() {
   }, [currentStep]);
 
   useEffect(() => {
-    function closeTilePicker(event: KeyboardEvent) {
+    function handleKeyboard(event: KeyboardEvent) {
+      const target = event.target;
+      const isFormControl =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement;
+
       if (event.key === "Escape") {
         setTilePicker(null);
+        return;
+      }
+
+      if (isFormControl || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === "z" && event.shiftKey) {
+        event.preventDefault();
+        redoPlans();
+      } else if (key === "z") {
+        event.preventDefault();
+        undoPlans();
+      } else if (key === "y") {
+        event.preventDefault();
+        redoPlans();
       }
     }
 
-    window.addEventListener("keydown", closeTilePicker);
-    return () => window.removeEventListener("keydown", closeTilePicker);
-  }, []);
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, [plans, pastPlans, futurePlans, selectedRoom, currentStep]);
 
   useEffect(() => {
     if (selectedRoom) {
@@ -124,6 +148,57 @@ export default function App() {
     } catch (error) {
       console.error("Failed to load plans:", error);
     }
+  }
+
+  function clearTransientSelection() {
+    setSelectedItemIndex(null);
+    setTilePicker(null);
+  }
+
+  function commitPlans(nextPlans: BuildPlansData, nextStep?: number) {
+    setPastPlans((current) => [...current, plans]);
+    setFuturePlans([]);
+    setPlans(nextPlans);
+
+    if (nextStep !== undefined) {
+      setCurrentStep(nextStep);
+    }
+
+    clearTransientSelection();
+  }
+
+  function clampCurrentStep(nextPlans: BuildPlansData) {
+    if (!selectedRoom) {
+      return 0;
+    }
+
+    return Math.min(currentStep, nextPlans[selectedRoom]?.plan.length ?? 0);
+  }
+
+  function undoPlans() {
+    if (pastPlans.length === 0) {
+      return;
+    }
+
+    const previousPlans = pastPlans[pastPlans.length - 1];
+    setPastPlans((current) => current.slice(0, -1));
+    setFuturePlans((current) => [plans, ...current]);
+    setPlans(previousPlans);
+    setCurrentStep(clampCurrentStep(previousPlans));
+    clearTransientSelection();
+  }
+
+  function redoPlans() {
+    if (futurePlans.length === 0) {
+      return;
+    }
+
+    const nextPlans = futurePlans[0];
+    setFuturePlans((current) => current.slice(1));
+    setPastPlans((current) => [...current, plans]);
+    setPlans(nextPlans);
+    setCurrentStep(clampCurrentStep(nextPlans));
+    clearTransientSelection();
   }
 
   async function loadTerrain(roomName: string) {
@@ -456,14 +531,10 @@ export default function App() {
     const newPlan = [...plan];
     newPlan.splice(currentStep, 0, newItem);
 
-    setPlans({
+    commitPlans({
       ...plans,
       [selectedRoom]: { plan: newPlan },
-    });
-
-    setCurrentStep(Math.min(currentStep + 1, newPlan.length));
-    setSelectedItemIndex(null);
-    setTilePicker(null);
+    }, Math.min(currentStep + 1, newPlan.length));
   }
 
   function deletePlanItem(itemIndex: number) {
@@ -471,14 +542,10 @@ export default function App() {
     const plan = plans[selectedRoom].plan;
     const newPlan = plan.filter((_, i) => i !== itemIndex);
 
-    setPlans({
+    commitPlans({
       ...plans,
       [selectedRoom]: { plan: newPlan },
-    });
-
-    setSelectedItemIndex(null);
-    setTilePicker(null);
-    setCurrentStep(Math.min(currentStep, newPlan.length));
+    }, Math.min(currentStep, newPlan.length));
   }
 
   function removeSelectedItem() {
@@ -493,13 +560,8 @@ export default function App() {
       return;
     }
 
-    setIsConfirmingSave(true);
-  }
-
-  async function confirmSavePlans() {
     setIsSaving(true);
     setSaveMessage("Saving...");
-    setIsConfirmingSave(false);
 
     try {
       const response = await fetch("/api/build-plans", {
@@ -533,11 +595,11 @@ export default function App() {
 
   return (
     <div className="editor">
-      <header className="editor-header">
+      <header className="build-plan-header editor-header">
         <div>
           <h1>Screeps Build Plan Builder</h1>
         </div>
-        <div className="editor-summary">
+        <div className="build-plan-summary editor-summary">
           {selectedRoom
             ? `${selectedRoom} · ${plan.length} planned structures${
                 terrainShard ? ` · terrain ${terrainShard}` : ""
@@ -546,7 +608,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="editor-toolbar">
+      <div className="build-plan-toolbar editor-toolbar">
         <label>
           Room
           <select
@@ -573,6 +635,30 @@ export default function App() {
         </button>
         <button
           type="button"
+          className="icon-button"
+          onClick={undoPlans}
+          disabled={pastPlans.length === 0}
+          title="Undo"
+          aria-label="Undo"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m 5 2 c -0.265625 0 -0.519531 0.105469 -0.707031 0.292969 l -4 4 c -0.3906252 0.390625 -0.3906252 1.023437 0 1.414062 l 4 4 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 s 0.390625 -1.023437 0 -1.414062 l -2.292969 -2.292969 h 8.585938 c 1.117188 0 2 0.882812 2 2 s -0.882812 2 -2 2 c -0.550781 0 -1 0.449219 -1 1 s 0.449219 1 1 1 c 2.199219 0 4 -1.800781 4 -4 s -1.800781 -4 -4 -4 h -8.585938 l 2.292969 -2.292969 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 z m 0 0" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="icon-button mirror"
+          onClick={redoPlans}
+          disabled={futurePlans.length === 0}
+          title="Redo"
+          aria-label="Redo"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m 5 2 c -0.265625 0 -0.519531 0.105469 -0.707031 0.292969 l -4 4 c -0.3906252 0.390625 -0.3906252 1.023437 0 1.414062 l 4 4 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 s 0.390625 -1.023437 0 -1.414062 l -2.292969 -2.292969 h 8.585938 c 1.117188 0 2 0.882812 2 2 s -0.882812 2 -2 2 c -0.550781 0 -1 0.449219 -1 1 s 0.449219 1 1 1 c 2.199219 0 4 -1.800781 4 -4 s -1.800781 -4 -4 -4 h -8.585938 l 2.292969 -2.292969 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 z m 0 0" />
+          </svg>
+        </button>
+        <button
+          type="button"
           className={`tool-button ${isEraseMode ? "active" : ""}`}
           onClick={() => {
             setIsEraseMode((current) => !current);
@@ -591,7 +677,7 @@ export default function App() {
         </button>
       </div>
 
-      <div className="editor-layout">
+      <div className="build-plan-layout editor-layout">
         <section className="canvas-section" onClick={() => setTilePicker(null)}>
           <div className="map-stack">
             <div className="map-canvas-wrap">
@@ -691,8 +777,8 @@ export default function App() {
           </div>
         </section>
 
-        <aside className="sidebar">
-          <div className="panel">
+        <aside className="build-plan-stack sidebar">
+          <div className="build-plan-panel panel">
             <h2>Structure</h2>
             <select
               value={selectedStructureType}
@@ -707,13 +793,15 @@ export default function App() {
             <p className="hint">Click on canvas to add {STRUCTURE_TYPE_LABELS[selectedStructureType]}</p>
           </div>
 
-          <div className="panel">
+          <div className="build-plan-panel panel">
             <h2>Legend</h2>
-            <div className="legend-list">
+            <div className="build-plan-legend-list legend-list">
               {legendEntries.map(({ structureType, count }) => (
-                <div className="legend-row" key={structureType}>
+                <div className="build-plan-legend-row legend-row" key={structureType}>
                   <span
-                    className={`legend-symbol legend-symbol-${structureType
+                    className={`build-plan-legend-symbol build-plan-legend-symbol-${structureType
+                      .replace("STRUCTURE_", "")
+                      .toLowerCase()} legend-symbol legend-symbol-${structureType
                       .replace("STRUCTURE_", "")
                       .toLowerCase()}`}
                     style={{
@@ -729,7 +817,7 @@ export default function App() {
           </div>
 
           {selectedItemIndex !== null && (
-            <div className="panel">
+            <div className="build-plan-panel panel">
               <h2>Selected Item</h2>
               <div className="item-details">
                 <p>
@@ -753,7 +841,7 @@ export default function App() {
           )}
 
           {validationErrors.length > 0 && (
-            <div className="panel error-panel">
+            <div className="build-plan-panel panel error-panel">
               <h2>Validation Errors</h2>
               <ul>
                 {validationErrors.slice(0, 5).map((error, i) => (
@@ -769,37 +857,21 @@ export default function App() {
           )}
 
           {selectedRoom && !terrain && (
-            <div className="panel warning-panel">
+            <div className="build-plan-panel panel warning-panel">
               <h2>Terrain Missing</h2>
               <p>Natural wall placement cannot be validated for {selectedRoom}.</p>
             </div>
           )}
 
-          <div className="panel">
+          <div className="build-plan-panel panel">
             <h2>Actions</h2>
             <button
               onClick={savePlans}
-              disabled={isSaving || validationErrors.length > 0 || isConfirmingSave}
+              disabled={isSaving || validationErrors.length > 0}
               className="save-btn"
             >
-              {isSaving ? "Saving..." : "Review Save"}
+              {isSaving ? "Applying..." : "Apply Build Plan"}
             </button>
-            {isConfirmingSave && (
-              <div className="confirm-save">
-                <p>
-                  Save {plan.length} planned structures for {selectedRoom} to
-                  src/buildPlans.ts?
-                </p>
-                <div className="confirm-actions">
-                  <button onClick={confirmSavePlans} className="save-btn">
-                    Confirm Save
-                  </button>
-                  <button onClick={() => setIsConfirmingSave(false)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
             {saveMessage && <p className="save-message">{saveMessage}</p>}
           </div>
         </aside>

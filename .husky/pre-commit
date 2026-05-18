@@ -1,4 +1,4 @@
 if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(src/.*\.ts|package\.json|tsconfig\.json|biome\.json)$'; then
   npm run check:staged
-  git diff --name-only --cached -z | xargs -0 git add --
+  git diff --name-only --cached --diff-filter=ACMR -z | xargs -0 git add --
 fi
