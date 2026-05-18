@@ -72,7 +72,7 @@ const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 42, y: 36, structureType: STRUCTURE_WALL },
       { x: 42, y: 35, structureType: STRUCTURE_RAMPART },
 
-      { x: 27, y: 27, structureType: STRUCTURE_RAMPART },
+      { x: 29, y: 27, structureType: STRUCTURE_RAMPART },
     ],
   },
 };
