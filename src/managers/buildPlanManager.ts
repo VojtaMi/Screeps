@@ -84,6 +84,36 @@ export function isControllerDeliveryContainer(
   return !!plan && structure.pos.x === plan.x && structure.pos.y === plan.y;
 }
 
+export function getControllerDeliveryContainer(
+  room: Room,
+): StructureContainer | null {
+  const plan = getControllerDeliveryBuildPlan(room);
+  if (plan) {
+    const plannedContainer = room
+      .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+      .find(
+        (structure): structure is StructureContainer =>
+          structure.structureType === STRUCTURE_CONTAINER,
+      );
+
+    if (plannedContainer) {
+      return plannedContainer;
+    }
+  }
+
+  const controller = room.controller;
+  if (!controller) {
+    return null;
+  }
+
+  return (
+    controller.pos.findInRange(FIND_STRUCTURES, 3, {
+      filter: (structure): structure is StructureContainer =>
+        structure.structureType === STRUCTURE_CONTAINER,
+    })[0] ?? null
+  );
+}
+
 function getBuildPlan(room: Room): BuildPlanItem[] {
   syncDefaultBuildPlan(room);
 

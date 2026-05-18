@@ -1,5 +1,12 @@
 import { CREEP_BODY } from "../creepBodies";
 import { CREEP_ROLE, type CreepRole } from "../types";
+import { getControllerDeliveryContainer } from "./buildPlanManager";
+
+const CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS = [
+  { energy: 1800, upgraders: 4 },
+  { energy: 1500, upgraders: 3 },
+  { energy: 1000, upgraders: 2 },
+] as const;
 
 interface SpawnRequest {
   role: CreepRole;
@@ -147,10 +154,11 @@ export const spawnManager = {
       };
     }
 
+    const desiredUpgraders = getDesiredUpgraderCount(room);
     if (
       harvesters.length >= sources.length &&
       carriers.length > 0 &&
-      upgraders.length < 1
+      upgraders.length < desiredUpgraders
     ) {
       return {
         role: CREEP_ROLE.UPGRADER,
@@ -249,6 +257,22 @@ function hasAvailableEnergyForCarriers(room: Room): boolean {
         structure.store[RESOURCE_ENERGY] >= 50,
     }).length > 0
   );
+}
+
+function getDesiredUpgraderCount(room: Room): number {
+  const controllerContainerEnergy = getControllerContainerEnergy(room);
+
+  for (const threshold of CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS) {
+    if (controllerContainerEnergy >= threshold.energy) {
+      return threshold.upgraders;
+    }
+  }
+
+  return 1;
+}
+
+function getControllerContainerEnergy(room: Room): number {
+  return getControllerDeliveryContainer(room)?.store[RESOURCE_ENERGY] ?? 0;
 }
 
 function findUnclaimedHarvesterSource(
