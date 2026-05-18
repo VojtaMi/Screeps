@@ -35,6 +35,12 @@ export const defender: Role = {
   run(creep: Creep): void {
     const hostile = findPriorityHostile(creep);
     if (!hostile) {
+      const spawn = Game.spawns.Spawn1;
+      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
+        creep.moveToAvoidingRoomEdges(spawn, {
+          visualizePathStyle: { stroke: "#ff0000" },
+        });
+      }
       return;
     }
 

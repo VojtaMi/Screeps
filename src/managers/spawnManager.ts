@@ -69,8 +69,6 @@ export const spawnManager = {
     const builders = creepsByRole(CREEP_ROLE.BUILDER);
     const repairers = creepsByRole(CREEP_ROLE.REPAIRER);
     const upgraders = creepsByRole(CREEP_ROLE.UPGRADER);
-    const defenders = creepsByRole(CREEP_ROLE.DEFENDER);
-
     const availableEnergy = room.energyAvailable;
 
     if (creeps.length === 0) {
@@ -83,7 +81,7 @@ export const spawnManager = {
       };
     }
 
-    if (hostiles.length > 0 && defenders.length === 0) {
+    if (hostiles.length > 0) {
       return {
         role: CREEP_ROLE.DEFENDER,
         body: buildBodyFromMaxPattern({
