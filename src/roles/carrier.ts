@@ -57,10 +57,6 @@ function hasRefillEnergy(target: EnergyRefillTarget): boolean {
   return getRefillEnergyAmount(target) > 0;
 }
 
-function isWorkerRefuelCreep(target: EnergyDeliveryTarget): target is Creep {
-  return target instanceof Creep && WORKER_REFUEL_ROLES.has(target.memory.role);
-}
-
 function isTowerDeliveryTarget(
   target: EnergyDeliveryTarget,
 ): target is StructureTower {
@@ -397,25 +393,6 @@ function shouldDeliverPartialEnergy(
   );
 }
 
-function hasNearbyEnergyContainer(creep: Creep): boolean {
-  return (
-    creep.pos.findInRange(FIND_STRUCTURES, LOCAL_ENERGY_RANGE, {
-      filter: (structure): structure is StructureContainer =>
-        structure.structureType === STRUCTURE_CONTAINER &&
-        structure.store[RESOURCE_ENERGY] > 0,
-    }).length > 0
-  );
-}
-
-function dropLeftoverEnergyForWorker(
-  carrierCreep: Creep,
-  workerCreep: Creep,
-): void {
-  if (carrierCreep.hasEnergy() && !hasNearbyEnergyContainer(workerCreep)) {
-    carrierCreep.drop(RESOURCE_ENERGY);
-  }
-}
-
 function deliverEnergy(
   creep: Creep,
   deliveryTarget: EnergyDeliveryTarget | null = findCarrierDeliveryTarget(
@@ -441,9 +418,6 @@ function deliverEnergy(
   }
 
   if (result === OK) {
-    if (isWorkerRefuelCreep(deliveryTarget)) {
-      dropLeftoverEnergyForWorker(creep, deliveryTarget);
-    }
     return true;
   }
 
