@@ -1,4 +1,9 @@
-import { BuildPlanItem, STRUCTURE_COLORS, STRUCTURE_TYPE_LABELS } from "../types";
+import {
+  BuildPlanItem,
+  EditorMode,
+  STRUCTURE_COLORS,
+  STRUCTURE_TYPE_LABELS,
+} from "../types";
 
 interface TilePickerProps {
   x: number;
@@ -7,7 +12,7 @@ interface TilePickerProps {
   top: number;
   itemIndexes: number[];
   plan: BuildPlanItem[];
-  isEraseMode: boolean;
+  editorMode: EditorMode;
   onSelect: (itemIndex: number) => void;
   onDelete: (itemIndex: number) => void;
 }
@@ -19,10 +24,12 @@ export function TilePicker({
   top,
   itemIndexes,
   plan,
-  isEraseMode,
+  editorMode,
   onSelect,
   onDelete,
 }: TilePickerProps) {
+  const isEraseMode = editorMode === "erase";
+
   return (
     <div className="tile-picker" style={{ left, top }}>
       <div className="tile-picker-title">

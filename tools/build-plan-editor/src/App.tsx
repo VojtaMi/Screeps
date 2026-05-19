@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { STRUCTURE_TYPES } from "./types";
+import { EditorMode, STRUCTURE_TYPES } from "./types";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
 import { useTerrain } from "./terrain/useTerrain";
@@ -39,7 +39,7 @@ export default function App() {
     STRUCTURE_TYPES[0]
   );
   const [showCoordinates, setShowCoordinates] = useState(true);
-  const [isEraseMode, setIsEraseMode] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
@@ -74,16 +74,9 @@ export default function App() {
         plans={plans}
         showCoordinates={showCoordinates}
         setShowCoordinates={setShowCoordinates}
-        isEraseMode={isEraseMode}
-        setIsEraseMode={setIsEraseMode}
-        onUndo={undoPlans}
-        onRedo={redoPlans}
-        pastPlans={pastPlans}
-        futurePlans={futurePlans}
         onRoomChange={(nextRoom) => {
           selectRoom(nextRoom);
         }}
-        onClearTilePicker={() => setTilePicker(null)}
       />
 
       <div className="build-plan-layout editor-layout">
@@ -96,7 +89,7 @@ export default function App() {
           setSelectedItemIndex={setSelectedItemIndex}
           tilePicker={tilePicker}
           setTilePicker={setTilePicker}
-          isEraseMode={isEraseMode}
+          editorMode={editorMode}
           selectedStructureType={selectedStructureType}
           showCoordinates={showCoordinates}
           terrain={terrain}
@@ -109,10 +102,19 @@ export default function App() {
           selectedRoom={selectedRoom}
           selectedStructureType={selectedStructureType}
           setSelectedStructureType={setSelectedStructureType}
+          editorMode={editorMode}
+          setEditorMode={(mode) => {
+            setEditorMode(mode);
+            setTilePicker(null);
+          }}
           selectedItemIndex={selectedItemIndex}
           validationErrors={validationErrors}
           terrain={terrain}
           plans={plans}
+          onUndo={undoPlans}
+          onRedo={redoPlans}
+          canUndo={pastPlans.length > 0}
+          canRedo={futurePlans.length > 0}
           deletePlanItem={deletePlanItem}
         />
       </div>

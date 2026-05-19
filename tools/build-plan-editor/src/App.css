@@ -275,6 +275,57 @@ body,
   color: var(--accent);
 }
 
+.mode-button-group,
+.history-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.mode-button-group {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.mode-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-transform: capitalize;
+}
+
+.mode-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.mode-icon-select path {
+  fill: currentColor;
+}
+
+.mode-icon-erase path:first-child {
+  fill: #2ca9bc;
+}
+
+.mode-icon-erase path:last-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.mode-button.active {
+  border-color: var(--accent);
+  background: #17342b;
+  color: var(--accent);
+}
+
+.history-actions {
+  grid-template-columns: repeat(2, 38px);
+  margin-top: 10px;
+}
+
 .editor-layout {
   display: grid;
   grid-template-columns: 1fr 320px;

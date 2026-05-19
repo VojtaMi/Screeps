@@ -1,11 +1,8 @@
 import { useRef, useEffect } from "react";
-import { BuildPlanItem, BuildPlansData } from "../types";
+import { BuildPlanItem, BuildPlansData, EditorMode } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
-import {
-  drawTerrain,
-  drawGrid,
-  drawPlan,
-} from "./drawing";
+import { validateSameTile } from "../plan/validation";
+import { drawTerrain, drawGrid, drawPlan } from "./drawing";
 import { TilePicker } from "./TilePicker";
 import { StepControls } from "./StepControls";
 
@@ -31,7 +28,7 @@ interface CanvasSectionProps {
   setSelectedItemIndex: (index: number | null) => void;
   tilePicker: TilePickerState | null;
   setTilePicker: (state: TilePickerState | null) => void;
-  isEraseMode: boolean;
+  editorMode: EditorMode;
   selectedStructureType: string;
   showCoordinates: boolean;
   terrain: string;
@@ -49,7 +46,7 @@ export function CanvasSection({
   setSelectedItemIndex,
   tilePicker,
   setTilePicker,
-  isEraseMode,
+  editorMode,
   selectedStructureType,
   showCoordinates,
   terrain,
@@ -113,32 +110,69 @@ export function CanvasSection({
       )
       .map(({ index }) => index);
 
-    if (visibleIndexes.length === 1) {
-      if (isEraseMode) {
+    if (editorMode === "build" && canPlaceStructure(plan, x, y)) {
+      addPlanItem(plan, x, y);
+      return;
+    }
+
+    if (editorMode === "erase") {
+      if (visibleIndexes.length === 1) {
         deletePlanItem(visibleIndexes[0]);
-      } else {
-        setSelectedItemIndex(visibleIndexes[0]);
+        setTilePicker(null);
+        return;
       }
+
+      if (visibleIndexes.length > 1) {
+        openTilePicker(x, y, visibleIndexes);
+        return;
+      }
+
+      setTilePicker(null);
+      return;
+    }
+
+    if (visibleIndexes.length === 1) {
+      setSelectedItemIndex(visibleIndexes[0]);
       setTilePicker(null);
       return;
     }
 
     if (visibleIndexes.length > 1) {
-      setTilePicker({
-        x,
-        y,
-        left: x * CELL_SIZE + CELL_SIZE,
-        top: y * CELL_SIZE,
-        itemIndexes: visibleIndexes,
-      });
+      openTilePicker(x, y, visibleIndexes);
       return;
     }
 
-    if (isEraseMode) {
+    if (editorMode !== "build") {
       setTilePicker(null);
       return;
     }
 
+    addPlanItem(plan, x, y);
+  }
+
+  function canPlaceStructure(plan: BuildPlanItem[], x: number, y: number) {
+    const existingTypes = plan
+      .filter((item) => item.x === x && item.y === y)
+      .map((item) => item.structureType);
+
+    if (existingTypes.length === 0) return true;
+
+    if (existingTypes.includes(selectedStructureType)) return false;
+
+    return validateSameTile([...existingTypes, selectedStructureType]);
+  }
+
+  function openTilePicker(x: number, y: number, visibleIndexes: number[]) {
+    setTilePicker({
+      x,
+      y,
+      left: x * CELL_SIZE + CELL_SIZE,
+      top: y * CELL_SIZE,
+      itemIndexes: visibleIndexes,
+    });
+  }
+
+  function addPlanItem(plan: BuildPlanItem[], x: number, y: number) {
     const newItem: BuildPlanItem = {
       x,
       y,
@@ -152,6 +186,7 @@ export function CanvasSection({
       ...plans,
       [selectedRoom]: { plan: newPlan },
     }, Math.min(currentStep + 1, newPlan.length));
+    setTilePicker(null);
   }
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
@@ -165,7 +200,7 @@ export function CanvasSection({
             width={GRID_SIZE * CELL_SIZE}
             height={GRID_SIZE * CELL_SIZE}
             onClick={handleCanvasClick}
-            className={`room-canvas ${isEraseMode ? "erase-mode" : ""}`}
+            className={`room-canvas ${editorMode === "erase" ? "erase-mode" : ""}`}
           />
           {tilePicker && (
             <TilePicker
@@ -175,7 +210,7 @@ export function CanvasSection({
               top={tilePicker.top}
               itemIndexes={tilePicker.itemIndexes}
               plan={plan}
-              isEraseMode={isEraseMode}
+              editorMode={editorMode}
               onSelect={(itemIndex) => {
                 setSelectedItemIndex(itemIndex);
                 setTilePicker(null);

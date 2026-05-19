@@ -13,6 +13,8 @@ export interface BuildPlansData {
   [roomName: string]: RoomBuildPlan;
 }
 
+export type EditorMode = "select" | "build" | "erase";
+
 export const STRUCTURE_TYPES = [
   "STRUCTURE_SPAWN",
   "STRUCTURE_EXTENSION",
