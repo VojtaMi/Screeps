@@ -8,22 +8,10 @@ GitHub Actions builds the TypeScript project, deploys the compiled JavaScript to
 
 ## Build plan editor
 
-Fetch the room terrain snapshot first with:
-
-```sh
-npm run fetch:terrain
-```
-
-The terrain fetch defaults to `E59S28` on `shard3`. To fetch another room or shard, pass them as arguments:
-
-```sh
-npm run fetch:terrain -- E59S28 shard3
-```
-
 Run the local React editor with:
 
 ```sh
 npm run editor:dev
 ```
 
-The editor loads `src/buildPlans.ts`, uses terrain snapshots from `tools/artifacts/terrain`, and writes confirmed changes back through its local Vite API.
+The editor loads `src/buildPlans.ts`, fetches and caches missing terrain snapshots in `tools/artifacts/terrain`, and writes confirmed changes back through its local Vite API. Set `SCREEPS_SHARD` to override the default terrain shard of `shard3`.

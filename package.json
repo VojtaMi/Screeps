@@ -10,7 +10,6 @@
     "format": "biome format --write .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
-    "fetch:terrain": "node tools/build-plan/fetch-room-terrain.mjs",
     "editor:dev": "cd tools/build-plan-editor && npm run dev",
     "editor:build": "cd tools/build-plan-editor && npm run build",
     "editor:preview": "cd tools/build-plan-editor && npm run preview",
@@ -21,6 +20,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@types/node": "^25.9.0",
     "@types/screeps": "^3.3.13",
     "esbuild": "^0.27.0",
     "husky": "^9.1.7",

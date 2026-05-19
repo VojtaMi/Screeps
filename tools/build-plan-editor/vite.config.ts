@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path";
 import {
+  mkdirSync,
   readFileSync,
   readdirSync,
   writeFileSync,
@@ -84,6 +85,57 @@ interface BuildPlansData {
   [roomName: string]: {
     plan: BuildPlanItem[];
   };
+}
+
+interface TerrainSnapshot {
+  room: string;
+  shard: string;
+  terrain: string;
+}
+
+async function fetchRoomTerrain(roomName: string): Promise<TerrainSnapshot> {
+  const shard = process.env.SCREEPS_SHARD ?? "shard3";
+  const url = new URL("https://screeps.com/api/game/room-terrain");
+  url.searchParams.set("room", roomName);
+  url.searchParams.set("shard", shard);
+  url.searchParams.set("encoded", "1");
+
+  const response = await fetch(url);
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Screeps terrain fetch failed with HTTP ${response.status}: ${responseText}`,
+    );
+  }
+
+  const result = JSON.parse(responseText);
+  if (result.ok !== 1 || !result.terrain?.[0]?.terrain) {
+    throw new Error(`Screeps terrain fetch failed: ${responseText}`);
+  }
+
+  const terrain = result.terrain[0].terrain;
+  if (terrain.length !== 2500) {
+    throw new Error(
+      `Expected a 2500-character terrain string, got ${terrain.length}.`,
+    );
+  }
+
+  return { room: roomName, shard, terrain };
+}
+
+async function readOrFetchTerrain(roomName: string): Promise<TerrainSnapshot> {
+  const terrainDir = path.join(root, "tools", "artifacts", "terrain");
+  const terrainPath = path.join(terrainDir, `${roomName}.json`);
+
+  try {
+    return JSON.parse(readFileSync(terrainPath, "utf8"));
+  } catch {
+    const terrain = await fetchRoomTerrain(roomName);
+    mkdirSync(terrainDir, { recursive: true });
+    writeFileSync(terrainPath, `${JSON.stringify(terrain, null, 2)}\n`);
+    return terrain;
+  }
 }
 
 function validateSameTile(types: string[]): boolean {
@@ -258,14 +310,7 @@ function buildPlanApiPlugin() {
 
           const terrainMatch = url.pathname.match(/^\/api\/terrain\/([^/]+)$/);
           if (request.method === "GET" && terrainMatch) {
-            const terrainPath = path.join(
-              root,
-              "tools",
-              "artifacts",
-              "terrain",
-              `${terrainMatch[1]}.json`,
-            );
-            const terrain = JSON.parse(readFileSync(terrainPath, "utf8"));
+            const terrain = await readOrFetchTerrain(terrainMatch[1]);
             sendJson(response, 200, terrain);
             return;
           }
