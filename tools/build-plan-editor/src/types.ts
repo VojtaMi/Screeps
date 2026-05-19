@@ -14,6 +14,7 @@ export interface BuildPlansData {
 }
 
 export const STRUCTURE_TYPES = [
+  "STRUCTURE_SPAWN",
   "STRUCTURE_EXTENSION",
   "STRUCTURE_CONTAINER",
   "STRUCTURE_ROAD",
@@ -23,6 +24,7 @@ export const STRUCTURE_TYPES = [
 ] as const;
 
 export const STRUCTURE_TYPE_LABELS: Record<string, string> = {
+  STRUCTURE_SPAWN: "Spawn",
   STRUCTURE_EXTENSION: "Extension",
   STRUCTURE_CONTAINER: "Container",
   STRUCTURE_ROAD: "Road",
@@ -32,6 +34,7 @@ export const STRUCTURE_TYPE_LABELS: Record<string, string> = {
 };
 
 export const STRUCTURE_COLORS: Record<string, string> = {
+  STRUCTURE_SPAWN: "#7dd3fc",
   STRUCTURE_EXTENSION: "#f4c542",
   STRUCTURE_CONTAINER: "#c98943",
   STRUCTURE_ROAD: "#9ca3af",

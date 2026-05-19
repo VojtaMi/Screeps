@@ -1,9 +1,8 @@
 import { CREEP_ROLE } from "../types";
+import { getPrimarySpawnBuildPlan } from "./buildPlanManager";
 
 const PRIMARY_SPAWN_NAME = "Spawn1";
 const PRIMARY_SPAWN_ROOM = "E59S28";
-const PRIMARY_SPAWN_X = 28;
-const PRIMARY_SPAWN_Y = 21;
 
 function getPrimarySpawnRoom(): Room | null {
   return (
@@ -16,11 +15,12 @@ function getPrimarySpawnRoom(): Room | null {
 export function getPrimarySpawnSite(
   room: Room,
 ): ConstructionSite<STRUCTURE_SPAWN> | null {
-  const sites = room.lookForAt(
-    LOOK_CONSTRUCTION_SITES,
-    PRIMARY_SPAWN_X,
-    PRIMARY_SPAWN_Y,
-  );
+  const plan = getPrimarySpawnBuildPlan(room);
+  if (!plan) {
+    return null;
+  }
+
+  const sites = room.lookForAt(LOOK_CONSTRUCTION_SITES, plan.x, plan.y);
 
   return (
     sites.find(
@@ -44,23 +44,28 @@ function canRebuildSpawn(creep: Creep): boolean {
 }
 
 function createPrimarySpawnSite(room: Room): void {
+  const plan = getPrimarySpawnBuildPlan(room);
+  if (!plan) {
+    return;
+  }
+
   if (getPrimarySpawnSite(room)) {
     return;
   }
 
   const result = room.createConstructionSite(
-    PRIMARY_SPAWN_X,
-    PRIMARY_SPAWN_Y,
-    STRUCTURE_SPAWN,
+    plan.x,
+    plan.y,
+    plan.structureType,
   );
 
   if (result === OK) {
     console.log(
-      `Spawn recovery placed ${STRUCTURE_SPAWN} in ${room.name} at ${PRIMARY_SPAWN_X},${PRIMARY_SPAWN_Y}`,
+      `Spawn recovery placed ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}`,
     );
   } else if (result !== ERR_FULL) {
     console.log(
-      `Spawn recovery failed for ${STRUCTURE_SPAWN} in ${room.name} at ${PRIMARY_SPAWN_X},${PRIMARY_SPAWN_Y}: ${result}`,
+      `Spawn recovery failed for ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
     );
   }
 }

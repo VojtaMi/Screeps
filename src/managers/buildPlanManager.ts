@@ -23,6 +23,18 @@ export function getControllerDeliveryBuildPlan(
   );
 }
 
+export function getPrimarySpawnBuildPlan(room: Room): RoomBuildPlanItem | null {
+  syncDefaultBuildPlan(room);
+
+  return (
+    room.memory.buildPlan?.find(
+      (item) =>
+        item.purpose === "primarySpawn" &&
+        item.structureType === STRUCTURE_SPAWN,
+    ) ?? null
+  );
+}
+
 export function isControllerDeliveryContainer(
   structure: Structure,
 ): structure is StructureContainer {

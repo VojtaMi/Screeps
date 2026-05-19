@@ -7,6 +7,12 @@ export interface DefaultBuildPlan {
 export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
   E59S28: {
     plan: [
+      {
+        x: 28,
+        y: 21,
+        structureType: STRUCTURE_SPAWN,
+        purpose: "primarySpawn",
+      },
       { x: 42, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 41, y: 19, structureType: STRUCTURE_EXTENSION },
       { x: 29, y: 19, structureType: STRUCTURE_EXTENSION },
@@ -66,6 +72,18 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 35, y: 29, structureType: STRUCTURE_ROAD },
       { x: 36, y: 30, structureType: STRUCTURE_ROAD },
       { x: 37, y: 31, structureType: STRUCTURE_ROAD },
+      { x: 27, y: 21, structureType: STRUCTURE_ROAD },
+      { x: 28, y: 20, structureType: STRUCTURE_ROAD },
+      { x: 30, y: 20, structureType: STRUCTURE_ROAD },
+      { x: 29, y: 21, structureType: STRUCTURE_ROAD },
+      { x: 29, y: 20, structureType: STRUCTURE_EXTENSION },
+      { x: 27, y: 23, structureType: STRUCTURE_EXTENSION },
+      { x: 32, y: 19, structureType: STRUCTURE_EXTENSION },
+      { x: 33, y: 20, structureType: STRUCTURE_EXTENSION },
+      { x: 31, y: 20, structureType: STRUCTURE_EXTENSION },
+      { x: 30, y: 21, structureType: STRUCTURE_ROAD },
+      { x: 31, y: 21, structureType: STRUCTURE_ROAD },
+      { x: 32, y: 21, structureType: STRUCTURE_ROAD },
     ],
   },
 };

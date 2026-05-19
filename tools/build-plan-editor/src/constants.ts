@@ -1,6 +1,7 @@
 export const CELL_SIZE = 15;
 export const GRID_SIZE = 50;
 export const LEGEND_ORDER = [
+  "STRUCTURE_SPAWN",
   "STRUCTURE_WALL",
   "STRUCTURE_CONTAINER",
   "STRUCTURE_EXTENSION",
