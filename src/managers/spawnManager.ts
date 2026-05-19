@@ -4,8 +4,7 @@ import { CREEP_ROLE, type CreepRole } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 
 const CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS = [
-  { energy: 2000, upgraders: 3 },
-  { energy: 1200, upgraders: 2 },
+  { energy: 2000, upgraders: 2 },
 ] as const;
 
 interface SpawnRequest {
