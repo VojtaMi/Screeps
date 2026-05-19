@@ -1,6 +1,7 @@
 export const CRITICAL_INFRASTRUCTURE_DAMAGE_RATIO = 0.5;
 export const MAINTENANCE_INFRASTRUCTURE_DAMAGE_RATIO = 0.9;
 export const DEFENSE_TARGET_HITS = 10_000;
+const REPAIR_PRIORITY_WEIGHT = 50;
 
 export type RepairTarget =
   | StructureRoad
@@ -92,6 +93,44 @@ function isBetterRepairTarget(
   );
 }
 
+function getCreepRepairScore(
+  creep: Creep,
+  target: RepairTarget,
+): number | null {
+  const priority = getRepairPriority(target);
+  if (priority === null) {
+    return null;
+  }
+
+  return priority * REPAIR_PRIORITY_WEIGHT + creep.pos.getRangeTo(target);
+}
+
+function isBetterRepairTargetForCreep(
+  creep: Creep,
+  target: RepairTarget,
+  currentBest: RepairTarget | null,
+): boolean {
+  if (!currentBest) {
+    return getCreepRepairScore(creep, target) !== null;
+  }
+
+  const targetScore = getCreepRepairScore(creep, target);
+  const currentScore = getCreepRepairScore(creep, currentBest);
+
+  if (targetScore === null) {
+    return false;
+  }
+
+  if (currentScore === null || targetScore < currentScore) {
+    return true;
+  }
+
+  return (
+    targetScore === currentScore &&
+    getRepairScore(target) < getRepairScore(currentBest)
+  );
+}
+
 export function findBestRepairTarget(room: Room): RepairTarget | null {
   const repairTargets = room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
@@ -100,6 +139,23 @@ export function findBestRepairTarget(room: Room): RepairTarget | null {
 
   return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
     if (isBetterRepairTarget(target, bestTarget)) {
+      return target;
+    }
+
+    return bestTarget;
+  }, null);
+}
+
+export function findBestRepairTargetForCreep(
+  creep: Creep,
+): RepairTarget | null {
+  const repairTargets = creep.room.find(FIND_STRUCTURES, {
+    filter: (structure): structure is RepairTarget =>
+      isRepairTarget(structure) && getRepairPriority(structure) !== null,
+  });
+
+  return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
+    if (isBetterRepairTargetForCreep(creep, target, bestTarget)) {
       return target;
     }
 

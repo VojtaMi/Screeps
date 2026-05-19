@@ -1,5 +1,5 @@
 import {
-  findBestRepairTarget,
+  findBestRepairTargetForCreep,
   getRepairPriority,
   type RepairTarget,
 } from "../repairPolicy";
@@ -26,17 +26,11 @@ function getSavedRepairTarget(creep: Creep): RepairTarget | null {
 
 function findRepairTarget(creep: Creep): RepairTarget | null {
   const savedTarget = getSavedRepairTarget(creep);
-  const bestTarget = findBestRepairTarget(creep.room);
-
-  if (
-    savedTarget &&
-    (!bestTarget ||
-      (getRepairPriority(savedTarget) ?? Number.MAX_SAFE_INTEGER) <=
-        (getRepairPriority(bestTarget) ?? Number.MAX_SAFE_INTEGER))
-  ) {
+  if (savedTarget) {
     return savedTarget;
   }
 
+  const bestTarget = findBestRepairTargetForCreep(creep);
   if (bestTarget) {
     creep.memory.repairTargetId = bestTarget.id;
   }
