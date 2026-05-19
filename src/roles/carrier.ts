@@ -1,3 +1,4 @@
+import { findPriorityHostile } from "../hostileTargeting";
 import {
   getControllerDeliveryBuildPlan,
   isControllerDeliveryContainer,
@@ -7,6 +8,7 @@ import { CREEP_ROLE, type CreepRole, type Role } from "../types";
 import { LOCAL_ENERGY_RANGE } from "./support/localEnergy";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
+const STORAGE_ENERGY_RESERVE = 50_000;
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
@@ -57,14 +59,40 @@ function hasRefillEnergy(target: EnergyRefillTarget): boolean {
   return getRefillEnergyAmount(target) > 0;
 }
 
-function isTowerDeliveryTarget(
-  target: EnergyDeliveryTarget,
-): target is StructureTower {
-  return "structureType" in target && target.structureType === STRUCTURE_TOWER;
+function isStorageTarget(
+  target: EnergyRefillTarget | EnergyDeliveryTarget,
+): target is StructureStorage {
+  return (
+    "structureType" in target && target.structureType === STRUCTURE_STORAGE
+  );
 }
 
 function isEmptyTower(target: StructureTower): boolean {
   return target.store[RESOURCE_ENERGY] === 0;
+}
+
+function isUrgentAttackDeliveryTarget(
+  target: EnergyDeliveryTarget | null,
+): target is StructureSpawn | StructureExtension | StructureTower {
+  if (!target || !("structureType" in target)) {
+    return false;
+  }
+
+  return (
+    target.structureType === STRUCTURE_SPAWN ||
+    target.structureType === STRUCTURE_EXTENSION ||
+    (target.structureType === STRUCTURE_TOWER && isEmptyTower(target))
+  );
+}
+
+function isRefuelDeliveryTarget(
+  target: EnergyDeliveryTarget,
+): target is StructureSpawn | StructureExtension {
+  return (
+    "structureType" in target &&
+    (target.structureType === STRUCTURE_SPAWN ||
+      target.structureType === STRUCTURE_EXTENSION)
+  );
 }
 
 function hasNearbyWorker(resource: Resource<RESOURCE_ENERGY>): boolean {
@@ -115,9 +143,24 @@ function isCarrierRefillTarget(
 ): boolean {
   return (
     hasRefillEnergy(target) &&
+    !isStorageTarget(target) &&
     !isDroppedEnergyReservedForWorker(target) &&
     !isRefillTargetReservedByOtherCreep(creep, target) &&
     (!("structureType" in target) || !isControllerDeliveryContainer(target))
+  );
+}
+
+function isAttackStorageRefillTarget(
+  creep: Creep,
+  target: EnergyRefillTarget,
+  deliveryTarget: EnergyDeliveryTarget | null,
+): target is StructureStorage {
+  return (
+    findPriorityHostile(creep.room, creep.pos) !== null &&
+    isStorageTarget(target) &&
+    isUrgentAttackDeliveryTarget(deliveryTarget) &&
+    hasRefillEnergy(target) &&
+    !isRefillTargetReservedByOtherCreep(creep, target)
   );
 }
 
@@ -138,6 +181,21 @@ function findCarrierEnergyContainer(creep: Creep): StructureContainer | null {
       structure.structureType === STRUCTURE_CONTAINER &&
       isCarrierRefillTarget(creep, structure),
   });
+}
+
+function findAttackStorageRefillTarget(
+  creep: Creep,
+  deliveryTarget: EnergyDeliveryTarget | null,
+): StructureStorage | null {
+  const storage = creep.room.storage;
+  if (
+    !storage ||
+    !isAttackStorageRefillTarget(creep, storage, deliveryTarget)
+  ) {
+    return null;
+  }
+
+  return storage;
 }
 
 function findCarrierDecayingEnergy(creep: Creep): DecayingEnergyTarget | null {
@@ -163,10 +221,17 @@ function findCarrierDecayingEnergy(creep: Creep): DecayingEnergyTarget | null {
 
 function findCarrierEnergyRefillTarget(
   creep: Creep,
+  deliveryTarget: EnergyDeliveryTarget | null = findCarrierDeliveryTarget(
+    creep,
+  ),
 ): EnergyRefillTarget | null {
   if (creep.memory.energyTargetId) {
     const savedTarget = Game.getObjectById(creep.memory.energyTargetId);
-    if (savedTarget && isCarrierRefillTarget(creep, savedTarget)) {
+    if (
+      savedTarget &&
+      (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget) ||
+        isCarrierRefillTarget(creep, savedTarget))
+    ) {
       return savedTarget;
     }
 
@@ -175,7 +240,9 @@ function findCarrierEnergyRefillTarget(
 
   return rememberRefillTarget(
     creep,
-    findCarrierDecayingEnergy(creep) ?? findCarrierEnergyContainer(creep),
+    findAttackStorageRefillTarget(creep, deliveryTarget) ??
+      findCarrierDecayingEnergy(creep) ??
+      findCarrierEnergyContainer(creep),
   );
 }
 
@@ -205,6 +272,17 @@ function isDeliveryTargetAvailable(
   );
 }
 
+function isStorageDeliveryTargetAvailable(
+  creep: Creep,
+  target: StructureStorage,
+): boolean {
+  return (
+    isDeliveryTargetAvailable(creep, target) &&
+    target.store[RESOURCE_ENERGY] + getReservedDeliveryEnergy(creep, target) <
+      STORAGE_ENERGY_RESERVE
+  );
+}
+
 function clearDeliveryTarget(creep: Creep): void {
   delete creep.memory.deliveryTargetId;
 }
@@ -216,7 +294,12 @@ function findSavedDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   }
 
   const savedTarget = Game.getObjectById(creep.memory.deliveryTargetId);
-  if (savedTarget && isDeliveryTargetAvailable(creep, savedTarget)) {
+  if (
+    savedTarget &&
+    (isStorageTarget(savedTarget)
+      ? isStorageDeliveryTargetAvailable(creep, savedTarget)
+      : isDeliveryTargetAvailable(creep, savedTarget))
+  ) {
     return savedTarget;
   }
 
@@ -256,6 +339,15 @@ function findTowerDeliveryTarget(
       (!emptyOnly || isEmptyTower(structure)) &&
       isDeliveryTargetAvailable(creep, structure),
   });
+}
+
+function findStorageDeliveryTarget(creep: Creep): StructureStorage | null {
+  const storage = creep.room.storage;
+  if (!storage || !isStorageDeliveryTargetAvailable(creep, storage)) {
+    return null;
+  }
+
+  return storage;
 }
 
 function findControllerDeliveryContainer(
@@ -350,8 +442,13 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   }
 
   const savedTarget = findSavedDeliveryTarget(creep);
-  if (savedTarget && !isTowerDeliveryTarget(savedTarget)) {
+  if (savedTarget && isRefuelDeliveryTarget(savedTarget)) {
     return savedTarget;
+  }
+
+  const storage = findStorageDeliveryTarget(creep);
+  if (storage) {
+    return rememberDeliveryTarget(creep, storage);
   }
 
   const worker = findWorkerDeliveryTarget(creep);
@@ -467,8 +564,8 @@ export const carrier: Role = {
       return;
     }
 
-    const refillTarget = findCarrierEnergyRefillTarget(creep);
     const deliveryTarget = findCarrierDeliveryTarget(creep);
+    const refillTarget = findCarrierEnergyRefillTarget(creep, deliveryTarget);
 
     if (shouldDeliverPartialEnergy(creep, refillTarget, deliveryTarget)) {
       creep.memory.working = true;

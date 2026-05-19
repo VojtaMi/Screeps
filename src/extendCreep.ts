@@ -482,7 +482,7 @@ export function extendCreep(): void {
       });
 
       const targets = [container, ruin, tombstone].filter(
-        (target): target is EnergyWithdrawTarget => !!target,
+        (target): target is StructureContainer | Ruin | Tombstone => !!target,
       );
       return this.pos.findClosestByPath(targets);
     };

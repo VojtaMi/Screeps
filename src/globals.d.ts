@@ -2,13 +2,21 @@ import type { CreepRole } from "./types";
 
 declare global {
   type DecayingEnergyTarget = Resource<RESOURCE_ENERGY> | Ruin | Tombstone;
-  type EnergyWithdrawTarget = StructureContainer | Ruin | Tombstone;
-  type EnergyRefillTarget = DecayingEnergyTarget | StructureContainer;
+  type EnergyWithdrawTarget =
+    | StructureContainer
+    | StructureStorage
+    | Ruin
+    | Tombstone;
+  type EnergyRefillTarget =
+    | DecayingEnergyTarget
+    | StructureContainer
+    | StructureStorage;
   type EnergyDeliveryTarget =
     | StructureSpawn
     | StructureExtension
     | StructureTower
     | StructureContainer
+    | StructureStorage
     | AnyCreep;
 
   interface CreepMemory {
