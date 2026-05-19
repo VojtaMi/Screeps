@@ -1,8 +1,13 @@
 import { useRef, useEffect } from "react";
-import { BuildPlanItem, BuildPlansData, EditorMode } from "../types";
+import {
+  BuildPlanItem,
+  BuildPlansData,
+  EditorMode,
+  RoomLandmark,
+} from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
 import { validateSameTile } from "../plan/validation";
-import { drawTerrain, drawGrid, drawPlan } from "./drawing";
+import { drawTerrain, drawGrid, drawLandmarks, drawPlan } from "./drawing";
 import { TilePicker } from "./TilePicker";
 import { StepControls } from "./StepControls";
 
@@ -31,6 +36,8 @@ interface CanvasSectionProps {
   editorMode: EditorMode;
   selectedStructureType: string;
   showCoordinates: boolean;
+  showLandmarks: boolean;
+  landmarks: RoomLandmark[];
   terrain: string;
   validationErrors: ValidationError[];
   commitPlans: (plans: BuildPlansData, nextStep?: number) => void;
@@ -49,6 +56,8 @@ export function CanvasSection({
   editorMode,
   selectedStructureType,
   showCoordinates,
+  showLandmarks,
+  landmarks,
   terrain,
   validationErrors,
   commitPlans,
@@ -70,6 +79,8 @@ export function CanvasSection({
     plans,
     validationErrors,
     showCoordinates,
+    showLandmarks,
+    landmarks,
   ]);
 
   function redraw() {
@@ -86,6 +97,9 @@ export function CanvasSection({
 
     drawTerrain(ctx, terrain);
     drawGrid(ctx, showCoordinates);
+    if (showLandmarks) {
+      drawLandmarks(ctx, landmarks);
+    }
 
     const plan = plans[selectedRoom]?.plan ?? [];
     drawPlan(ctx, plan, currentStep, selectedItemIndex, validationErrors);

@@ -1,4 +1,4 @@
-import { BuildPlanItem, BuildPlansData, STRUCTURE_COLORS } from "../types";
+import { BuildPlanItem, RoomLandmark, STRUCTURE_COLORS } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
 
 interface ValidationError {
@@ -58,6 +58,70 @@ export function drawGrid(
     ctx.fillText(String(i), i * CELL_SIZE + 2, 9);
     ctx.fillText(String(i), 2, i * CELL_SIZE + 10);
   }
+}
+
+export function drawLandmarks(
+  ctx: CanvasRenderingContext2D,
+  landmarks: RoomLandmark[]
+): void {
+  for (const landmark of landmarks) {
+    const x = landmark.x * CELL_SIZE;
+    const y = landmark.y * CELL_SIZE;
+    const centerX = x + CELL_SIZE / 2;
+    const centerY = y + CELL_SIZE / 2;
+
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = getLandmarkColor(landmark.type);
+    ctx.fillStyle = "rgba(16, 19, 26, 0.72)";
+
+    if (landmark.type === "controller") {
+      ctx.beginPath();
+      ctx.rect(x + 2.5, y + 2.5, CELL_SIZE - 5, CELL_SIZE - 5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(centerX, y + 4);
+      ctx.lineTo(x + CELL_SIZE - 4, centerY);
+      ctx.lineTo(centerX, y + CELL_SIZE - 4);
+      ctx.lineTo(x + 4, centerY);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (landmark.type === "source") {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = getLandmarkColor(landmark.type);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(centerX, y + 2.5);
+      ctx.lineTo(x + CELL_SIZE - 2.5, centerY);
+      ctx.lineTo(centerX, y + CELL_SIZE - 2.5);
+      ctx.lineTo(x + 2.5, centerY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    if (landmark.label) {
+      ctx.fillStyle = getLandmarkColor(landmark.type);
+      ctx.font = "7px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(landmark.label.slice(0, 2), centerX, y + CELL_SIZE - 3);
+    }
+
+    ctx.restore();
+  }
+}
+
+function getLandmarkColor(type: RoomLandmark["type"]): string {
+  if (type === "controller") return "#a78bfa";
+  if (type === "source") return "#facc15";
+  return "#38bdf8";
 }
 
 export function drawPlan(

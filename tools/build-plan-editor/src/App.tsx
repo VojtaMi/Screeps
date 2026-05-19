@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
+import { useLandmarks } from "./terrain/useLandmarks";
 import { useTerrain } from "./terrain/useTerrain";
 import { validatePlans } from "./plan/validation";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
@@ -34,11 +35,13 @@ export default function App() {
   } = usePlan();
 
   const { terrain, terrainShard } = useTerrain(selectedRoom);
+  const { landmarks } = useLandmarks(selectedRoom);
 
   const [selectedStructureType, setSelectedStructureType] = useState<string>(
     STRUCTURE_TYPES[0]
   );
   const [showCoordinates, setShowCoordinates] = useState(true);
+  const [showLandmarks, setShowLandmarks] = useState(true);
   const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
@@ -74,6 +77,8 @@ export default function App() {
         plans={plans}
         showCoordinates={showCoordinates}
         setShowCoordinates={setShowCoordinates}
+        showLandmarks={showLandmarks}
+        setShowLandmarks={setShowLandmarks}
         onRoomChange={(nextRoom) => {
           selectRoom(nextRoom);
         }}
@@ -92,6 +97,8 @@ export default function App() {
           editorMode={editorMode}
           selectedStructureType={selectedStructureType}
           showCoordinates={showCoordinates}
+          showLandmarks={showLandmarks}
+          landmarks={landmarks}
           terrain={terrain}
           validationErrors={validationErrors}
           commitPlans={commitPlans}

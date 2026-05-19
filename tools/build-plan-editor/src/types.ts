@@ -15,6 +15,16 @@ export interface BuildPlansData {
 
 export type EditorMode = "select" | "build" | "erase";
 
+export type RoomLandmarkType = "controller" | "source" | "mineral";
+
+export interface RoomLandmark {
+  id: string;
+  type: RoomLandmarkType;
+  x: number;
+  y: number;
+  label?: string;
+}
+
 export const STRUCTURE_TYPES = [
   "STRUCTURE_SPAWN",
   "STRUCTURE_EXTENSION",

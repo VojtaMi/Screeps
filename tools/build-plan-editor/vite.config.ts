@@ -93,6 +93,20 @@ interface TerrainSnapshot {
   terrain: string;
 }
 
+interface RoomLandmark {
+  id: string;
+  type: "controller" | "source" | "mineral";
+  x: number;
+  y: number;
+  label?: string;
+}
+
+interface LandmarkSnapshot {
+  room: string;
+  shard: string;
+  landmarks: RoomLandmark[];
+}
+
 async function fetchRoomTerrain(roomName: string): Promise<TerrainSnapshot> {
   const shard = process.env.SCREEPS_SHARD ?? "shard3";
   const url = new URL("https://screeps.com/api/game/room-terrain");
@@ -124,6 +138,49 @@ async function fetchRoomTerrain(roomName: string): Promise<TerrainSnapshot> {
   return { room: roomName, shard, terrain };
 }
 
+async function fetchRoomLandmarks(roomName: string): Promise<LandmarkSnapshot> {
+  const shard = process.env.SCREEPS_SHARD ?? "shard3";
+  const url = new URL("https://screeps.com/api/game/room-objects");
+  url.searchParams.set("room", roomName);
+  url.searchParams.set("shard", shard);
+
+  const response = await fetch(url);
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Screeps room objects fetch failed with HTTP ${response.status}: ${responseText}`,
+    );
+  }
+
+  const result = JSON.parse(responseText);
+  if (result.ok !== 1 || !Array.isArray(result.objects)) {
+    throw new Error(`Screeps room objects fetch failed: ${responseText}`);
+  }
+
+  const landmarks = result.objects
+    .filter((object: { type?: string }) =>
+      ["controller", "source", "mineral"].includes(object.type ?? ""),
+    )
+    .map(
+      (object: {
+        _id?: string;
+        type: "controller" | "source" | "mineral";
+        x: number;
+        y: number;
+        mineralType?: string;
+      }): RoomLandmark => ({
+        id: object._id ?? `${object.type}-${object.x}-${object.y}`,
+        type: object.type,
+        x: object.x,
+        y: object.y,
+        label: object.type === "mineral" ? object.mineralType : undefined,
+      }),
+    );
+
+  return { room: roomName, shard, landmarks };
+}
+
 async function readOrFetchTerrain(roomName: string): Promise<TerrainSnapshot> {
   const terrainDir = path.join(root, "tools", "artifacts", "terrain");
   const terrainPath = path.join(terrainDir, `${roomName}.json`);
@@ -135,6 +192,22 @@ async function readOrFetchTerrain(roomName: string): Promise<TerrainSnapshot> {
     mkdirSync(terrainDir, { recursive: true });
     writeFileSync(terrainPath, `${JSON.stringify(terrain, null, 2)}\n`);
     return terrain;
+  }
+}
+
+async function readOrFetchLandmarks(
+  roomName: string,
+): Promise<LandmarkSnapshot> {
+  const landmarksDir = path.join(root, "tools", "artifacts", "landmarks");
+  const landmarksPath = path.join(landmarksDir, `${roomName}.json`);
+
+  try {
+    return JSON.parse(readFileSync(landmarksPath, "utf8"));
+  } catch {
+    const landmarks = await fetchRoomLandmarks(roomName);
+    mkdirSync(landmarksDir, { recursive: true });
+    writeFileSync(landmarksPath, `${JSON.stringify(landmarks, null, 2)}\n`);
+    return landmarks;
   }
 }
 
@@ -312,6 +385,15 @@ function buildPlanApiPlugin() {
           if (request.method === "GET" && terrainMatch) {
             const terrain = await readOrFetchTerrain(terrainMatch[1]);
             sendJson(response, 200, terrain);
+            return;
+          }
+
+          const landmarksMatch = url.pathname.match(
+            /^\/api\/landmarks\/([^/]+)$/,
+          );
+          if (request.method === "GET" && landmarksMatch) {
+            const landmarks = await readOrFetchLandmarks(landmarksMatch[1]);
+            sendJson(response, 200, landmarks);
             return;
           }
 

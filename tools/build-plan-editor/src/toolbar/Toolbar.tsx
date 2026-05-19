@@ -5,6 +5,8 @@ interface ToolbarProps {
   plans: BuildPlansData;
   showCoordinates: boolean;
   setShowCoordinates: (show: boolean) => void;
+  showLandmarks: boolean;
+  setShowLandmarks: (show: boolean) => void;
   onRoomChange: (room: string) => void;
 }
 
@@ -13,6 +15,8 @@ export function Toolbar({
   plans,
   showCoordinates,
   setShowCoordinates,
+  showLandmarks,
+  setShowLandmarks,
   onRoomChange,
 }: ToolbarProps) {
   return (
@@ -39,6 +43,17 @@ export function Toolbar({
       >
         Coordinates
       </button>
+      <label className="toggle-switch">
+        <input
+          type="checkbox"
+          checked={showLandmarks}
+          onChange={(event) => setShowLandmarks(event.target.checked)}
+        />
+        <span className="toggle-switch-track" aria-hidden="true">
+          <span className="toggle-switch-thumb" />
+        </span>
+        <span>Landmarks</span>
+      </label>
     </div>
   );
 }
