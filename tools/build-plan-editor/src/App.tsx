@@ -1,597 +1,58 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  BuildPlanItem,
-  BuildPlansData,
-  STRUCTURE_COLORS,
-  STRUCTURE_TYPES,
-  STRUCTURE_TYPE_LABELS,
-} from "./types";
+import { useEffect, useState } from "react";
+import { STRUCTURE_TYPES } from "./types";
 import "./App.css";
+import { usePlan } from "./plan/usePlan";
+import { useTerrain } from "./terrain/useTerrain";
+import { validatePlans } from "./plan/validation";
+import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
+import { Toolbar } from "./toolbar/Toolbar";
+import { CanvasSection } from "./canvas/CanvasSection";
+import { Sidebar } from "./sidebar/Sidebar";
 
 interface ValidationError {
   step: number;
   message: string;
 }
 
-interface ApiResponse {
-  plans: BuildPlansData;
-  availableTerrains: string[];
-}
-
-interface TerrainSnapshot {
-  room: string;
-  shard: string;
-  terrain: string;
-}
-
-interface TilePickerState {
-  x: number;
-  y: number;
-  left: number;
-  top: number;
-  itemIndexes: number[];
-}
-
-const CELL_SIZE = 15;
-const GRID_SIZE = 50;
-const LEGEND_ORDER = [
-  "STRUCTURE_WALL",
-  "STRUCTURE_CONTAINER",
-  "STRUCTURE_EXTENSION",
-  "STRUCTURE_RAMPART",
-  "STRUCTURE_ROAD",
-  "STRUCTURE_TOWER",
-];
-
 export default function App() {
-  const [plans, setPlans] = useState<BuildPlansData>({});
-  const [selectedRoom, setSelectedRoom] = useState<string>("");
-  const [currentStep, setCurrentStep] = useState(0);
+  const {
+    plans,
+    selectedRoom,
+    selectRoom,
+    currentStep,
+    setCurrentStep,
+    pastPlans,
+    futurePlans,
+    selectedItemIndex,
+    setSelectedItemIndex,
+    tilePicker,
+    setTilePicker,
+    commitPlans,
+    undoPlans,
+    redoPlans,
+    deletePlanItem,
+  } = usePlan();
+
+  const { terrain, terrainShard } = useTerrain(selectedRoom);
+
   const [selectedStructureType, setSelectedStructureType] = useState<string>(
     STRUCTURE_TYPES[0]
   );
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(
-    null
-  );
+  const [showCoordinates, setShowCoordinates] = useState(true);
+  const [isEraseMode, setIsEraseMode] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
-  const [terrain, setTerrain] = useState<string>("");
-  const [terrainShard, setTerrainShard] = useState<string>("");
-  const [showCoordinates, setShowCoordinates] = useState(true);
-  const [isEraseMode, setIsEraseMode] = useState(false);
-  const [pastPlans, setPastPlans] = useState<BuildPlansData[]>([]);
-  const [futurePlans, setFuturePlans] = useState<BuildPlansData[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
-  const [tilePicker, setTilePicker] = useState<TilePickerState | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    loadPlans();
-  }, []);
 
   useEffect(() => {
     if (selectedRoom) {
-      loadTerrain(selectedRoom);
+      setValidationErrors(validatePlans(plans, selectedRoom, terrain));
     }
-    setTilePicker(null);
-  }, [selectedRoom]);
+  }, [plans, selectedRoom, terrain]);
 
-  useEffect(() => {
-    setTilePicker(null);
-  }, [currentStep]);
-
-  useEffect(() => {
-    function handleKeyboard(event: KeyboardEvent) {
-      const target = event.target;
-      const isFormControl =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLSelectElement ||
-        target instanceof HTMLTextAreaElement;
-
-      if (event.key === "Escape") {
-        setTilePicker(null);
-        return;
-      }
-
-      if (isFormControl || (!event.ctrlKey && !event.metaKey)) {
-        return;
-      }
-
-      const key = event.key.toLowerCase();
-      if (key === "z" && event.shiftKey) {
-        event.preventDefault();
-        redoPlans();
-      } else if (key === "z") {
-        event.preventDefault();
-        undoPlans();
-      } else if (key === "y") {
-        event.preventDefault();
-        redoPlans();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyboard);
-    return () => window.removeEventListener("keydown", handleKeyboard);
-  }, [plans, pastPlans, futurePlans, selectedRoom, currentStep]);
-
-  useEffect(() => {
-    if (selectedRoom) {
-      validatePlans();
-    }
-  }, [plans, selectedRoom]);
-
-  useEffect(() => {
-    redraw();
-  }, [
-    selectedRoom,
-    currentStep,
-    selectedItemIndex,
-    terrain,
-    plans,
-    validationErrors,
-    showCoordinates,
-  ]);
-
-  async function loadPlans() {
-    try {
-      const response = await fetch("/api/build-plans");
-      const data: ApiResponse = await response.json();
-      setPlans(data.plans);
-      const roomNames = Object.keys(data.plans);
-      if (roomNames.length > 0) {
-        const initialRoom = roomNames[0];
-        setSelectedRoom(initialRoom);
-        setCurrentStep(data.plans[initialRoom].plan.length);
-      }
-    } catch (error) {
-      console.error("Failed to load plans:", error);
-    }
-  }
-
-  function clearTransientSelection() {
-    setSelectedItemIndex(null);
-    setTilePicker(null);
-  }
-
-  function commitPlans(nextPlans: BuildPlansData, nextStep?: number) {
-    setPastPlans((current) => [...current, plans]);
-    setFuturePlans([]);
-    setPlans(nextPlans);
-
-    if (nextStep !== undefined) {
-      setCurrentStep(nextStep);
-    }
-
-    clearTransientSelection();
-  }
-
-  function clampCurrentStep(nextPlans: BuildPlansData) {
-    if (!selectedRoom) {
-      return 0;
-    }
-
-    return Math.min(currentStep, nextPlans[selectedRoom]?.plan.length ?? 0);
-  }
-
-  function undoPlans() {
-    if (pastPlans.length === 0) {
-      return;
-    }
-
-    const previousPlans = pastPlans[pastPlans.length - 1];
-    setPastPlans((current) => current.slice(0, -1));
-    setFuturePlans((current) => [plans, ...current]);
-    setPlans(previousPlans);
-    setCurrentStep(clampCurrentStep(previousPlans));
-    clearTransientSelection();
-  }
-
-  function redoPlans() {
-    if (futurePlans.length === 0) {
-      return;
-    }
-
-    const nextPlans = futurePlans[0];
-    setFuturePlans((current) => current.slice(1));
-    setPastPlans((current) => [...current, plans]);
-    setPlans(nextPlans);
-    setCurrentStep(clampCurrentStep(nextPlans));
-    clearTransientSelection();
-  }
-
-  async function loadTerrain(roomName: string) {
-    try {
-      const response = await fetch(`/api/terrain/${roomName}`);
-      if (response.ok) {
-        const data: TerrainSnapshot = await response.json();
-        setTerrain(data.terrain);
-        setTerrainShard(data.shard);
-      } else {
-        setTerrain("");
-        setTerrainShard("");
-      }
-    } catch (error) {
-      console.error("Failed to load terrain:", error);
-      setTerrain("");
-      setTerrainShard("");
-    }
-  }
-
-  function validatePlans() {
-    if (!selectedRoom) return;
-
-    const errors: ValidationError[] = [];
-    const plan = plans[selectedRoom]?.plan ?? [];
-
-    for (let i = 0; i < plan.length; i++) {
-      const item = plan[i];
-
-      // Validate coordinates
-      if (!Number.isInteger(item.x) || item.x < 0 || item.x > 49) {
-        errors.push({
-          step: i,
-          message: `Invalid x coordinate: ${item.x}`,
-        });
-        continue;
-      }
-      if (!Number.isInteger(item.y) || item.y < 0 || item.y > 49) {
-        errors.push({
-          step: i,
-          message: `Invalid y coordinate: ${item.y}`,
-        });
-        continue;
-      }
-
-      // Check for duplicates at same position with same type
-      const duplicates = plan.filter(
-        (other, j) =>
-          j !== i &&
-          other.x === item.x &&
-          other.y === item.y &&
-          other.structureType === item.structureType
-      );
-      if (duplicates.length > 0) {
-        errors.push({
-          step: i,
-          message: `Duplicate structure at (${item.x}, ${item.y})`,
-        });
-        continue;
-      }
-
-      // Check same-tile rules
-      const samePos = plan.filter(
-        (other, j) => j !== i && other.x === item.x && other.y === item.y
-      );
-      if (samePos.length > 0) {
-        const types = [item.structureType, ...samePos.map((s) => s.structureType)];
-        const isValid = validateSameTile(types);
-        if (!isValid) {
-          errors.push({
-            step: i,
-            message: `Invalid same-tile combination at (${item.x}, ${item.y})`,
-          });
-        }
-      }
-
-      // Check terrain rules
-      if (terrain) {
-        const terrainCode = Number(terrain[item.y * 50 + item.x] ?? 0);
-        const isWall = terrainCode & 1;
-        if (
-          isWall &&
-          item.structureType !== "STRUCTURE_ROAD"
-        ) {
-          errors.push({
-            step: i,
-            message: `Cannot place ${STRUCTURE_TYPE_LABELS[item.structureType] || item.structureType} on natural wall`,
-          });
-        }
-      }
-    }
-
-    setValidationErrors(errors);
-  }
-
-  function validateSameTile(types: string[]): boolean {
-    if (types.length === 1) {
-      return true;
-    }
-
-    const sortedTypes = [...types].sort();
-    const hasRampart = sortedTypes.includes("STRUCTURE_RAMPART");
-    const withoutRampart = sortedTypes.filter(
-      (type) => type !== "STRUCTURE_RAMPART"
-    );
-
-    if (hasRampart && withoutRampart.length === sortedTypes.length - 1) {
-      return validateSameTile(withoutRampart);
-    }
-
-    return (
-      sortedTypes.length === 2 &&
-      sortedTypes[0] === "STRUCTURE_CONTAINER" &&
-      sortedTypes[1] === "STRUCTURE_ROAD"
-    );
-  }
-
-  function redraw() {
-    if (!canvasRef.current || !selectedRoom) return;
-
-    const ctx = canvasRef.current.getContext("2d");
-    if (!ctx) return;
-
-    const width = GRID_SIZE * CELL_SIZE;
-    const height = GRID_SIZE * CELL_SIZE;
-
-    ctx.fillStyle = "#10131a";
-    ctx.fillRect(0, 0, width, height);
-
-    drawTerrain(ctx);
-    drawGrid(ctx);
-    drawPlan(ctx);
-  }
-
-  function drawTerrain(ctx: CanvasRenderingContext2D) {
-    if (!terrain) return;
-
-    const colors = {
-      plain: "rgb(44, 44, 44)",
-      swamp: "rgb(40, 51, 29)",
-      wall: "rgb(19, 19, 19)",
-    };
-
-    for (let y = 0; y < GRID_SIZE; y++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        const code = Number(terrain[y * GRID_SIZE + x] ?? 0);
-        let color = colors.plain;
-        if (code & 1) color = colors.wall;
-        else if (code & 2) color = colors.swamp;
-
-        ctx.fillStyle = color;
-        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      }
-    }
-  }
-
-  function drawGrid(ctx: CanvasRenderingContext2D) {
-    ctx.strokeStyle = "#2c3444";
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= GRID_SIZE; i++) {
-      const pos = i * CELL_SIZE + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(pos, 0);
-      ctx.lineTo(pos, GRID_SIZE * CELL_SIZE);
-      ctx.moveTo(0, pos);
-      ctx.lineTo(GRID_SIZE * CELL_SIZE, pos);
-      ctx.stroke();
-    }
-
-    if (!showCoordinates) {
-      return;
-    }
-
-    ctx.fillStyle = "#cad1dd";
-    ctx.font = "8px ui-monospace, SFMono-Regular, Menlo, monospace";
-    for (let i = 0; i < GRID_SIZE; i += 5) {
-      ctx.fillText(String(i), i * CELL_SIZE + 2, 9);
-      ctx.fillText(String(i), 2, i * CELL_SIZE + 10);
-    }
-  }
-
-  function drawPlan(ctx: CanvasRenderingContext2D) {
-    if (!selectedRoom) return;
-
-    const plan = plans[selectedRoom]?.plan ?? [];
-    const tileItems = new Map<
-      string,
-      Array<{ item: BuildPlanItem; index: number }>
-    >();
-
-    for (const [index, item] of plan.entries()) {
-      const key = `${item.x},${item.y}`;
-      tileItems.set(key, [...(tileItems.get(key) ?? []), { item, index }]);
-    }
-
-    for (const items of tileItems.values()) {
-      drawTileStructures(ctx, items);
-    }
-  }
-
-  function getStructureColor(item: BuildPlanItem, isAfterStep: boolean): string {
-    const color = STRUCTURE_COLORS[item.structureType] || "#ffffff";
-    return isAfterStep ? adjustBrightness(color, 0.5) : color;
-  }
-
-  function drawTileStructures(
-    ctx: CanvasRenderingContext2D,
-    items: Array<{ item: BuildPlanItem; index: number }>
-  ) {
-    const [{ item: firstItem }] = items;
-    const x = firstItem.x * CELL_SIZE;
-    const y = firstItem.y * CELL_SIZE;
-    const centerX = x + CELL_SIZE / 2;
-    const centerY = y + CELL_SIZE / 2;
-    const rampart = items.find(
-      ({ item }) => item.structureType === "STRUCTURE_RAMPART"
-    );
-    const road = items.find(
-      ({ item }) => item.structureType === "STRUCTURE_ROAD"
-    );
-    const mainStructure = items.find(
-      ({ item }) =>
-        item.structureType !== "STRUCTURE_RAMPART" &&
-        item.structureType !== "STRUCTURE_ROAD"
-    );
-    const selected = items.find(({ index }) => index === selectedItemIndex);
-    const hasError = items.some(({ index }) =>
-      validationErrors.some((error) => error.step === index)
-    );
-
-    if (rampart) {
-      ctx.fillStyle = getStructureColor(
-        rampart.item,
-        rampart.index >= currentStep
-      );
-      ctx.fillRect(x + 2, y + 2, 11, 11);
-    }
-
-    if (mainStructure) {
-      ctx.fillStyle = getStructureColor(
-        mainStructure.item,
-        mainStructure.index >= currentStep
-      );
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (mainStructure.item.purpose) {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
-      }
-    }
-
-    if (road) {
-      ctx.fillStyle = getStructureColor(road.item, road.index >= currentStep);
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (hasError || selected) {
-      ctx.strokeStyle = hasError ? "#ff0000" : "#00ff00";
-      ctx.lineWidth = hasError ? 3 : 2.5;
-      ctx.strokeRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3);
-    }
-  }
-
-  function adjustBrightness(color: string, factor: number): string {
-    const num = parseInt(color.replace("#", ""), 16);
-    const r = Math.round((num >> 16) * factor);
-    const g = Math.round(((num >> 8) & 0x00ff) * factor);
-    const b = Math.round((num & 0x0000ff) * factor);
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-  }
-
-  function handleCanvasClick(
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) {
-    if (!canvasRef.current || !selectedRoom) return;
-    e.stopPropagation();
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-
-    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
-
-    const plan = plans[selectedRoom].plan;
-    const visibleIndexes = plan
-      .map((item, index) => ({ item, index }))
-      .filter(
-        ({ item, index }) =>
-          index < currentStep && item.x === x && item.y === y
-      )
-      .map(({ index }) => index);
-
-    if (visibleIndexes.length === 1) {
-      if (isEraseMode) {
-        deletePlanItem(visibleIndexes[0]);
-      } else {
-        setSelectedItemIndex(visibleIndexes[0]);
-      }
-      setTilePicker(null);
-      return;
-    }
-
-    if (visibleIndexes.length > 1) {
-      setTilePicker({
-        x,
-        y,
-        left: x * CELL_SIZE + CELL_SIZE,
-        top: y * CELL_SIZE,
-        itemIndexes: visibleIndexes,
-      });
-      return;
-    }
-
-    if (isEraseMode) {
-      setTilePicker(null);
-      return;
-    }
-
-    const newItem: BuildPlanItem = {
-      x,
-      y,
-      structureType: selectedStructureType,
-    };
-
-    const newPlan = [...plan];
-    newPlan.splice(currentStep, 0, newItem);
-
-    commitPlans({
-      ...plans,
-      [selectedRoom]: { plan: newPlan },
-    }, Math.min(currentStep + 1, newPlan.length));
-  }
-
-  function deletePlanItem(itemIndex: number) {
-    if (!selectedRoom) return;
-    const plan = plans[selectedRoom].plan;
-    const newPlan = plan.filter((_, i) => i !== itemIndex);
-
-    commitPlans({
-      ...plans,
-      [selectedRoom]: { plan: newPlan },
-    }, Math.min(currentStep, newPlan.length));
-  }
-
-  function removeSelectedItem() {
-    if (selectedItemIndex === null) return;
-    deletePlanItem(selectedItemIndex);
-  }
-
-  async function savePlans() {
-    const hasErrors = validationErrors.length > 0;
-    if (hasErrors) {
-      setSaveMessage("Cannot save: validation errors exist");
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveMessage("Saving...");
-
-    try {
-      const response = await fetch("/api/build-plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plans }),
-      });
-
-      if (response.ok) {
-        setSaveMessage("Saved successfully!");
-        setTimeout(() => setSaveMessage(""), 3000);
-      } else {
-        const error = await response.json();
-        setSaveMessage(`Save failed: ${error.error || "Unknown error"}`);
-      }
-    } catch (error) {
-      setSaveMessage(
-        `Save failed: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
+  useKeyboardShortcuts(undoPlans, redoPlans, () => setTilePicker(null));
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
-  const visiblePlan = plan.slice(0, currentStep);
-  const legendEntries = LEGEND_ORDER.map((structureType) => ({
-    structureType,
-    count: plan.filter((item) => item.structureType === structureType).length,
-  })).filter((entry) => entry.count > 0);
 
   return (
     <div className="editor">
@@ -608,273 +69,52 @@ export default function App() {
         </div>
       </header>
 
-      <div className="build-plan-toolbar editor-toolbar">
-        <label>
-          Room
-          <select
-            value={selectedRoom}
-            onChange={(event) => {
-              const nextRoom = event.target.value;
-              setSelectedRoom(nextRoom);
-              setCurrentStep(plans[nextRoom]?.plan.length ?? 0);
-              setSelectedItemIndex(null);
-            }}
-          >
-            {Object.keys(plans).map((room) => (
-              <option key={room} value={room}>
-                {room}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => setShowCoordinates((current) => !current)}
-        >
-          Coordinates
-        </button>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={undoPlans}
-          disabled={pastPlans.length === 0}
-          title="Undo"
-          aria-label="Undo"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="m 5 2 c -0.265625 0 -0.519531 0.105469 -0.707031 0.292969 l -4 4 c -0.3906252 0.390625 -0.3906252 1.023437 0 1.414062 l 4 4 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 s 0.390625 -1.023437 0 -1.414062 l -2.292969 -2.292969 h 8.585938 c 1.117188 0 2 0.882812 2 2 s -0.882812 2 -2 2 c -0.550781 0 -1 0.449219 -1 1 s 0.449219 1 1 1 c 2.199219 0 4 -1.800781 4 -4 s -1.800781 -4 -4 -4 h -8.585938 l 2.292969 -2.292969 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 z m 0 0" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="icon-button mirror"
-          onClick={redoPlans}
-          disabled={futurePlans.length === 0}
-          title="Redo"
-          aria-label="Redo"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="m 5 2 c -0.265625 0 -0.519531 0.105469 -0.707031 0.292969 l -4 4 c -0.3906252 0.390625 -0.3906252 1.023437 0 1.414062 l 4 4 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 s 0.390625 -1.023437 0 -1.414062 l -2.292969 -2.292969 h 8.585938 c 1.117188 0 2 0.882812 2 2 s -0.882812 2 -2 2 c -0.550781 0 -1 0.449219 -1 1 s 0.449219 1 1 1 c 2.199219 0 4 -1.800781 4 -4 s -1.800781 -4 -4 -4 h -8.585938 l 2.292969 -2.292969 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 z m 0 0" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className={`tool-button ${isEraseMode ? "active" : ""}`}
-          onClick={() => {
-            setIsEraseMode((current) => !current);
-            setTilePicker(null);
-          }}
-          title="Erase structures"
-          aria-pressed={isEraseMode}
-        >
-          <svg viewBox="0 -1.01 20.244 20.244" aria-hidden="true">
-            <g transform="translate(-1.926 -2.881)">
-              <path d="M3.29,10,9,4.29a1,1,0,0,1,1.41,0l5.4,5.4L8.69,16.76l-5.4-5.4A1,1,0,0,1,3.29,10Z" />
-              <path d="M3.29,10,9,4.29a1,1,0,0,1,1.41,0l10.3,10.35a1,1,0,0,1,0,1.41l-3.66,3.66a1,1,0,0,1-.71.29H11.93L3.29,11.36A1,1,0,0,1,3.29,10Zm12.47-.26,5,5a1,1,0,0,1,0,1.41L17.1,19.81a1,1,0,0,1-.71.29H11.93L8.69,16.76ZM6,20h6" />
-            </g>
-          </svg>
-          <span>Erase</span>
-        </button>
-      </div>
+      <Toolbar
+        selectedRoom={selectedRoom}
+        plans={plans}
+        showCoordinates={showCoordinates}
+        setShowCoordinates={setShowCoordinates}
+        isEraseMode={isEraseMode}
+        setIsEraseMode={setIsEraseMode}
+        onUndo={undoPlans}
+        onRedo={redoPlans}
+        pastPlans={pastPlans}
+        futurePlans={futurePlans}
+        onRoomChange={(nextRoom) => {
+          selectRoom(nextRoom);
+        }}
+        onClearTilePicker={() => setTilePicker(null)}
+      />
 
       <div className="build-plan-layout editor-layout">
-        <section className="canvas-section" onClick={() => setTilePicker(null)}>
-          <div className="map-stack">
-            <div className="map-canvas-wrap">
-              <canvas
-                ref={canvasRef}
-                width={GRID_SIZE * CELL_SIZE}
-                height={GRID_SIZE * CELL_SIZE}
-                onClick={handleCanvasClick}
-                className={`room-canvas ${isEraseMode ? "erase-mode" : ""}`}
-              />
-              {tilePicker && (
-                <div
-                  className="tile-picker"
-                  style={{ left: tilePicker.left, top: tilePicker.top }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="tile-picker-title">
-                    {isEraseMode ? "Erase" : "Select"} ({tilePicker.x},{" "}
-                    {tilePicker.y})
-                  </div>
-                  {tilePicker.itemIndexes.map((itemIndex) => {
-                    const item = plan[itemIndex];
-
-                    return (
-                      <button
-                        key={itemIndex}
-                        type="button"
-                        className="tile-picker-option"
-                        onClick={() => {
-                          if (isEraseMode) {
-                            deletePlanItem(itemIndex);
-                          } else {
-                            setSelectedItemIndex(itemIndex);
-                          }
-                          setTilePicker(null);
-                        }}
-                      >
-                        <span
-                          className="tile-picker-swatch"
-                          style={{
-                            backgroundColor:
-                              STRUCTURE_COLORS[item.structureType] ??
-                              "#ffffff",
-                          }}
-                        />
-                        <span>
-                          Step {itemIndex}:{" "}
-                          {STRUCTURE_TYPE_LABELS[item.structureType] ??
-                            item.structureType}
-                          {item.purpose ? ` (${item.purpose})` : ""}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="map-step-controls">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(0)}
-                disabled={currentStep === 0}
-                title="First step"
-              >
-                &lt;&lt;
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                disabled={currentStep === 0}
-                title="Previous step"
-              >
-                &lt;
-              </button>
-              <div className="map-step-display">
-                Step {currentStep} / {plan.length}
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentStep(Math.min(plan.length, currentStep + 1))
-                }
-                disabled={currentStep === plan.length}
-                title="Next step"
-              >
-                &gt;
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentStep(plan.length)}
-                disabled={currentStep === plan.length}
-                title="Last step"
-              >
-                &gt;&gt;
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <aside className="build-plan-stack sidebar">
-          <div className="build-plan-panel panel">
-            <h2>Structure</h2>
-            <select
-              value={selectedStructureType}
-              onChange={(event) => setSelectedStructureType(event.target.value)}
-            >
-              {STRUCTURE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {STRUCTURE_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-            <p className="hint">Click on canvas to add {STRUCTURE_TYPE_LABELS[selectedStructureType]}</p>
-          </div>
-
-          <div className="build-plan-panel panel">
-            <h2>Legend</h2>
-            <div className="build-plan-legend-list legend-list">
-              {legendEntries.map(({ structureType, count }) => (
-                <div className="build-plan-legend-row legend-row" key={structureType}>
-                  <span
-                    className={`build-plan-legend-symbol build-plan-legend-symbol-${structureType
-                      .replace("STRUCTURE_", "")
-                      .toLowerCase()} legend-symbol legend-symbol-${structureType
-                      .replace("STRUCTURE_", "")
-                      .toLowerCase()}`}
-                    style={{
-                      backgroundColor:
-                        STRUCTURE_COLORS[structureType] ?? "#ffffff",
-                    }}
-                  />
-                  <span>{STRUCTURE_TYPE_LABELS[structureType]}</span>
-                  <strong>{count}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {selectedItemIndex !== null && (
-            <div className="build-plan-panel panel">
-              <h2>Selected Item</h2>
-              <div className="item-details">
-                <p>
-                  <strong>Position:</strong> ({plan[selectedItemIndex].x},
-                  {plan[selectedItemIndex].y})
-                </p>
-                <p>
-                  <strong>Type:</strong>{" "}
-                  {STRUCTURE_TYPE_LABELS[plan[selectedItemIndex].structureType]}
-                </p>
-                {plan[selectedItemIndex].purpose && (
-                  <p>
-                    <strong>Purpose:</strong> {plan[selectedItemIndex].purpose}
-                  </p>
-                )}
-              </div>
-              <button onClick={removeSelectedItem} className="danger-btn">
-                Remove
-              </button>
-            </div>
-          )}
-
-          {validationErrors.length > 0 && (
-            <div className="build-plan-panel panel error-panel">
-              <h2>Validation Errors</h2>
-              <ul>
-                {validationErrors.slice(0, 5).map((error, i) => (
-                  <li key={i}>
-                    Step {error.step}: {error.message}
-                  </li>
-                ))}
-                {validationErrors.length > 5 && (
-                  <li>... and {validationErrors.length - 5} more</li>
-                )}
-              </ul>
-            </div>
-          )}
-
-          {selectedRoom && !terrain && (
-            <div className="build-plan-panel panel warning-panel">
-              <h2>Terrain Missing</h2>
-              <p>Natural wall placement cannot be validated for {selectedRoom}.</p>
-            </div>
-          )}
-
-          <div className="build-plan-panel panel">
-            <h2>Actions</h2>
-            <button
-              onClick={savePlans}
-              disabled={isSaving || validationErrors.length > 0}
-              className="save-btn"
-            >
-              {isSaving ? "Applying..." : "Apply Build Plan"}
-            </button>
-            {saveMessage && <p className="save-message">{saveMessage}</p>}
-          </div>
-        </aside>
+        <CanvasSection
+          plans={plans}
+          selectedRoom={selectedRoom}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+          selectedItemIndex={selectedItemIndex}
+          setSelectedItemIndex={setSelectedItemIndex}
+          tilePicker={tilePicker}
+          setTilePicker={setTilePicker}
+          isEraseMode={isEraseMode}
+          selectedStructureType={selectedStructureType}
+          showCoordinates={showCoordinates}
+          terrain={terrain}
+          validationErrors={validationErrors}
+          commitPlans={commitPlans}
+          deletePlanItem={deletePlanItem}
+        />
+        <Sidebar
+          plan={plan}
+          selectedRoom={selectedRoom}
+          selectedStructureType={selectedStructureType}
+          setSelectedStructureType={setSelectedStructureType}
+          selectedItemIndex={selectedItemIndex}
+          validationErrors={validationErrors}
+          terrain={terrain}
+          plans={plans}
+          deletePlanItem={deletePlanItem}
+        />
       </div>
     </div>
   );

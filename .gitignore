@@ -3,3 +3,4 @@ node_modules/
 
 dist/
 tools/artifacts/
+.playwright-mcp/
