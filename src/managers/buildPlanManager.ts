@@ -191,13 +191,18 @@ export const buildPlanManager = {
       (a, b) => a.priority - b.priority,
     );
 
-    return (
-      buildPlan.find(
-        (plan) =>
-          !isBuilt(room, plan) &&
-          !hasConstructionSiteAt(room, plan) &&
-          canBuildAtCurrentControllerLevel(room, plan),
-      ) ?? null
-    );
+    for (const plan of buildPlan) {
+      if (isBuilt(room, plan) || hasConstructionSiteAt(room, plan)) {
+        continue;
+      }
+
+      if (!canBuildAtCurrentControllerLevel(room, plan)) {
+        return null;
+      }
+
+      return plan;
+    }
+
+    return null;
   },
 };
