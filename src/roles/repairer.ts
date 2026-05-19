@@ -40,7 +40,9 @@ function findRepairTarget(creep: Creep): RepairTarget | null {
 function repairBestTarget(creep: Creep): boolean {
   const target = findRepairTarget(creep);
   if (!target) {
-    creep.moveOffRoad();
+    if (!moveToBestRepairTargetForCreep(creep)) {
+      creep.moveOffRoad();
+    }
     return false;
   }
 
@@ -55,12 +57,32 @@ function repairBestTarget(creep: Creep): boolean {
   return true;
 }
 
+function moveToBestRepairTargetForCreep(creep: Creep): boolean {
+  const target = findBestRepairTargetForCreep(creep);
+  if (!target) {
+    return false;
+  }
+
+  creep.memory.repairTargetId = target.id;
+  creep.moveToWorkTarget(target, ERR_NOT_IN_RANGE, 3, {
+    visualizePathStyle: { stroke: "#ffaa00" },
+  });
+
+  return true;
+}
+
+function idleRepairer(creep: Creep): void {
+  if (!moveToBestRepairTargetForCreep(creep)) {
+    creep.moveOffRoad();
+  }
+}
+
 export const repairer: Role = {
   run(creep: Creep): void {
     if (!creep.hasEnergy()) {
       clearRepairTarget(creep);
     }
 
-    runWorkRefuelLoop(creep, repairBestTarget);
+    runWorkRefuelLoop(creep, repairBestTarget, idleRepairer);
   },
 };

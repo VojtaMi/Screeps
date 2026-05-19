@@ -3,6 +3,9 @@ import { collectLocalEnergy } from "./localEnergy";
 export function runWorkRefuelLoop(
   creep: Creep,
   work: (creep: Creep) => void,
+  idle: (creep: Creep) => void = (idleCreep) => {
+    idleCreep.moveOffRoad();
+  },
 ): void {
   if (creep.memory.working && !creep.hasEnergy()) {
     creep.memory.working = false;
@@ -28,5 +31,5 @@ export function runWorkRefuelLoop(
     return;
   }
 
-  creep.moveOffRoad();
+  idle(creep);
 }
