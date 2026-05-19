@@ -1,6 +1,5 @@
 import {
   findBestRepairTargetForCreep,
-  getRepairPriority,
   type RepairTarget,
 } from "../repairPolicy";
 import type { Role } from "../types";
@@ -16,7 +15,7 @@ function getSavedRepairTarget(creep: Creep): RepairTarget | null {
   }
 
   const target = Game.getObjectById(creep.memory.repairTargetId);
-  if (target && getRepairPriority(target) !== null) {
+  if (target && target.hits < target.hitsMax) {
     return target;
   }
 
