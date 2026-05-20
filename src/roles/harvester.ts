@@ -21,8 +21,9 @@ export const harvester: Role = {
       return;
     }
 
+    const target = container ?? source;
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-      creep.moveToAvoidingRoomEdges(source, {
+      creep.moveToAvoidingRoomEdges(target, {
         visualizePathStyle: { stroke: "#ffaa00" },
       });
     }
