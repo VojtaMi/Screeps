@@ -29,6 +29,7 @@ function withRoomEdgeAvoidance(
   const existingCostCallback = opts?.costCallback;
 
   return {
+    ignoreCreeps: true,
     ...opts,
     maxRooms: 1,
     costCallback(roomName, matrix) {
