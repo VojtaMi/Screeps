@@ -27,6 +27,7 @@ interface BodyBuildOptions {
   maxBody: BodyPartConstant[];
   energyBudget: number;
   minimumSize?: number;
+  sortBody?: (body: BodyPartConstant[]) => BodyPartConstant[];
 }
 
 // Main spawning coordinator: gather room state, choose the next role, then spawn it.
@@ -96,6 +97,7 @@ export const spawnManager = {
         body: buildBodyFromMaxPattern({
           maxBody: CREEP_BODY.DEFENDER,
           energyBudget: availableEnergy,
+          sortBody: sortCombatBody,
         }),
       };
     }
@@ -201,10 +203,11 @@ function buildBodyFromMaxPattern({
   maxBody,
   energyBudget,
   minimumSize = 3,
+  sortBody,
 }: BodyBuildOptions): BodyPartConstant[] {
   const minimumBody = maxBody.slice(0, minimumSize);
   if (energyBudget < bodyCost(minimumBody)) {
-    return minimumBody;
+    return sortBody ? sortBody(minimumBody) : minimumBody;
   }
 
   const body = [...minimumBody];
@@ -218,7 +221,29 @@ function buildBodyFromMaxPattern({
     body.push(part);
   }
 
-  return body;
+  return sortBody ? sortBody(body) : body;
+}
+
+function sortCombatBody(body: BodyPartConstant[]): BodyPartConstant[] {
+  const bodyPartOrder: Record<BodyPartConstant, number> = {
+    [TOUGH]: 0,
+    [ATTACK]: 1,
+    [RANGED_ATTACK]: 2,
+    [HEAL]: 3,
+    [WORK]: 4,
+    [CARRY]: 5,
+    [CLAIM]: 6,
+    [MOVE]: 7,
+  };
+
+  return body
+    .map((part, index) => ({ index, part }))
+    .sort(
+      (left, right) =>
+        bodyPartOrder[left.part] - bodyPartOrder[right.part] ||
+        left.index - right.index,
+    )
+    .map(({ part }) => part);
 }
 
 // Room state helpers keep the priority rules in getSpawnRequest readable.
