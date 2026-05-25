@@ -581,11 +581,11 @@ export const carrier: Role = {
 
     clearDeliveryTarget(creep);
 
-    if (collectEnergy(creep, refillTarget)) {
+    if (creep.store.getUsedCapacity() === 0 && collectResourceLoot(creep)) {
       return;
     }
 
-    if (creep.store.getUsedCapacity() === 0 && collectResourceLoot(creep)) {
+    if (collectEnergy(creep, refillTarget)) {
       return;
     }
 
