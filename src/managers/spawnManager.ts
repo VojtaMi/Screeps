@@ -225,25 +225,34 @@ function buildBodyFromMaxPattern({
 }
 
 function sortCombatBody(body: BodyPartConstant[]): BodyPartConstant[] {
-  const bodyPartOrder: Record<BodyPartConstant, number> = {
+  const bodyPartOrder: BodyPartConstant[] = [
+    TOUGH,
+    ATTACK,
+    RANGED_ATTACK,
+    HEAL,
+    WORK,
+    CARRY,
+    CLAIM,
+    MOVE,
+  ];
+  const bodyPartCounts: Record<BodyPartConstant, number> = {
     [TOUGH]: 0,
-    [ATTACK]: 1,
-    [RANGED_ATTACK]: 2,
-    [HEAL]: 3,
-    [WORK]: 4,
-    [CARRY]: 5,
-    [CLAIM]: 6,
-    [MOVE]: 7,
+    [ATTACK]: 0,
+    [RANGED_ATTACK]: 0,
+    [HEAL]: 0,
+    [WORK]: 0,
+    [CARRY]: 0,
+    [CLAIM]: 0,
+    [MOVE]: 0,
   };
 
-  return body
-    .map((part, index) => ({ index, part }))
-    .sort(
-      (left, right) =>
-        bodyPartOrder[left.part] - bodyPartOrder[right.part] ||
-        left.index - right.index,
-    )
-    .map(({ part }) => part);
+  for (const part of body) {
+    bodyPartCounts[part] += 1;
+  }
+
+  return bodyPartOrder.flatMap((part) =>
+    Array(bodyPartCounts[part]).fill(part),
+  );
 }
 
 // Room state helpers keep the priority rules in getSpawnRequest readable.
