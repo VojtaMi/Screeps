@@ -65,6 +65,10 @@ export function getRepairPriority(target: RepairTarget): number | null {
     return 4;
   }
 
+  if (isInfrastructureTarget(target) && target.hits < target.hitsMax) {
+    return 5;
+  }
+
   return null;
 }
 
