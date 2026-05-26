@@ -533,6 +533,10 @@ function hasRepairerWork(room: Room): boolean {
 
 export const carrier: Role = {
   run(creep: Creep): void {
+    if (creep.store[RESOURCE_ENERGY] === 0 && collectResourceLoot(creep)) {
+      return;
+    }
+
     if (deliverResourceLoot(creep)) {
       return;
     }
@@ -580,10 +584,6 @@ export const carrier: Role = {
     }
 
     clearDeliveryTarget(creep);
-
-    if (creep.store.getUsedCapacity() === 0 && collectResourceLoot(creep)) {
-      return;
-    }
 
     if (collectEnergy(creep, refillTarget)) {
       return;

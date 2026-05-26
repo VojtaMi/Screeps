@@ -52,6 +52,10 @@ function findResourceLootTarget(creep: Creep): ResourceLootTarget | null {
 }
 
 export function collectResourceLoot(creep: Creep): boolean {
+  if (creep.store.getFreeCapacity() === 0) {
+    return false;
+  }
+
   if (!findResourceLootDeliveryTarget(creep)) {
     return false;
   }
