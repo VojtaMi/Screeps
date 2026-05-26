@@ -39,7 +39,7 @@ function isDefenseTarget(
   );
 }
 
-export function getRepairPriority(target: RepairTarget): number | null {
+export function getRepairPriority(target: RepairTarget): number {
   if (
     isInfrastructureTarget(target) &&
     target.hits / target.hitsMax < CRITICAL_INFRASTRUCTURE_DAMAGE_RATIO
@@ -69,7 +69,7 @@ export function getRepairPriority(target: RepairTarget): number | null {
     return 5;
   }
 
-  return null;
+  return Infinity;
 }
 
 function getRepairScore(target: RepairTarget): number {
@@ -96,11 +96,7 @@ function isBetterRepairTarget(
   const targetPriority = getRepairPriority(target);
   const currentPriority = getRepairPriority(currentBest);
 
-  if (targetPriority === null) {
-    return false;
-  }
-
-  if (currentPriority === null || targetPriority < currentPriority) {
+  if (targetPriority < currentPriority) {
     return true;
   }
 
@@ -110,16 +106,11 @@ function isBetterRepairTarget(
   );
 }
 
-function getCreepRepairScore(
-  creep: Creep,
-  target: RepairTarget,
-): number | null {
-  const priority = getRepairPriority(target);
-  if (priority === null) {
-    return null;
-  }
-
-  return priority * REPAIR_PRIORITY_WEIGHT + creep.pos.getRangeTo(target);
+function getCreepRepairScore(creep: Creep, target: RepairTarget): number {
+  return (
+    getRepairPriority(target) * REPAIR_PRIORITY_WEIGHT +
+    creep.pos.getRangeTo(target)
+  );
 }
 
 function isBetterRepairTargetForCreep(
@@ -128,17 +119,13 @@ function isBetterRepairTargetForCreep(
   currentBest: RepairTarget | null,
 ): boolean {
   if (!currentBest) {
-    return getCreepRepairScore(creep, target) !== null;
+    return getCreepRepairScore(creep, target) !== Infinity;
   }
 
   const targetScore = getCreepRepairScore(creep, target);
   const currentScore = getCreepRepairScore(creep, currentBest);
 
-  if (targetScore === null) {
-    return false;
-  }
-
-  if (currentScore === null || targetScore < currentScore) {
+  if (targetScore < currentScore) {
     return true;
   }
 
@@ -151,7 +138,7 @@ function isBetterRepairTargetForCreep(
 export function findBestRepairTarget(room: Room): RepairTarget | null {
   const repairTargets = room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) && getRepairPriority(structure) !== null,
+      isRepairTarget(structure) && getRepairPriority(structure) !== Infinity,
   });
 
   return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
@@ -168,7 +155,7 @@ export function findBestRepairTargetForCreep(
 ): RepairTarget | null {
   const repairTargets = creep.room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) && getRepairPriority(structure) !== null,
+      isRepairTarget(structure) && getRepairPriority(structure) !== Infinity,
   });
 
   return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {

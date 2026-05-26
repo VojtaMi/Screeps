@@ -284,9 +284,12 @@ function hasAvailableEnergyForCarriers(room: Room): boolean {
 
 function getDesiredRepairerCount(room: Room): number {
   const target = findBestRepairTarget(room);
-  const priority = target ? getRepairPriority(target) : null;
+  if (!target) return 0;
 
-  return priority === 1 ? 2 : priority === null ? 0 : 1;
+  const priority = getRepairPriority(target);
+  if (priority === 1) return 2;
+  if (priority < 5) return 1; // damage worth a dedicated repairer
+  return 0;
 }
 
 function getDesiredUpgraderCount(room: Room): number {
