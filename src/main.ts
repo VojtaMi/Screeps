@@ -34,6 +34,10 @@ export function loop(): void {
 
   for (const name in Game.creeps) {
     const creep = Game.creeps[name];
+    if (creep.handleSwapRequest()) {
+      continue;
+    }
+
     const role = roles[creep.memory.role];
     if (role) {
       role.run(creep);

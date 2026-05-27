@@ -27,6 +27,18 @@ declare global {
       StructureRoad | StructureContainer | StructureRampart | StructureWall
     >;
     deliveryTargetId?: Id<EnergyDeliveryTarget>;
+    moveLastX?: number;
+    moveLastY?: number;
+    moveLastRoomName?: string;
+    moveLastTick?: number;
+    moveStuckCount?: number;
+    swapRequest?: {
+      requesterName: string;
+      requesterX: number;
+      requesterY: number;
+      requesterRoomName: string;
+      tick: number;
+    };
     working?: boolean;
   }
 
@@ -52,6 +64,7 @@ declare global {
       target: Parameters<Creep["moveTo"]>[0],
       opts?: Parameters<Creep["moveTo"]>[1],
     ): ReturnType<Creep["moveTo"]>;
+    handleSwapRequest(): boolean;
     moveOffRoad(): boolean;
     moveToWorkTarget(
       target: Parameters<Creep["moveTo"]>[0],

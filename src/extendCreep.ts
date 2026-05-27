@@ -4,6 +4,9 @@ import {
   type RepairTarget,
 } from "./repairPolicy";
 
+const SWAP_STUCK_THRESHOLD = 2;
+const SWAP_REQUEST_TTL = 1;
+
 function getTargetPosition(
   target: Parameters<Creep["moveTo"]>[0],
 ): RoomPosition {
@@ -48,6 +51,97 @@ function withRoomEdgeAvoidance(
 
       return costs;
     },
+  };
+}
+
+function positionMatches(
+  pos: RoomPosition,
+  x: number | undefined,
+  y: number | undefined,
+  roomName: string | undefined,
+): boolean {
+  return pos.x === x && pos.y === y && pos.roomName === roomName;
+}
+
+function updateMoveStuckCount(creep: Creep): number {
+  if (creep.memory.moveLastTick === Game.time) {
+    return creep.memory.moveStuckCount ?? 0;
+  }
+
+  const stayedInPlace =
+    creep.memory.moveLastTick === Game.time - 1 &&
+    positionMatches(
+      creep.pos,
+      creep.memory.moveLastX,
+      creep.memory.moveLastY,
+      creep.memory.moveLastRoomName,
+    );
+
+  creep.memory.moveStuckCount = stayedInPlace
+    ? (creep.memory.moveStuckCount ?? 0) + 1
+    : 0;
+  creep.memory.moveLastX = creep.pos.x;
+  creep.memory.moveLastY = creep.pos.y;
+  creep.memory.moveLastRoomName = creep.pos.roomName;
+  creep.memory.moveLastTick = Game.time;
+
+  return creep.memory.moveStuckCount;
+}
+
+function findNextStep(
+  creep: Creep,
+  target: Parameters<Creep["moveTo"]>[0],
+  opts?: MoveToOpts,
+): RoomPosition | null {
+  const targetPos = getTargetPosition(target);
+  if (targetPos.roomName !== creep.room.name) {
+    return null;
+  }
+
+  const path = creep.pos.findPathTo(
+    targetPos,
+    withRoomEdgeAvoidance(creep, target, opts),
+  );
+  const nextStep = path[0];
+  if (!nextStep) {
+    return null;
+  }
+
+  return new RoomPosition(nextStep.x, nextStep.y, creep.room.name);
+}
+
+function requestSwapWithBlockingCreep(
+  creep: Creep,
+  target: Parameters<Creep["moveTo"]>[0],
+  opts?: MoveToOpts,
+): void {
+  if (creep.fatigue > 0 || updateMoveStuckCount(creep) < SWAP_STUCK_THRESHOLD) {
+    return;
+  }
+
+  const nextStep = findNextStep(creep, target, opts);
+  if (!nextStep || !creep.pos.isNearTo(nextStep)) {
+    return;
+  }
+
+  const blocker = nextStep
+    .lookFor(LOOK_CREEPS)
+    .find(
+      (blockingCreep) =>
+        blockingCreep.my &&
+        blockingCreep.name !== creep.name &&
+        blockingCreep.fatigue === 0,
+    );
+  if (!blocker) {
+    return;
+  }
+
+  blocker.memory.swapRequest = {
+    requesterName: creep.name,
+    requesterX: creep.pos.x,
+    requesterY: creep.pos.y,
+    requesterRoomName: creep.pos.roomName,
+    tick: Game.time,
   };
 }
 
@@ -223,7 +317,36 @@ export function extendCreep(): void {
     target: Parameters<Creep["moveTo"]>[0],
     opts?: Parameters<Creep["moveTo"]>[1],
   ): ReturnType<Creep["moveTo"]> {
+    requestSwapWithBlockingCreep(this, target, opts);
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
+  };
+
+  Creep.prototype.handleSwapRequest = function (): boolean {
+    const request = this.memory.swapRequest;
+    delete this.memory.swapRequest;
+
+    if (!request || Game.time - request.tick > SWAP_REQUEST_TTL) {
+      return false;
+    }
+
+    const requester = Game.creeps[request.requesterName];
+    if (
+      !requester ||
+      this.fatigue > 0 ||
+      requester.fatigue > 0 ||
+      !positionMatches(
+        requester.pos,
+        request.requesterX,
+        request.requesterY,
+        request.requesterRoomName,
+      ) ||
+      this.pos.roomName !== requester.pos.roomName ||
+      !this.pos.isNearTo(requester)
+    ) {
+      return false;
+    }
+
+    return this.move(this.pos.getDirectionTo(requester)) === OK;
   };
 
   Creep.prototype.moveOffRoad = function (): boolean {
