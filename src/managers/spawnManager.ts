@@ -92,19 +92,25 @@ export const spawnManager = {
       };
     }
 
-    if (
-      hostiles.some(
-        (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
-      )
-    ) {
-      return {
-        role: CREEP_ROLE.DEFENDER,
-        body: buildBodyFromMaxPattern({
-          maxBody: CREEP_BODY.DEFENDER,
-          energyBudget: availableEnergy,
-          sortBody: sortCombatBody,
-        }),
-      };
+    const hasUnsafeHostiles = hostiles.some(
+      (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
+    );
+    if (hasUnsafeHostiles) {
+      const defenderEnergyBudget =
+        harvesters.length > 0 && carriers.length === 0
+          ? availableEnergy - minimumBodyCost(CREEP_BODY.CARRIER)
+          : availableEnergy;
+
+      if (defenderEnergyBudget >= minimumBodyCost(CREEP_BODY.DEFENDER)) {
+        return {
+          role: CREEP_ROLE.DEFENDER,
+          body: buildBodyFromMaxPattern({
+            maxBody: CREEP_BODY.DEFENDER,
+            energyBudget: defenderEnergyBudget,
+            sortBody: sortCombatBody,
+          }),
+        };
+      }
     }
 
     if (harvesters.length > 0 && carriers.length === 0) {
@@ -198,6 +204,10 @@ function groupCreepsByRole(creeps: Creep[]): CreepsByRole {
 // Body builders scale each role from the room's current or maximum energy budget.
 function bodyCost(body: BodyPartConstant[]): number {
   return body.reduce((total, part) => total + BODYPART_COST[part], 0);
+}
+
+function minimumBodyCost(body: BodyPartConstant[]): number {
+  return bodyCost(body.slice(0, 3));
 }
 
 function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
