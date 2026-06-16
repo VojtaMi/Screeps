@@ -1,4 +1,5 @@
 import { CREEP_BODY } from "../creepBodies";
+import { canTowersOverpowerHostile } from "../hostileTargeting";
 import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
@@ -91,7 +92,11 @@ export const spawnManager = {
       };
     }
 
-    if (hostiles.length > 0) {
+    if (
+      hostiles.some(
+        (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
+      )
+    ) {
       return {
         role: CREEP_ROLE.DEFENDER,
         body: buildBodyFromMaxPattern({
