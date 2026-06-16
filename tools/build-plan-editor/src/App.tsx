@@ -106,6 +106,7 @@ export default function App() {
         />
         <Sidebar
           plan={plan}
+          currentStep={currentStep}
           selectedRoom={selectedRoom}
           selectedStructureType={selectedStructureType}
           setSelectedStructureType={setSelectedStructureType}

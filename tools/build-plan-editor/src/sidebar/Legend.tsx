@@ -3,12 +3,15 @@ import { LEGEND_ORDER } from "../constants";
 
 interface LegendProps {
   plan: BuildPlanItem[];
+  currentStep: number;
 }
 
-export function Legend({ plan }: LegendProps) {
+export function Legend({ plan, currentStep }: LegendProps) {
   const legendEntries = LEGEND_ORDER.map((structureType) => ({
     structureType,
-    count: plan.filter((item) => item.structureType === structureType).length,
+    count: plan.filter(
+      (item, index) => index < currentStep && item.structureType === structureType
+    ).length,
   })).filter((entry) => entry.count > 0);
 
   return (

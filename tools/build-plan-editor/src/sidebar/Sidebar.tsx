@@ -13,6 +13,7 @@ interface ValidationError {
 
 interface SidebarProps {
   plan: BuildPlanItem[];
+  currentStep: number;
   selectedRoom: string;
   selectedStructureType: string;
   setSelectedStructureType: (type: string) => void;
@@ -31,6 +32,7 @@ interface SidebarProps {
 
 export function Sidebar({
   plan,
+  currentStep,
   selectedRoom,
   selectedStructureType,
   setSelectedStructureType,
@@ -99,7 +101,7 @@ export function Sidebar({
         />
       )}
 
-      <Legend plan={plan} />
+      <Legend plan={plan} currentStep={currentStep} />
 
       {selectedItemIndex !== null && (
         <SelectedItemPanel

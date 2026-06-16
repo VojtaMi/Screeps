@@ -116,6 +116,10 @@ export function CanvasSection({
     if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
 
     const plan = plans[selectedRoom].plan;
+    const tileIndexes = plan
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.x === x && item.y === y)
+      .map(({ index }) => index);
     const visibleIndexes = plan
       .map((item, index) => ({ item, index }))
       .filter(
@@ -130,14 +134,14 @@ export function CanvasSection({
     }
 
     if (editorMode === "erase") {
-      if (visibleIndexes.length === 1) {
-        deletePlanItem(visibleIndexes[0]);
+      if (tileIndexes.length === 1) {
+        deletePlanItem(tileIndexes[0]);
         setTilePicker(null);
         return;
       }
 
-      if (visibleIndexes.length > 1) {
-        openTilePicker(x, y, visibleIndexes);
+      if (tileIndexes.length > 1) {
+        openTilePicker(x, y, tileIndexes);
         return;
       }
 
