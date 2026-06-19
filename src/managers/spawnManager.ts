@@ -229,13 +229,18 @@ function getExpansionSpawnRequest(
     return null;
   }
 
+  const expansionRoom = Game.rooms[targetRoom];
   const expansionCreeps = Object.values(Game.creeps).filter(
     (creep) => creep.memory.targetRoom === targetRoom,
   );
   const hasClaimer = expansionCreeps.some(
     (creep) => creep.memory.role === CREEP_ROLE.CLAIMER,
   );
-  if (!hasClaimer) {
+  if (!expansionRoom?.controller?.my && !hasClaimer) {
+    if (energyBudget < bodyCost(CREEP_BODY.CLAIMER)) {
+      return null;
+    }
+
     return {
       role: CREEP_ROLE.CLAIMER,
       body: CREEP_BODY.CLAIMER,
@@ -300,25 +305,18 @@ function isExpansionCandidate(room: Room | undefined): boolean {
     return false;
   }
 
-  return !hasMySpawnOrSpawnSite(room);
+  return !hasMySpawn(room);
 }
 
 function hasNonEmptyDefaultBuildPlan(roomName: string): boolean {
   return (DEFAULT_BUILD_PLANS[roomName]?.plan.length ?? 0) > 0;
 }
 
-function hasMySpawnOrSpawnSite(room: Room): boolean {
-  const spawns = room.find(FIND_MY_STRUCTURES, {
-    filter: (structure): structure is StructureSpawn =>
-      structure.structureType === STRUCTURE_SPAWN,
-  });
-  if (spawns.length > 0) {
-    return true;
-  }
-
+function hasMySpawn(room: Room): boolean {
   return (
-    room.find(FIND_MY_CONSTRUCTION_SITES, {
-      filter: (site) => site.structureType === STRUCTURE_SPAWN,
+    room.find(FIND_MY_STRUCTURES, {
+      filter: (structure): structure is StructureSpawn =>
+        structure.structureType === STRUCTURE_SPAWN,
     }).length > 0
   );
 }

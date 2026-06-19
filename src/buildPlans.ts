@@ -7,7 +7,12 @@ export interface DefaultBuildPlan {
 export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
   E58S28: {
     plan: [
-      { x: 47, y: 48, structureType: STRUCTURE_SPAWN },
+      {
+        x: 47,
+        y: 48,
+        structureType: STRUCTURE_SPAWN,
+        purpose: "primarySpawn",
+      },
       { x: 48, y: 41, structureType: STRUCTURE_EXTENSION },
       { x: 48, y: 40, structureType: STRUCTURE_EXTENSION },
       { x: 47, y: 39, structureType: STRUCTURE_EXTENSION },
