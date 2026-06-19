@@ -101,7 +101,35 @@ function syncDefaultBuildPlan(room: Room): void {
 }
 
 function hasConstructionSite(room: Room): boolean {
-  return room.find(FIND_CONSTRUCTION_SITES).length > 0;
+  return room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+}
+
+function removeForeignConstructionSites(room: Room): void {
+  if (!room.controller?.my) {
+    return;
+  }
+
+  const foreignSites = room.find(FIND_CONSTRUCTION_SITES, {
+    filter: (site) => !site.my,
+  });
+  let removedCount = 0;
+
+  for (const site of foreignSites) {
+    const result = site.remove();
+    if (result === OK) {
+      removedCount += 1;
+    } else {
+      console.log(
+        `Failed to remove foreign ${site.structureType} construction site in ${room.name} at ${site.pos.x},${site.pos.y}: ${result}`,
+      );
+    }
+  }
+
+  if (removedCount > 0) {
+    console.log(
+      `Removed ${removedCount} foreign construction site(s) in ${room.name}`,
+    );
+  }
 }
 
 function isBuilt(room: Room, plan: RoomBuildPlanItem): boolean {
@@ -115,7 +143,9 @@ function isBuilt(room: Room, plan: RoomBuildPlanItem): boolean {
 function hasConstructionSiteAt(room: Room, plan: RoomBuildPlanItem): boolean {
   const sites = room.lookForAt(LOOK_CONSTRUCTION_SITES, plan.x, plan.y);
 
-  return sites.some((site) => site.structureType === plan.structureType);
+  return sites.some(
+    (site) => site.my && site.structureType === plan.structureType,
+  );
 }
 
 function countStructures(
@@ -131,7 +161,7 @@ function countConstructionSites(
   room: Room,
   structureType: BuildableStructureConstant,
 ): number {
-  return room.find(FIND_CONSTRUCTION_SITES, {
+  return room.find(FIND_MY_CONSTRUCTION_SITES, {
     filter: (site) => site.structureType === structureType,
   }).length;
 }
@@ -151,6 +181,34 @@ function canBuildAtCurrentControllerLevel(
   );
 }
 
+function shouldPlaceBuildPlanSite(
+  room: Room,
+  plan: RoomBuildPlanItem,
+): boolean {
+  return (
+    !isBuilt(room, plan) &&
+    !hasConstructionSiteAt(room, plan) &&
+    canBuildAtCurrentControllerLevel(room, plan)
+  );
+}
+
+function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
+  const result = room.createConstructionSite(
+    plan.x,
+    plan.y,
+    plan.structureType,
+  );
+  if (result === OK) {
+    console.log(
+      `Build plan placed ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}`,
+    );
+  } else {
+    console.log(
+      `Build plan failed for ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
+    );
+  }
+}
+
 export const buildPlanManager = {
   manageBuildPlans(): void {
     for (const roomName in Game.rooms) {
@@ -160,6 +218,13 @@ export const buildPlanManager = {
 
   manageRoomBuildPlan(room: Room): void {
     syncDefaultBuildPlan(room);
+    removeForeignConstructionSites(room);
+
+    const primarySpawnPlan = getPrimarySpawnBuildPlan(room);
+    if (primarySpawnPlan && shouldPlaceBuildPlanSite(room, primarySpawnPlan)) {
+      placeBuildPlanSite(room, primarySpawnPlan);
+      return;
+    }
 
     if (hasConstructionSite(room)) {
       return;
@@ -170,20 +235,7 @@ export const buildPlanManager = {
       return;
     }
 
-    const result = room.createConstructionSite(
-      nextPlan.x,
-      nextPlan.y,
-      nextPlan.structureType,
-    );
-    if (result === OK) {
-      console.log(
-        `Build plan placed ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}`,
-      );
-    } else {
-      console.log(
-        `Build plan failed for ${nextPlan.structureType} in ${room.name} at ${nextPlan.x},${nextPlan.y}: ${result}`,
-      );
-    }
+    placeBuildPlanSite(room, nextPlan);
   },
 
   getNextBuildPlan(room: Room): RoomBuildPlanItem | null {
