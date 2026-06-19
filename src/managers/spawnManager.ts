@@ -1,3 +1,4 @@
+import { DEFAULT_BUILD_PLANS } from "../buildPlans";
 import { CREEP_BODY } from "../creepBodies";
 import { canTowersOverpowerHostile } from "../hostileTargeting";
 import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
@@ -149,6 +150,11 @@ export const spawnManager = {
       };
     }
 
+    const expansionRequest = getExpansionSpawnRequest(room, capacityEnergy);
+    if (expansionRequest) {
+      return expansionRequest;
+    }
+
     if (hasConstructionWork(room) && builders.length === 0) {
       return {
         role: CREEP_ROLE.BUILDER,
@@ -212,6 +218,167 @@ function minimumBodyCost(body: BodyPartConstant[]): number {
 
 function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
+}
+
+function getExpansionSpawnRequest(
+  room: Room,
+  energyBudget: number,
+): SpawnRequest | null {
+  const targetRoom = findExpansionTargetRoom(room);
+  if (!targetRoom) {
+    return null;
+  }
+
+  const expansionCreeps = Object.values(Game.creeps).filter(
+    (creep) => creep.memory.targetRoom === targetRoom,
+  );
+  const hasClaimer = expansionCreeps.some(
+    (creep) => creep.memory.role === CREEP_ROLE.CLAIMER,
+  );
+  if (!hasClaimer) {
+    return {
+      role: CREEP_ROLE.CLAIMER,
+      body: CREEP_BODY.CLAIMER,
+      memory: { targetRoom },
+    };
+  }
+
+  const hasSettler = expansionCreeps.some(
+    (creep) => creep.memory.role === CREEP_ROLE.SETTLER,
+  );
+  if (!hasSettler) {
+    return {
+      role: CREEP_ROLE.SETTLER,
+      body: buildBodyFromMaxPattern({
+        maxBody: CREEP_BODY.PIONEER,
+        energyBudget,
+      }),
+      memory: { targetRoom, working: false },
+    };
+  }
+
+  return null;
+}
+
+function findExpansionTargetRoom(room: Room): string | null {
+  if (!room.controller?.my || room.controller.level <= 3) {
+    return null;
+  }
+
+  return (
+    getAdjacentRoomNames(room.name)
+      .filter((roomName) => isExpansionCandidate(Game.rooms[roomName]))
+      .sort()[0] ?? null
+  );
+}
+
+function isExpansionCandidate(room: Room | undefined): boolean {
+  if (!room || !hasNonEmptyDefaultBuildPlan(room.name)) {
+    return false;
+  }
+
+  const controller = room.controller;
+  if (!controller) {
+    return false;
+  }
+
+  if (controller.owner && !controller.my) {
+    return false;
+  }
+
+  if (
+    controller.reservation &&
+    controller.reservation.username !== getMyUsername()
+  ) {
+    return false;
+  }
+
+  if (
+    room.find(FIND_HOSTILE_CREEPS).length > 0 ||
+    room.find(FIND_HOSTILE_STRUCTURES).length > 0
+  ) {
+    return false;
+  }
+
+  return !hasMySpawnOrSpawnSite(room);
+}
+
+function hasNonEmptyDefaultBuildPlan(roomName: string): boolean {
+  return (DEFAULT_BUILD_PLANS[roomName]?.plan.length ?? 0) > 0;
+}
+
+function hasMySpawnOrSpawnSite(room: Room): boolean {
+  const spawns = room.find(FIND_MY_STRUCTURES, {
+    filter: (structure): structure is StructureSpawn =>
+      structure.structureType === STRUCTURE_SPAWN,
+  });
+  if (spawns.length > 0) {
+    return true;
+  }
+
+  return (
+    room.find(FIND_MY_CONSTRUCTION_SITES, {
+      filter: (site) => site.structureType === STRUCTURE_SPAWN,
+    }).length > 0
+  );
+}
+
+function getMyUsername(): string | null {
+  return (
+    Game.spawns.Spawn1?.owner.username ??
+    Object.values(Game.creeps)[0]?.owner.username ??
+    null
+  );
+}
+
+function getAdjacentRoomNames(roomName: string): string[] {
+  const position = parseRoomName(roomName);
+  if (!position) {
+    return [];
+  }
+
+  const roomNames: string[] = [];
+  for (let xOffset = -1; xOffset <= 1; xOffset += 1) {
+    for (let yOffset = -1; yOffset <= 1; yOffset += 1) {
+      if (xOffset === 0 && yOffset === 0) {
+        continue;
+      }
+
+      roomNames.push(
+        serializeRoomName(position.x + xOffset, position.y + yOffset),
+      );
+    }
+  }
+
+  return roomNames;
+}
+
+function parseRoomName(roomName: string): { x: number; y: number } | null {
+  const match = roomName.match(/^([WE])(\d+)([NS])(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [
+    ,
+    horizontalDirection,
+    horizontalDistance,
+    verticalDirection,
+    verticalDistance,
+  ] = match;
+  const xDistance = Number(horizontalDistance);
+  const yDistance = Number(verticalDistance);
+
+  return {
+    x: horizontalDirection === "E" ? xDistance : -xDistance - 1,
+    y: verticalDirection === "S" ? yDistance : -yDistance - 1,
+  };
+}
+
+function serializeRoomName(x: number, y: number): string {
+  const horizontal = x >= 0 ? `E${x}` : `W${-x - 1}`;
+  const vertical = y >= 0 ? `S${y}` : `N${-y - 1}`;
+  return `${horizontal}${vertical}`;
 }
 
 function buildBodyFromMaxPattern({

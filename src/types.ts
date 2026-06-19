@@ -1,5 +1,7 @@
 export const CREEP_ROLE = {
   PIONEER: "pioneer",
+  CLAIMER: "claimer",
+  SETTLER: "settler",
   HARVESTER: "harvester",
   CARRIER: "carrier",
   DEFENDER: "defender",

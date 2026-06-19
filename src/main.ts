@@ -6,10 +6,12 @@ import { spawnRecoveryManager } from "./managers/spawnRecoveryManager";
 import { towerManager } from "./managers/towerManager";
 import { builder } from "./roles/builder";
 import { carrier } from "./roles/carrier/carrier";
+import { claimer } from "./roles/claimer";
 import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
 import { pioneer } from "./roles/pioneer";
 import { repairer } from "./roles/repairer";
+import { settler } from "./roles/settler";
 import { upgrader } from "./roles/upgrader";
 import { CREEP_ROLE, type CreepRole, type Role } from "./types";
 
@@ -17,6 +19,8 @@ extendCreep();
 
 const roles: Record<CreepRole, Role> = {
   [CREEP_ROLE.PIONEER]: pioneer,
+  [CREEP_ROLE.CLAIMER]: claimer,
+  [CREEP_ROLE.SETTLER]: settler,
   [CREEP_ROLE.HARVESTER]: harvester,
   [CREEP_ROLE.CARRIER]: carrier,
   [CREEP_ROLE.DEFENDER]: defender,

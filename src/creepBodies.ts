@@ -3,6 +3,7 @@ const repeatBody = (count: number, parts: BodyPartConstant[]) =>
 
 export const CREEP_BODY = {
   PIONEER: [WORK, CARRY, MOVE, CARRY, MOVE],
+  CLAIMER: [CLAIM, MOVE],
   HARVESTER: [WORK, CARRY, MOVE, WORK, WORK, CARRY, WORK, WORK, MOVE, WORK],
   UPGRADER: [
     WORK,

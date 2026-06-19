@@ -21,6 +21,7 @@ declare global {
 
   interface CreepMemory {
     role: CreepRole;
+    targetRoom?: string;
     sourceId?: Id<Source>;
     energyTargetId?: Id<EnergyRefillTarget>;
     repairTargetId?: Id<
