@@ -9,7 +9,14 @@ interface BodyBuildOptions {
 }
 
 export const CREEP_BODY = {
-  PIONEER: [WORK, CARRY, MOVE, CARRY, MOVE],
+  PIONEER: [
+    WORK,
+    CARRY,
+    MOVE,
+    CARRY,
+    MOVE,
+    ...repeatBody(5, [WORK, CARRY, MOVE, MOVE]),
+  ],
   CLAIMER: [CLAIM, MOVE],
   HARVESTER: [WORK, CARRY, MOVE, WORK, WORK, CARRY, WORK, WORK, MOVE, WORK],
   UPGRADER: [
