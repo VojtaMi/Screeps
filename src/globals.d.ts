@@ -56,6 +56,18 @@ declare global {
     buildPlanHash?: string;
   }
 
+  interface Memory {
+    expansionTargets?: Record<
+      string,
+      {
+        claimerName?: string;
+        settlerName?: string;
+        lastAttemptTick?: number;
+        failedUntilTick?: number;
+      }
+    >;
+  }
+
   interface Creep {
     needsEnergy(): boolean;
     hasFullEnergy(): boolean;

@@ -12,6 +12,12 @@ export const CREEP_ROLE = {
 
 export type CreepRole = (typeof CREEP_ROLE)[keyof typeof CREEP_ROLE];
 
+export interface SpawnRequest {
+  role: CreepRole;
+  body: BodyPartConstant[];
+  memory?: Partial<CreepMemory>;
+}
+
 export interface Role {
   run(creep: Creep): void;
 }

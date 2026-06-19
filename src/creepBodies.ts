@@ -1,6 +1,13 @@
 const repeatBody = (count: number, parts: BodyPartConstant[]) =>
   Array.from({ length: count }).flatMap(() => parts);
 
+interface BodyBuildOptions {
+  maxBody: BodyPartConstant[];
+  energyBudget: number;
+  minimumSize?: number;
+  sortBody?: (body: BodyPartConstant[]) => BodyPartConstant[];
+}
+
 export const CREEP_BODY = {
   PIONEER: [WORK, CARRY, MOVE, CARRY, MOVE],
   CLAIMER: [CLAIM, MOVE],
@@ -29,3 +36,36 @@ export const CREEP_BODY = {
     MOVE,
   ],
 } satisfies Record<string, BodyPartConstant[]>;
+
+export function bodyCost(body: BodyPartConstant[]): number {
+  return body.reduce((total, part) => total + BODYPART_COST[part], 0);
+}
+
+export function minimumBodyCost(body: BodyPartConstant[]): number {
+  return bodyCost(body.slice(0, 3));
+}
+
+export function buildBodyFromMaxPattern({
+  maxBody,
+  energyBudget,
+  minimumSize = 3,
+  sortBody,
+}: BodyBuildOptions): BodyPartConstant[] {
+  const minimumBody = maxBody.slice(0, minimumSize);
+  if (energyBudget < bodyCost(minimumBody)) {
+    return sortBody ? sortBody(minimumBody) : minimumBody;
+  }
+
+  const body = [...minimumBody];
+
+  for (const part of maxBody.slice(minimumBody.length)) {
+    const nextBody = [...body, part];
+    if (nextBody.length > MAX_CREEP_SIZE || bodyCost(nextBody) > energyBudget) {
+      break;
+    }
+
+    body.push(part);
+  }
+
+  return sortBody ? sortBody(body) : body;
+}
