@@ -299,6 +299,18 @@ function isDeliveryTargetAvailable(
   );
 }
 
+function canTowerAcceptFullCarrierLoad(
+  creep: Creep,
+  target: StructureTower,
+): boolean {
+  return (
+    isDeliveryTargetAvailable(creep, target) &&
+    target.store.getFreeCapacity(RESOURCE_ENERGY) -
+      getReservedDeliveryEnergy(creep, target) >=
+      creep.store[RESOURCE_ENERGY]
+  );
+}
+
 function isStorageDeliveryTargetAvailable(
   creep: Creep,
   target: StructureStorage,
@@ -364,7 +376,7 @@ function findTowerDeliveryTarget(
     filter: (structure): structure is StructureTower =>
       structure.structureType === STRUCTURE_TOWER &&
       (!emptyOnly || isEmptyTower(structure)) &&
-      isDeliveryTargetAvailable(creep, structure),
+      canTowerAcceptFullCarrierLoad(creep, structure),
   });
 }
 
