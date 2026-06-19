@@ -60,6 +60,26 @@ function hasRefillEnergy(target: EnergyRefillTarget): boolean {
   return getRefillEnergyAmount(target) > 0;
 }
 
+function getAvailableRefillEnergy(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): number {
+  return Math.max(
+    0,
+    getRefillEnergyAmount(target) - getReservedRefillCapacity(creep, target),
+  );
+}
+
+function canFullyRefillFromTarget(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): boolean {
+  return (
+    getAvailableRefillEnergy(creep, target) >=
+    creep.store.getFreeCapacity(RESOURCE_ENERGY)
+  );
+}
+
 function isStorageTarget(
   target: EnergyRefillTarget | EnergyDeliveryTarget,
 ): target is StructureStorage {
@@ -133,9 +153,7 @@ function isRefillTargetReservedByOtherCreep(
   creep: Creep,
   target: EnergyRefillTarget,
 ): boolean {
-  return (
-    getReservedRefillCapacity(creep, target) >= getRefillEnergyAmount(target)
-  );
+  return getAvailableRefillEnergy(creep, target) === 0;
 }
 
 function isCarrierRefillTarget(
@@ -176,12 +194,17 @@ function rememberRefillTarget(
   return target;
 }
 
-function findCarrierEnergyContainer(creep: Creep): StructureContainer | null {
-  return creep.pos.findClosestByPath(FIND_STRUCTURES, {
-    filter: (structure): structure is StructureContainer =>
-      structure.structureType === STRUCTURE_CONTAINER &&
-      isCarrierRefillTarget(creep, structure),
-  });
+function findClosestRefillTargetPreferringFull<T extends EnergyRefillTarget>(
+  creep: Creep,
+  targets: T[],
+): T | null {
+  const fullRefillTargets = targets.filter((target) =>
+    canFullyRefillFromTarget(creep, target),
+  );
+
+  return creep.pos.findClosestByPath(
+    fullRefillTargets.length > 0 ? fullRefillTargets : targets,
+  );
 }
 
 function findAttackStorageRefillTarget(
@@ -199,7 +222,7 @@ function findAttackStorageRefillTarget(
   return storage;
 }
 
-function findCarrierDecayingEnergy(creep: Creep): DecayingEnergyTarget | null {
+function findCarrierLocalRefillTarget(creep: Creep): EnergyRefillTarget | null {
   const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
     filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
       resource.resourceType === RESOURCE_ENERGY &&
@@ -212,11 +235,17 @@ function findCarrierDecayingEnergy(creep: Creep): DecayingEnergyTarget | null {
   const tombstones = creep.room.find(FIND_TOMBSTONES, {
     filter: (target) => isCarrierRefillTarget(creep, target),
   });
+  const containers = creep.room.find(FIND_STRUCTURES, {
+    filter: (structure): structure is StructureContainer =>
+      structure.structureType === STRUCTURE_CONTAINER &&
+      isCarrierRefillTarget(creep, structure),
+  });
 
-  return creep.pos.findClosestByPath([
+  return findClosestRefillTargetPreferringFull(creep, [
     ...droppedEnergy,
     ...ruins,
     ...tombstones,
+    ...containers,
   ]);
 }
 
@@ -226,14 +255,30 @@ function findCarrierEnergyRefillTarget(
     creep,
   ),
 ): EnergyRefillTarget | null {
+  const localRefillTarget = findCarrierLocalRefillTarget(creep);
+  const attackStorageRefillTarget = findAttackStorageRefillTarget(
+    creep,
+    deliveryTarget,
+  );
+
   if (creep.memory.energyTargetId) {
     const savedTarget = Game.getObjectById(creep.memory.energyTargetId);
-    if (
-      savedTarget &&
-      (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget) ||
-        isCarrierRefillTarget(creep, savedTarget))
-    ) {
-      return savedTarget;
+    if (savedTarget) {
+      if (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget)) {
+        return savedTarget;
+      }
+
+      if (isCarrierRefillTarget(creep, savedTarget)) {
+        if (
+          localRefillTarget &&
+          canFullyRefillFromTarget(creep, localRefillTarget) &&
+          !canFullyRefillFromTarget(creep, savedTarget)
+        ) {
+          return rememberRefillTarget(creep, localRefillTarget);
+        }
+
+        return savedTarget;
+      }
     }
 
     creep.clearEnergyTarget();
@@ -241,9 +286,7 @@ function findCarrierEnergyRefillTarget(
 
   return rememberRefillTarget(
     creep,
-    findAttackStorageRefillTarget(creep, deliveryTarget) ??
-      findCarrierDecayingEnergy(creep) ??
-      findCarrierEnergyContainer(creep),
+    attackStorageRefillTarget ?? localRefillTarget,
   );
 }
 
