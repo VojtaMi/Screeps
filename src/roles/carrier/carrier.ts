@@ -251,34 +251,16 @@ function findCarrierLocalRefillTarget(creep: Creep): EnergyRefillTarget | null {
 
 function findCarrierEnergyRefillTarget(
   creep: Creep,
-  deliveryTarget: EnergyDeliveryTarget | null = findCarrierDeliveryTarget(
-    creep,
-  ),
+  deliveryTarget: EnergyDeliveryTarget | null = null,
 ): EnergyRefillTarget | null {
-  const localRefillTarget = findCarrierLocalRefillTarget(creep);
-  const attackStorageRefillTarget = findAttackStorageRefillTarget(
-    creep,
-    deliveryTarget,
-  );
-
   if (creep.memory.energyTargetId) {
     const savedTarget = Game.getObjectById(creep.memory.energyTargetId);
-    if (savedTarget) {
-      if (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget)) {
-        return savedTarget;
-      }
-
-      if (isCarrierRefillTarget(creep, savedTarget)) {
-        if (
-          localRefillTarget &&
-          canFullyRefillFromTarget(creep, localRefillTarget) &&
-          !canFullyRefillFromTarget(creep, savedTarget)
-        ) {
-          return rememberRefillTarget(creep, localRefillTarget);
-        }
-
-        return savedTarget;
-      }
+    if (
+      savedTarget &&
+      (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget) ||
+        isCarrierRefillTarget(creep, savedTarget))
+    ) {
+      return savedTarget;
     }
 
     creep.clearEnergyTarget();
@@ -286,7 +268,8 @@ function findCarrierEnergyRefillTarget(
 
   return rememberRefillTarget(
     creep,
-    attackStorageRefillTarget ?? localRefillTarget,
+    findAttackStorageRefillTarget(creep, deliveryTarget) ??
+      findCarrierLocalRefillTarget(creep),
   );
 }
 
