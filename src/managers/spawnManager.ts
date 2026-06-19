@@ -248,6 +248,10 @@ function getExpansionSpawnRequest(
     };
   }
 
+  if (!expansionRoom?.controller?.my) {
+    return null;
+  }
+
   const hasSettler = expansionCreeps.some(
     (creep) => creep.memory.role === CREEP_ROLE.SETTLER,
   );
@@ -271,17 +275,29 @@ function findExpansionTargetRoom(room: Room): string | null {
   }
 
   return (
-    getAdjacentRoomNames(room.name)
-      .filter((roomName) => isExpansionCandidate(Game.rooms[roomName]))
-      .sort()[0] ?? null
+    getAdjacentRoomNames(room.name).filter(isExpansionCandidate).sort()[0] ??
+    null
   );
 }
 
-function isExpansionCandidate(room: Room | undefined): boolean {
-  if (!room || !hasNonEmptyDefaultBuildPlan(room.name)) {
+function isExpansionCandidate(roomName: string): boolean {
+  if (!hasNonEmptyDefaultBuildPlan(roomName)) {
     return false;
   }
 
+  const room = Game.rooms[roomName];
+  if (!room) {
+    return true;
+  }
+
+  if (!hasInspectableExpansionState(room)) {
+    return false;
+  }
+
+  return !hasMySpawn(room);
+}
+
+function hasInspectableExpansionState(room: Room): boolean {
   const controller = room.controller;
   if (!controller) {
     return false;
@@ -305,7 +321,7 @@ function isExpansionCandidate(room: Room | undefined): boolean {
     return false;
   }
 
-  return !hasMySpawn(room);
+  return true;
 }
 
 function hasNonEmptyDefaultBuildPlan(roomName: string): boolean {
