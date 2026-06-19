@@ -452,6 +452,11 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
     return rememberDeliveryTarget(creep, storage);
   }
 
+  const tower = findTowerDeliveryTarget(creep);
+  if (tower) {
+    return rememberDeliveryTarget(creep, tower);
+  }
+
   const worker = findWorkerDeliveryTarget(creep);
   if (worker) {
     return rememberDeliveryTarget(creep, worker);
@@ -459,11 +464,6 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
 
   if (savedTarget) {
     return savedTarget;
-  }
-
-  const tower = findTowerDeliveryTarget(creep);
-  if (tower) {
-    return rememberDeliveryTarget(creep, tower);
   }
 
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
