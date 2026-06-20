@@ -10,6 +10,14 @@ import { collectResourceLoot, deliverResourceLoot } from "./loot";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 const STORAGE_ENERGY_RESERVE = 50_000;
+const CARRIER_REFILL_MOVE_OPTS: MoveToOpts = {
+  reusePath: 10,
+  visualizePathStyle: { stroke: "#ffaa00" },
+};
+const CARRIER_DELIVERY_MOVE_OPTS: MoveToOpts = {
+  reusePath: 10,
+  visualizePathStyle: { stroke: "#ffffff" },
+};
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
@@ -36,13 +44,23 @@ function collectEnergy(
   ),
 ): boolean {
   if (energyTarget && "amount" in energyTarget) {
-    creep.pickUpEnergy(energyTarget);
-    return true;
+    const result = creep.pickup(energyTarget);
+    if (result === ERR_NOT_IN_RANGE) {
+      creep.moveToAvoidingRoomEdges(energyTarget, CARRIER_REFILL_MOVE_OPTS);
+      return true;
+    }
+
+    return result === OK;
   }
 
   if (energyTarget) {
-    creep.withdrawEnergyFrom(energyTarget);
-    return true;
+    const result = creep.withdraw(energyTarget, RESOURCE_ENERGY);
+    if (result === ERR_NOT_IN_RANGE) {
+      creep.moveToAvoidingRoomEdges(energyTarget, CARRIER_REFILL_MOVE_OPTS);
+      return true;
+    }
+
+    return result === OK;
   }
 
   return false;
@@ -103,16 +121,6 @@ function isUrgentAttackDeliveryTarget(
     target.structureType === STRUCTURE_SPAWN ||
     target.structureType === STRUCTURE_EXTENSION ||
     (target.structureType === STRUCTURE_TOWER && isEmptyTower(target))
-  );
-}
-
-function isRefuelDeliveryTarget(
-  target: EnergyDeliveryTarget,
-): target is StructureSpawn | StructureExtension {
-  return (
-    "structureType" in target &&
-    (target.structureType === STRUCTURE_SPAWN ||
-      target.structureType === STRUCTURE_EXTENSION)
   );
 }
 
@@ -470,6 +478,11 @@ function findWorkerDeliveryTarget(creep: Creep): Creep | null {
 }
 
 function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
+  const savedTarget = findSavedDeliveryTarget(creep);
+  if (savedTarget) {
+    return savedTarget;
+  }
+
   const refuelTarget = findRefuelDeliveryTarget(creep);
   if (refuelTarget) {
     return rememberDeliveryTarget(creep, refuelTarget);
@@ -478,11 +491,6 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   const emptyTower = findTowerDeliveryTarget(creep, true);
   if (emptyTower) {
     return rememberDeliveryTarget(creep, emptyTower);
-  }
-
-  const savedTarget = findSavedDeliveryTarget(creep);
-  if (savedTarget && isRefuelDeliveryTarget(savedTarget)) {
-    return savedTarget;
   }
 
   const storage = findStorageDeliveryTarget(creep);
@@ -498,10 +506,6 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   const worker = findWorkerDeliveryTarget(creep);
   if (worker) {
     return rememberDeliveryTarget(creep, worker);
-  }
-
-  if (savedTarget) {
-    return savedTarget;
   }
 
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
@@ -547,9 +551,7 @@ function deliverEnergy(
   const result = creep.transfer(deliveryTarget, RESOURCE_ENERGY, amount);
 
   if (result === ERR_NOT_IN_RANGE) {
-    creep.moveToAvoidingRoomEdges(deliveryTarget, {
-      visualizePathStyle: { stroke: "#ffffff" },
-    });
+    creep.moveToAvoidingRoomEdges(deliveryTarget, CARRIER_DELIVERY_MOVE_OPTS);
     return true;
   }
 
@@ -602,9 +604,7 @@ export const carrier: Role = {
 
       const spawn = Game.spawns.Spawn1;
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
-        creep.moveToAvoidingRoomEdges(spawn, {
-          visualizePathStyle: { stroke: "#ffffff" },
-        });
+        creep.moveToAvoidingRoomEdges(spawn, CARRIER_DELIVERY_MOVE_OPTS);
         return;
       }
       creep.moveOffRoad();
@@ -617,7 +617,7 @@ export const carrier: Role = {
     if (shouldDeliverPartialEnergy(creep, refillTarget, deliveryTarget)) {
       creep.memory.working = true;
       creep.clearEnergyTarget();
-      creep.transferEnergyTo(deliveryTarget);
+      deliverEnergy(creep, deliveryTarget);
       return;
     }
 
