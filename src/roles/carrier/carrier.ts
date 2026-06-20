@@ -18,6 +18,8 @@ const CARRIER_DELIVERY_MOVE_OPTS: MoveToOpts = {
   reusePath: 10,
   visualizePathStyle: { stroke: "#ffffff" },
 };
+const NEARBY_DROPPED_ENERGY_RANGE = 5;
+const MIN_DROPPED_ENERGY_PER_RANGE = 10;
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
@@ -147,6 +149,21 @@ function isDroppedEnergyReservedForWorker(target: EnergyRefillTarget): boolean {
   );
 }
 
+function isWorthCarrierDroppedEnergyTrip(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): boolean {
+  if (!("amount" in target)) {
+    return true;
+  }
+
+  const range = creep.pos.getRangeTo(target);
+  return (
+    range <= NEARBY_DROPPED_ENERGY_RANGE ||
+    target.amount >= range * MIN_DROPPED_ENERGY_PER_RANGE
+  );
+}
+
 function getReservedRefillCapacity(
   creep: Creep,
   target: EnergyRefillTarget,
@@ -178,6 +195,7 @@ function isCarrierRefillTarget(
   return (
     hasRefillEnergy(target) &&
     !isStorageTarget(target) &&
+    isWorthCarrierDroppedEnergyTrip(creep, target) &&
     !isDroppedEnergyReservedForWorker(target) &&
     !isRefillTargetReservedByOtherCreep(creep, target) &&
     (!("structureType" in target) || !isControllerDeliveryContainer(target))
