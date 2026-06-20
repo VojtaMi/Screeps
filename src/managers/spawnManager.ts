@@ -13,6 +13,8 @@ import { expansionManager } from "./expansionManager";
 const CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS = [
   { energy: 2000, upgraders: 2 },
 ] as const;
+const MAX_DESIRED_CARRIER_CAPACITY = 1600;
+const HAULABLE_ENERGY_BUFFER = 1.25;
 
 type CreepsByRole = (role: CreepRole) => Creep[];
 
@@ -135,9 +137,15 @@ export const spawnManager = {
       };
     }
 
-    const desiredCarriers =
-      sources.length > 1 || hasAvailableEnergyForCarriers(room) ? 2 : 1;
-    if (harvesters.length > 0 && carriers.length < desiredCarriers) {
+    const haulableEnergy = getHaulableEnergy(room);
+    const minimumCarriers = sources.length > 1 || haulableEnergy > 0 ? 2 : 1;
+    const desiredCarrierCapacity = getDesiredCarrierCapacity(haulableEnergy);
+    const needsMoreCarrierCapacity =
+      getCarrierCapacity(carriers) < desiredCarrierCapacity;
+    if (
+      harvesters.length > 0 &&
+      (carriers.length < minimumCarriers || needsMoreCarrierCapacity)
+    ) {
       return {
         role: CREEP_ROLE.CARRIER,
         body: buildBodyFromMaxPattern({
@@ -261,22 +269,43 @@ function hasConstructionWork(room: Room): boolean {
   return room.find(FIND_CONSTRUCTION_SITES).length > 0;
 }
 
-function hasAvailableEnergyForCarriers(room: Room): boolean {
-  const droppedEnergy = room.find(FIND_DROPPED_RESOURCES, {
-    filter: (resource) =>
-      resource.resourceType === RESOURCE_ENERGY && resource.amount >= 50,
-  });
-
-  if (droppedEnergy.length > 0) {
-    return true;
-  }
-
-  return (
-    room.find(FIND_STRUCTURES, {
+function getHaulableEnergy(room: Room): number {
+  const controllerDeliveryContainer = getControllerDeliveryContainer(room);
+  const droppedEnergy = room
+    .find(FIND_DROPPED_RESOURCES, {
+      filter: (resource) =>
+        resource.resourceType === RESOURCE_ENERGY && resource.amount >= 50,
+    })
+    .reduce((total, resource) => total + resource.amount, 0);
+  const containerEnergy = room
+    .find(FIND_STRUCTURES, {
       filter: (structure): structure is StructureContainer =>
         structure.structureType === STRUCTURE_CONTAINER &&
+        structure.id !== controllerDeliveryContainer?.id &&
         structure.store[RESOURCE_ENERGY] >= 50,
-    }).length > 0
+    })
+    .reduce((total, container) => total + container.store[RESOURCE_ENERGY], 0);
+  const tombstoneEnergy = room
+    .find(FIND_TOMBSTONES)
+    .reduce((total, tombstone) => total + tombstone.store[RESOURCE_ENERGY], 0);
+  const ruinEnergy = room
+    .find(FIND_RUINS)
+    .reduce((total, ruin) => total + ruin.store[RESOURCE_ENERGY], 0);
+
+  return droppedEnergy + containerEnergy + tombstoneEnergy + ruinEnergy;
+}
+
+function getCarrierCapacity(carriers: Creep[]): number {
+  return carriers.reduce(
+    (total, carrier) => total + carrier.store.getCapacity(RESOURCE_ENERGY),
+    0,
+  );
+}
+
+function getDesiredCarrierCapacity(haulableEnergy: number): number {
+  return Math.min(
+    MAX_DESIRED_CARRIER_CAPACITY,
+    Math.ceil(haulableEnergy * HAULABLE_ENERGY_BUFFER),
   );
 }
 
