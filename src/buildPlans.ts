@@ -19,7 +19,12 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 44, y: 34, structureType: STRUCTURE_EXTENSION },
       { x: 44, y: 36, structureType: STRUCTURE_EXTENSION },
       { x: 28, y: 42, structureType: STRUCTURE_CONTAINER },
-      { x: 32, y: 34, structureType: STRUCTURE_CONTAINER },
+      {
+        x: 32,
+        y: 34,
+        structureType: STRUCTURE_CONTAINER,
+        purpose: "controllerDelivery",
+      },
       { x: 45, y: 37, structureType: STRUCTURE_CONTAINER },
       { x: 30, y: 41, structureType: STRUCTURE_ROAD },
       { x: 44, y: 46, structureType: STRUCTURE_ROAD },
