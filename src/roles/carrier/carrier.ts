@@ -106,6 +106,13 @@ function isStorageTarget(
   );
 }
 
+function isTargetInCreepRoom(
+  creep: Creep,
+  target: EnergyRefillTarget | EnergyDeliveryTarget,
+): boolean {
+  return target.pos.roomName === creep.room.name;
+}
+
 function isEmptyTower(target: StructureTower): boolean {
   return target.store[RESOURCE_ENERGY] === 0;
 }
@@ -265,6 +272,7 @@ function findCarrierEnergyRefillTarget(
     const savedTarget = Game.getObjectById(creep.memory.energyTargetId);
     if (
       savedTarget &&
+      isTargetInCreepRoom(creep, savedTarget) &&
       (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget) ||
         isCarrierRefillTarget(creep, savedTarget))
     ) {
@@ -343,6 +351,7 @@ function findSavedDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   const savedTarget = Game.getObjectById(creep.memory.deliveryTargetId);
   if (
     savedTarget &&
+    isTargetInCreepRoom(creep, savedTarget) &&
     (isStorageTarget(savedTarget)
       ? isStorageDeliveryTargetAvailable(creep, savedTarget)
       : isDeliveryTargetAvailable(creep, savedTarget))
@@ -511,6 +520,13 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
 }
 
+function findSameRoomSpawn(creep: Creep): StructureSpawn | null {
+  return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+    filter: (structure): structure is StructureSpawn =>
+      structure.structureType === STRUCTURE_SPAWN,
+  });
+}
+
 function shouldDeliverPartialEnergy(
   creep: Creep,
   refillTarget: EnergyRefillTarget | null,
@@ -602,7 +618,7 @@ export const carrier: Role = {
         return;
       }
 
-      const spawn = Game.spawns.Spawn1;
+      const spawn = findSameRoomSpawn(creep);
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
         creep.moveToAvoidingRoomEdges(spawn, CARRIER_DELIVERY_MOVE_OPTS);
         return;
