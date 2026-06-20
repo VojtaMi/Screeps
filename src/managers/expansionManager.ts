@@ -166,7 +166,7 @@ function reconcileAttempt(
   const settlerMissing =
     memory.settlerName !== undefined && !Game.creeps[memory.settlerName];
 
-  if ((claimerMissing && !controllerMine) || settlerMissing) {
+  if (claimerMissing && !controllerMine) {
     memory.failedUntilTick = Game.time + EXPANSION_FAILURE_COOLDOWN_TICKS;
     delete memory.claimerName;
     delete memory.settlerName;
@@ -175,6 +175,8 @@ function reconcileAttempt(
     );
   } else if (claimerMissing && controllerMine) {
     delete memory.claimerName;
+  } else if (settlerMissing && controllerMine) {
+    delete memory.settlerName;
   }
 }
 
