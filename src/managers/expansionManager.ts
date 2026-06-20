@@ -156,15 +156,27 @@ function reconcileAttempt(
     return;
   }
 
-  if (isTargetCoolingDown(roomName)) {
-    return;
-  }
-
   const controllerMine = room?.controller?.my ?? false;
   const claimerMissing =
     memory.claimerName !== undefined && !Game.creeps[memory.claimerName];
   const settlerMissing =
     memory.settlerName !== undefined && !Game.creeps[memory.settlerName];
+
+  if (controllerMine) {
+    delete memory.failedUntilTick;
+
+    if (claimerMissing) {
+      delete memory.claimerName;
+    }
+    if (settlerMissing) {
+      delete memory.settlerName;
+    }
+    return;
+  }
+
+  if (isTargetCoolingDown(roomName)) {
+    return;
+  }
 
   if (claimerMissing && !controllerMine) {
     memory.failedUntilTick = Game.time + EXPANSION_FAILURE_COOLDOWN_TICKS;
@@ -173,10 +185,6 @@ function reconcileAttempt(
     console.log(
       `Expansion attempt for ${roomName} failed; cooling down until tick ${memory.failedUntilTick}`,
     );
-  } else if (claimerMissing && controllerMine) {
-    delete memory.claimerName;
-  } else if (settlerMissing && controllerMine) {
-    delete memory.settlerName;
   }
 }
 
