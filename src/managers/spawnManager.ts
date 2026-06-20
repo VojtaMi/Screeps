@@ -27,41 +27,44 @@ interface SpawnContext {
 // Main spawning coordinator: gather room state, choose the next role, then spawn it.
 export const spawnManager = {
   manageSpawning(): void {
-    const spawn = Game.spawns.Spawn1;
-    if (!spawn || spawn.spawning) {
-      return;
-    }
-
     expansionManager.reconcileAttempts();
 
-    const room = spawn.room;
-    const creeps = Object.values(Game.creeps).filter(
-      (creep) => creep.room.name === room.name,
-    );
-    const creepsByRole = groupCreepsByRole(creeps);
-    const sources = room.find(FIND_SOURCES);
-    const hostiles = room.find(FIND_HOSTILE_CREEPS);
+    for (const spawn of getOwnedSpawns()) {
+      if (spawn.spawning) {
+        continue;
+      }
 
-    const request = this.getSpawnRequest({
-      room,
-      creeps,
-      creepsByRole,
-      sources,
-      hostiles,
-    });
+      const room = spawn.room;
+      const creeps = Object.values(Game.creeps).filter(
+        (creep) => creep.room.name === room.name,
+      );
+      const creepsByRole = groupCreepsByRole(creeps);
+      const sources = room.find(FIND_SOURCES);
+      const hostiles = room.find(FIND_HOSTILE_CREEPS);
 
-    if (!request || !canAfford(spawn, request.body)) {
-      return;
-    }
+      const request = this.getSpawnRequest({
+        room,
+        creeps,
+        creepsByRole,
+        sources,
+        hostiles,
+      });
 
-    const newName = `${request.role}${Game.time}`;
-    const result = spawn.spawnCreep(request.body, newName, {
-      memory: { role: request.role, ...request.memory },
-    });
+      if (!request || !canAfford(spawn, request.body)) {
+        continue;
+      }
 
-    if (result === OK) {
-      console.log(`Spawning new ${request.role}: ${newName}`);
-      expansionManager.recordSpawn(newName, request);
+      const newName = `${request.role}-${spawn.name}-${Game.time}`;
+      const result = spawn.spawnCreep(request.body, newName, {
+        memory: { role: request.role, ...request.memory },
+      });
+
+      if (result === OK) {
+        console.log(
+          `Spawning new ${request.role} at ${spawn.name}: ${newName}`,
+        );
+        expansionManager.recordSpawn(newName, request);
+      }
     }
   },
 
@@ -192,6 +195,16 @@ export const spawnManager = {
     return null;
   },
 };
+
+function getOwnedSpawns(): StructureSpawn[] {
+  return Object.values(Game.spawns).sort((left, right) => {
+    if (left.room.name !== right.room.name) {
+      return left.room.name.localeCompare(right.room.name);
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+}
 
 function groupCreepsByRole(creeps: Creep[]): CreepsByRole {
   const creepsByRole = new Map<CreepRole, Creep[]>();
