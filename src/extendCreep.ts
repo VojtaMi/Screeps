@@ -7,6 +7,17 @@ import {
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
 
+function toMoveToOpts(
+  opts?: MoveToAvoidingRoomEdgesOpts,
+): MoveToOpts | undefined {
+  if (!opts) {
+    return undefined;
+  }
+
+  const { requestSwap: _requestSwap, ...moveToOpts } = opts;
+  return moveToOpts;
+}
+
 function getTargetPosition(
   target: Parameters<Creep["moveTo"]>[0],
 ): RoomPosition {
@@ -23,17 +34,19 @@ function shouldAvoidRoomEdges(
 function withRoomEdgeAvoidance(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
-  opts?: MoveToOpts,
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): MoveToOpts {
+  const moveToOpts = toMoveToOpts(opts);
+
   if (!shouldAvoidRoomEdges(creep, target)) {
-    return opts ?? {};
+    return moveToOpts ?? {};
   }
 
   const existingCostCallback = opts?.costCallback;
 
   return {
     ignoreCreeps: true,
-    ...opts,
+    ...moveToOpts,
     maxRooms: 1,
     costCallback(roomName, matrix) {
       const costs = existingCostCallback?.(roomName, matrix) ?? matrix;
@@ -91,7 +104,7 @@ function updateMoveStuckCount(creep: Creep): number {
 function findNextStep(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
-  opts?: MoveToOpts,
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): RoomPosition | null {
   const targetPos = getTargetPosition(target);
   if (targetPos.roomName !== creep.room.name) {
@@ -293,7 +306,7 @@ function moveToNonRoadWorkPosition(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
   range: number,
-  opts?: Parameters<Creep["moveTo"]>[1],
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): boolean {
   const targetPos = getTargetPosition(target);
   if (targetPos.roomName !== creep.room.name) {
@@ -325,10 +338,12 @@ export function extendCreep(): void {
 
   Creep.prototype.moveToAvoidingRoomEdges = function (
     target: Parameters<Creep["moveTo"]>[0],
-    opts?: Parameters<Creep["moveTo"]>[1],
+    opts?: MoveToAvoidingRoomEdgesOpts,
   ): ReturnType<Creep["moveTo"]> {
     const nextStep = findNextStep(this, target, opts);
-    requestSwapWithBlockingCreep(this, nextStep);
+    if (opts?.requestSwap !== false) {
+      requestSwapWithBlockingCreep(this, nextStep);
+    }
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
 

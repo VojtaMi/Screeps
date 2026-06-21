@@ -18,6 +18,9 @@ declare global {
     | StructureContainer
     | StructureStorage
     | AnyCreep;
+  interface MoveToAvoidingRoomEdgesOpts extends MoveToOpts {
+    requestSwap?: boolean;
+  }
 
   interface CreepMemory {
     role: CreepRole;
@@ -77,7 +80,7 @@ declare global {
     isAtFlag(flagName: string, range?: number): boolean;
     moveToAvoidingRoomEdges(
       target: Parameters<Creep["moveTo"]>[0],
-      opts?: Parameters<Creep["moveTo"]>[1],
+      opts?: MoveToAvoidingRoomEdgesOpts,
     ): ReturnType<Creep["moveTo"]>;
     handleSwapRequest(): boolean;
     moveOffRoad(): boolean;

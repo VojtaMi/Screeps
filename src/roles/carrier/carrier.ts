@@ -632,7 +632,10 @@ export const carrier: Role = {
 
       const spawn = findSameRoomSpawn(creep);
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
-        creep.moveToAvoidingRoomEdges(spawn, CARRIER_DELIVERY_MOVE_OPTS);
+        creep.moveToAvoidingRoomEdges(spawn, {
+          ...CARRIER_DELIVERY_MOVE_OPTS,
+          requestSwap: false,
+        });
         return;
       }
       creep.moveOffRoad();
