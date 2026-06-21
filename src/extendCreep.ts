@@ -6,6 +6,19 @@ import {
 
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
+const DEFAULT_SWAP_PRIORITY = 1;
+const IDLE_SWAP_PRIORITY = 0;
+
+function toMoveToOpts(
+  opts?: MoveToAvoidingRoomEdgesOpts,
+): MoveToOpts | undefined {
+  if (!opts) {
+    return undefined;
+  }
+
+  const { swapPriority: _swapPriority, ...moveToOpts } = opts;
+  return moveToOpts;
+}
 
 function getTargetPosition(
   target: Parameters<Creep["moveTo"]>[0],
@@ -23,17 +36,19 @@ function shouldAvoidRoomEdges(
 function withRoomEdgeAvoidance(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
-  opts?: MoveToOpts,
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): MoveToOpts {
+  const moveToOpts = toMoveToOpts(opts);
+
   if (!shouldAvoidRoomEdges(creep, target)) {
-    return opts ?? {};
+    return moveToOpts ?? {};
   }
 
   const existingCostCallback = opts?.costCallback;
 
   return {
     ignoreCreeps: true,
-    ...opts,
+    ...moveToOpts,
     maxRooms: 1,
     costCallback(roomName, matrix) {
       const costs = existingCostCallback?.(roomName, matrix) ?? matrix;
@@ -91,7 +106,7 @@ function updateMoveStuckCount(creep: Creep): number {
 function findNextStep(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
-  opts?: MoveToOpts,
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): RoomPosition | null {
   const targetPos = getTargetPosition(target);
   if (targetPos.roomName !== creep.room.name) {
@@ -110,7 +125,11 @@ function findNextStep(
   return new RoomPosition(nextStep.x, nextStep.y, creep.room.name);
 }
 
-function rememberMoveIntent(creep: Creep, nextStep: RoomPosition | null): void {
+function rememberMoveIntent(
+  creep: Creep,
+  nextStep: RoomPosition | null,
+  opts?: MoveToAvoidingRoomEdgesOpts,
+): void {
   if (!nextStep) {
     delete creep.memory.moveIntent;
     return;
@@ -123,34 +142,48 @@ function rememberMoveIntent(creep: Creep, nextStep: RoomPosition | null): void {
     nextX: nextStep.x,
     nextY: nextStep.y,
     nextRoomName: nextStep.roomName,
+    priority: opts?.swapPriority ?? DEFAULT_SWAP_PRIORITY,
     tick: Game.time,
   };
 }
 
-function hasUsableMoveIntent(creep: Creep): boolean {
+function getUsableMoveIntent(
+  creep: Creep,
+): NonNullable<CreepMemory["moveIntent"]> | null {
   const intent = creep.memory.moveIntent;
   if (!intent || Game.time - intent.tick > 1) {
-    return false;
+    return null;
   }
 
-  return positionMatches(
-    creep.pos,
-    intent.startX,
-    intent.startY,
-    intent.startRoomName,
-  );
+  if (
+    !positionMatches(
+      creep.pos,
+      intent.startX,
+      intent.startY,
+      intent.startRoomName,
+    )
+  ) {
+    return null;
+  }
+
+  return intent;
 }
 
-function isMovingTowardRequester(creep: Creep, requester: Creep): boolean {
-  if (!hasUsableMoveIntent(creep)) {
+function canYieldToRequester(blocker: Creep, requester: Creep): boolean {
+  const blockerIntent = getUsableMoveIntent(blocker);
+  if (!blockerIntent) {
     return true;
   }
 
-  const intent = creep.memory.moveIntent;
+  const requesterIntent = getUsableMoveIntent(requester);
+  if (requesterIntent && requesterIntent.priority > blockerIntent.priority) {
+    return true;
+  }
+
   return (
-    intent?.nextX === requester.pos.x &&
-    intent.nextY === requester.pos.y &&
-    intent.nextRoomName === requester.pos.roomName
+    blockerIntent.nextX === requester.pos.x &&
+    blockerIntent.nextY === requester.pos.y &&
+    blockerIntent.nextRoomName === requester.pos.roomName
   );
 }
 
@@ -337,7 +370,7 @@ function moveToNonRoadWorkPosition(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
   range: number,
-  opts?: Parameters<Creep["moveTo"]>[1],
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): boolean {
   const targetPos = getTargetPosition(target);
   if (targetPos.roomName !== creep.room.name) {
@@ -369,10 +402,10 @@ export function extendCreep(): void {
 
   Creep.prototype.moveToAvoidingRoomEdges = function (
     target: Parameters<Creep["moveTo"]>[0],
-    opts?: Parameters<Creep["moveTo"]>[1],
+    opts?: MoveToAvoidingRoomEdgesOpts,
   ): ReturnType<Creep["moveTo"]> {
     const nextStep = findNextStep(this, target, opts);
-    rememberMoveIntent(this, nextStep);
+    rememberMoveIntent(this, nextStep, opts);
     requestSwapWithBlockingCreep(this, nextStep);
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
@@ -398,7 +431,7 @@ export function extendCreep(): void {
       ) ||
       this.pos.roomName !== requester.pos.roomName ||
       !this.pos.isNearTo(requester) ||
-      !isMovingTowardRequester(this, requester) ||
+      !canYieldToRequester(this, requester) ||
       swappedWithLastTick(this, requester) ||
       swappedWithLastTick(requester, this)
     ) {
@@ -425,6 +458,7 @@ export function extendCreep(): void {
     }
 
     this.moveToAvoidingRoomEdges(parkingPosition, {
+      swapPriority: IDLE_SWAP_PRIORITY,
       visualizePathStyle: { stroke: "#888888" },
     });
     return true;
