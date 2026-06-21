@@ -21,6 +21,9 @@ const CARRIER_DELIVERY_MOVE_OPTS: MoveToOpts = {
 };
 const NEARBY_DROPPED_ENERGY_RANGE = 5;
 const MIN_DROPPED_ENERGY_PER_RANGE = 10;
+const DECAYING_REFILL_SCORE_BONUS = 8;
+const FULL_REFILL_SCORE_BONUS = 3;
+const MAX_PARTIAL_REFILL_SCORE_PENALTY = 6;
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
@@ -228,17 +231,56 @@ function rememberRefillTarget(
   return target;
 }
 
-function findClosestRefillTargetPreferringFull<T extends EnergyRefillTarget>(
+function isDecayingRefillTarget(
+  target: EnergyRefillTarget,
+): target is DecayingEnergyTarget {
+  return !("structureType" in target);
+}
+
+function getRefillTargetScore(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): number {
+  const freeCapacity = creep.store.getFreeCapacity(RESOURCE_ENERGY);
+  const availableEnergy = getAvailableRefillEnergy(creep, target);
+  const remainingFreeCapacity = Math.max(0, freeCapacity - availableEnergy);
+  const partialRefillPenalty =
+    (remainingFreeCapacity / Math.max(1, freeCapacity)) *
+    MAX_PARTIAL_REFILL_SCORE_PENALTY;
+
+  return (
+    creep.pos.getRangeTo(target) -
+    (isDecayingRefillTarget(target) ? DECAYING_REFILL_SCORE_BONUS : 0) -
+    (canFullyRefillFromTarget(creep, target) ? FULL_REFILL_SCORE_BONUS : 0) +
+    partialRefillPenalty
+  );
+}
+
+function findBestCarrierRefillTarget<T extends EnergyRefillTarget>(
   creep: Creep,
   targets: T[],
 ): T | null {
-  const fullRefillTargets = targets.filter((target) =>
-    canFullyRefillFromTarget(creep, target),
-  );
+  return targets.reduce<T | null>((bestTarget, target) => {
+    if (!bestTarget) {
+      return target;
+    }
 
-  return creep.pos.findClosestByPath(
-    fullRefillTargets.length > 0 ? fullRefillTargets : targets,
-  );
+    const score = getRefillTargetScore(creep, target);
+    const bestScore = getRefillTargetScore(creep, bestTarget);
+    if (score !== bestScore) {
+      return score < bestScore ? target : bestTarget;
+    }
+
+    const availableEnergy = getAvailableRefillEnergy(creep, target);
+    const bestAvailableEnergy = getAvailableRefillEnergy(creep, bestTarget);
+    if (availableEnergy !== bestAvailableEnergy) {
+      return availableEnergy > bestAvailableEnergy ? target : bestTarget;
+    }
+
+    return creep.pos.getRangeTo(target) < creep.pos.getRangeTo(bestTarget)
+      ? target
+      : bestTarget;
+  }, null);
 }
 
 function findAttackStorageRefillTarget(
@@ -275,7 +317,7 @@ function findCarrierLocalRefillTarget(creep: Creep): EnergyRefillTarget | null {
       isCarrierRefillTarget(creep, structure),
   });
 
-  return findClosestRefillTargetPreferringFull(creep, [
+  return findBestCarrierRefillTarget(creep, [
     ...droppedEnergy,
     ...ruins,
     ...tombstones,
