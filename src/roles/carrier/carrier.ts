@@ -43,6 +43,33 @@ function getEnergyRatio(creep: Creep): number {
   );
 }
 
+function collectAdjacentDroppedEnergy(
+  creep: Creep,
+  container: StructureContainer,
+): boolean {
+  if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+    return false;
+  }
+
+  const droppedEnergy = creep.pos
+    .findInRange(FIND_DROPPED_RESOURCES, 1, {
+      filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+        resource.resourceType === RESOURCE_ENERGY &&
+        resource.amount > 0 &&
+        resource.pos.inRangeTo(container, 1) &&
+        isCarrierRefillTarget(creep, resource as Resource<RESOURCE_ENERGY>),
+    })
+    .reduce<Resource<RESOURCE_ENERGY> | null>(
+      (bestResource, resource) =>
+        !bestResource || resource.amount > bestResource.amount
+          ? resource
+          : bestResource,
+      null,
+    );
+
+  return droppedEnergy ? creep.pickup(droppedEnergy) === OK : false;
+}
+
 function collectEnergy(
   creep: Creep,
   energyTarget: EnergyRefillTarget | null = findCarrierEnergyRefillTarget(
@@ -60,6 +87,14 @@ function collectEnergy(
   }
 
   if (energyTarget) {
+    if (
+      "structureType" in energyTarget &&
+      energyTarget.structureType === STRUCTURE_CONTAINER &&
+      collectAdjacentDroppedEnergy(creep, energyTarget)
+    ) {
+      return true;
+    }
+
     const result = creep.withdraw(energyTarget, RESOURCE_ENERGY);
     if (result === ERR_NOT_IN_RANGE) {
       creep.moveToAvoidingRoomEdges(energyTarget, CARRIER_REFILL_MOVE_OPTS);
