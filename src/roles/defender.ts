@@ -1,11 +1,12 @@
 import { findPriorityHostile } from "../hostileTargeting";
 import type { Role } from "../types";
+import { findSameRoomSpawn } from "./support/spawns";
 
 export const defender: Role = {
   run(creep: Creep): void {
     const hostile = findPriorityHostile(creep.room, creep.pos);
     if (!hostile) {
-      const spawn = Game.spawns.Spawn1;
+      const spawn = findSameRoomSpawn(creep);
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
         creep.moveToAvoidingRoomEdges(spawn, {
           visualizePathStyle: { stroke: "#ff0000" },

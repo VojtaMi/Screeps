@@ -6,6 +6,7 @@ import {
 import { hasRepairWork } from "../../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type Role } from "../../types";
 import { LOCAL_ENERGY_RANGE } from "../support/localEnergy";
+import { findSameRoomSpawn } from "../support/spawns";
 import { collectResourceLoot, deliverResourceLoot } from "./loot";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
@@ -536,13 +537,6 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   }
 
   return rememberDeliveryTarget(creep, findControllerDeliveryContainer(creep));
-}
-
-function findSameRoomSpawn(creep: Creep): StructureSpawn | null {
-  return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-    filter: (structure): structure is StructureSpawn =>
-      structure.structureType === STRUCTURE_SPAWN,
-  });
 }
 
 function shouldDeliverPartialEnergy(
