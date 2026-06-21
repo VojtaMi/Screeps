@@ -110,16 +110,58 @@ function findNextStep(
   return new RoomPosition(nextStep.x, nextStep.y, creep.room.name);
 }
 
+function rememberMoveIntent(creep: Creep, nextStep: RoomPosition | null): void {
+  if (!nextStep) {
+    delete creep.memory.moveIntent;
+    return;
+  }
+
+  creep.memory.moveIntent = {
+    startX: creep.pos.x,
+    startY: creep.pos.y,
+    startRoomName: creep.pos.roomName,
+    nextX: nextStep.x,
+    nextY: nextStep.y,
+    nextRoomName: nextStep.roomName,
+    tick: Game.time,
+  };
+}
+
+function hasUsableMoveIntent(creep: Creep): boolean {
+  const intent = creep.memory.moveIntent;
+  if (!intent || Game.time - intent.tick > 1) {
+    return false;
+  }
+
+  return positionMatches(
+    creep.pos,
+    intent.startX,
+    intent.startY,
+    intent.startRoomName,
+  );
+}
+
+function isMovingTowardRequester(creep: Creep, requester: Creep): boolean {
+  if (!hasUsableMoveIntent(creep)) {
+    return true;
+  }
+
+  const intent = creep.memory.moveIntent;
+  return (
+    intent?.nextX === requester.pos.x &&
+    intent.nextY === requester.pos.y &&
+    intent.nextRoomName === requester.pos.roomName
+  );
+}
+
 function requestSwapWithBlockingCreep(
   creep: Creep,
-  target: Parameters<Creep["moveTo"]>[0],
-  opts?: MoveToOpts,
+  nextStep: RoomPosition | null,
 ): void {
   if (creep.fatigue > 0 || updateMoveStuckCount(creep) < SWAP_STUCK_THRESHOLD) {
     return;
   }
 
-  const nextStep = findNextStep(creep, target, opts);
   if (!nextStep || !creep.pos.isNearTo(nextStep)) {
     return;
   }
@@ -317,7 +359,9 @@ export function extendCreep(): void {
     target: Parameters<Creep["moveTo"]>[0],
     opts?: Parameters<Creep["moveTo"]>[1],
   ): ReturnType<Creep["moveTo"]> {
-    requestSwapWithBlockingCreep(this, target, opts);
+    const nextStep = findNextStep(this, target, opts);
+    rememberMoveIntent(this, nextStep);
+    requestSwapWithBlockingCreep(this, nextStep);
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
 
@@ -341,7 +385,8 @@ export function extendCreep(): void {
         request.requesterRoomName,
       ) ||
       this.pos.roomName !== requester.pos.roomName ||
-      !this.pos.isNearTo(requester)
+      !this.pos.isNearTo(requester) ||
+      !isMovingTowardRequester(this, requester)
     ) {
       return false;
     }

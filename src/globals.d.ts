@@ -33,6 +33,15 @@ declare global {
     moveLastRoomName?: string;
     moveLastTick?: number;
     moveStuckCount?: number;
+    moveIntent?: {
+      startX: number;
+      startY: number;
+      startRoomName: string;
+      nextX: number;
+      nextY: number;
+      nextRoomName: string;
+      tick: number;
+    };
     swapRequest?: {
       requesterName: string;
       requesterX: number;
