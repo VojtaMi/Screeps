@@ -1,4 +1,4 @@
-export const LOCAL_ENERGY_RANGE = 3;
+export const LOCAL_ENERGY_RANGE = 5;
 
 export function collectLocalEnergy(creep: Creep): boolean {
   const droppedEnergy = creep.pos.findClosestByRange(
