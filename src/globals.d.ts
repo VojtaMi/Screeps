@@ -49,6 +49,8 @@ declare global {
       requesterRoomName: string;
       tick: number;
     };
+    lastSwapCreepName?: string;
+    lastSwapTick?: number;
     working?: boolean;
   }
 

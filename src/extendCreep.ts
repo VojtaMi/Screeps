@@ -154,6 +154,18 @@ function isMovingTowardRequester(creep: Creep, requester: Creep): boolean {
   );
 }
 
+function swappedWithLastTick(creep: Creep, otherCreep: Creep): boolean {
+  return (
+    creep.memory.lastSwapCreepName === otherCreep.name &&
+    creep.memory.lastSwapTick === Game.time - 1
+  );
+}
+
+function rememberSwap(creep: Creep, otherCreep: Creep): void {
+  creep.memory.lastSwapCreepName = otherCreep.name;
+  creep.memory.lastSwapTick = Game.time;
+}
+
 function requestSwapWithBlockingCreep(
   creep: Creep,
   nextStep: RoomPosition | null,
@@ -386,12 +398,20 @@ export function extendCreep(): void {
       ) ||
       this.pos.roomName !== requester.pos.roomName ||
       !this.pos.isNearTo(requester) ||
-      !isMovingTowardRequester(this, requester)
+      !isMovingTowardRequester(this, requester) ||
+      swappedWithLastTick(this, requester) ||
+      swappedWithLastTick(requester, this)
     ) {
       return false;
     }
 
-    return this.move(this.pos.getDirectionTo(requester)) === OK;
+    if (this.move(this.pos.getDirectionTo(requester)) !== OK) {
+      return false;
+    }
+
+    rememberSwap(this, requester);
+    rememberSwap(requester, this);
+    return true;
   };
 
   Creep.prototype.moveOffRoad = function (): boolean {
