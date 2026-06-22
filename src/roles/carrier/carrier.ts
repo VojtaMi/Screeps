@@ -1,6 +1,7 @@
 import { findPriorityHostile } from "../../hostileTargeting";
 import {
   getControllerDeliveryBuildPlan,
+  getControllerDeliveryContainer,
   isControllerDeliveryContainer,
 } from "../../managers/buildPlanManager";
 import { hasRepairWork } from "../../repairPolicy";
@@ -550,7 +551,7 @@ function canRefuelWorkerRole(room: Room, role: CreepRole): boolean {
     return hasRepairerWork(room);
   }
 
-  return role === CREEP_ROLE.UPGRADER;
+  return role === CREEP_ROLE.UPGRADER && !getControllerDeliveryContainer(room);
 }
 
 function getWorkerRefuelScore(carrier: Creep, worker: Creep): number {
