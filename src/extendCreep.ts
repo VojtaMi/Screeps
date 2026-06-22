@@ -227,20 +227,6 @@ function isRoomEdge(pos: RoomPosition): boolean {
   return pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49;
 }
 
-function justEnteredRoom(creep: Creep): boolean {
-  return (
-    creep.memory.moveLastTick === Game.time - 1 &&
-    creep.memory.moveLastRoomName !== undefined &&
-    creep.memory.moveLastRoomName !== creep.room.name
-  );
-}
-
-function getStepOffRoomEdgeDirection(pos: RoomPosition): DirectionConstant {
-  const x = Math.min(48, Math.max(1, pos.x));
-  const y = Math.min(48, Math.max(1, pos.y));
-  return pos.getDirectionTo(x, y);
-}
-
 function isRoadPosition(pos: RoomPosition): boolean {
   return pos
     .lookFor(LOOK_STRUCTURES)
@@ -354,11 +340,6 @@ export function extendCreep(): void {
     target: Parameters<Creep["moveTo"]>[0],
     opts?: MoveToAvoidingRoomEdgesOpts,
   ): ReturnType<Creep["moveTo"]> {
-    if (isRoomEdge(this.pos) && justEnteredRoom(this)) {
-      updateMoveStuckCount(this);
-      return this.move(getStepOffRoomEdgeDirection(this.pos));
-    }
-
     const nextStep = findNextStep(this, target, opts);
     if (opts?.requestSwap !== false) {
       requestSwapWithBlockingCreep(this, nextStep);

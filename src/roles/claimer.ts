@@ -1,15 +1,5 @@
 import type { Role } from "../types";
-
-function moveToTargetRoom(creep: Creep, targetRoom: string): boolean {
-  if (creep.room.name === targetRoom) {
-    return false;
-  }
-
-  creep.moveToAvoidingRoomEdges(new RoomPosition(25, 25, targetRoom), {
-    visualizePathStyle: { stroke: "#a78bfa" },
-  });
-  return true;
-}
+import { moveToTargetRoom } from "./support/targetRoom";
 
 function getMyUsername(): string {
   return creepOwnerName() ?? "";
@@ -50,7 +40,7 @@ export const claimer: Role = {
       return;
     }
 
-    if (moveToTargetRoom(creep, targetRoom)) {
+    if (moveToTargetRoom(creep, targetRoom, { stroke: "#a78bfa" })) {
       return;
     }
 

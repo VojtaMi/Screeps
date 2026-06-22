@@ -1,16 +1,6 @@
 import { getPrimarySpawnBuildPlan } from "../managers/buildPlanManager";
 import type { Role } from "../types";
-
-function moveToTargetRoom(creep: Creep, targetRoom: string): boolean {
-  if (creep.room.name === targetRoom) {
-    return false;
-  }
-
-  creep.moveToAvoidingRoomEdges(new RoomPosition(25, 25, targetRoom), {
-    visualizePathStyle: { stroke: "#34d399" },
-  });
-  return true;
-}
+import { moveToTargetRoom } from "./support/targetRoom";
 
 function getPlannedSpawnSite(
   creep: Creep,
@@ -51,7 +41,7 @@ export const settler: Role = {
       return;
     }
 
-    if (moveToTargetRoom(creep, targetRoom)) {
+    if (moveToTargetRoom(creep, targetRoom, { stroke: "#34d399" })) {
       return;
     }
 
