@@ -15,6 +15,8 @@ export interface BuildPlansData {
 
 export type EditorMode = "select" | "build" | "erase";
 
+export const BUILD_SELECTION_CONTROLLER_CONTAINER = "controllerDelivery";
+
 export type RoomLandmarkType = "controller" | "source" | "mineral";
 
 export interface RoomLandmark {
@@ -29,6 +31,7 @@ export const STRUCTURE_TYPES = [
   "STRUCTURE_SPAWN",
   "STRUCTURE_EXTENSION",
   "STRUCTURE_CONTAINER",
+  BUILD_SELECTION_CONTROLLER_CONTAINER,
   "STRUCTURE_STORAGE",
   "STRUCTURE_LINK",
   "STRUCTURE_ROAD",
@@ -45,6 +48,7 @@ export const STRUCTURE_TYPE_LABELS: Record<string, string> = {
   STRUCTURE_SPAWN: "Spawn",
   STRUCTURE_EXTENSION: "Extension",
   STRUCTURE_CONTAINER: "Container",
+  [BUILD_SELECTION_CONTROLLER_CONTAINER]: "Controller container",
   STRUCTURE_STORAGE: "Storage",
   STRUCTURE_LINK: "Link",
   STRUCTURE_ROAD: "Road",

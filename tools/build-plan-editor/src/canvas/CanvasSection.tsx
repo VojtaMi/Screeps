@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import {
+  BUILD_SELECTION_CONTROLLER_CONTAINER,
   BuildPlanItem,
   BuildPlansData,
   EditorMode,
@@ -175,9 +176,11 @@ export function CanvasSection({
 
     if (existingTypes.length === 0) return true;
 
-    if (existingTypes.includes(selectedStructureType)) return false;
+    const selectedItem = getSelectedBuildPlanItem(x, y);
 
-    return validateSameTile([...existingTypes, selectedStructureType]);
+    if (existingTypes.includes(selectedItem.structureType)) return false;
+
+    return validateSameTile([...existingTypes, selectedItem.structureType]);
   }
 
   function openTilePicker(x: number, y: number, visibleIndexes: number[]) {
@@ -191,11 +194,7 @@ export function CanvasSection({
   }
 
   function addPlanItem(plan: BuildPlanItem[], x: number, y: number) {
-    const newItem: BuildPlanItem = {
-      x,
-      y,
-      structureType: selectedStructureType,
-    };
+    const newItem = getSelectedBuildPlanItem(x, y);
 
     const newPlan = [...plan];
     newPlan.splice(currentStep, 0, newItem);
@@ -205,6 +204,23 @@ export function CanvasSection({
       [selectedRoom]: { plan: newPlan },
     }, Math.min(currentStep + 1, newPlan.length));
     setTilePicker(null);
+  }
+
+  function getSelectedBuildPlanItem(x: number, y: number): BuildPlanItem {
+    if (selectedStructureType === BUILD_SELECTION_CONTROLLER_CONTAINER) {
+      return {
+        x,
+        y,
+        structureType: "STRUCTURE_CONTAINER",
+        purpose: "controllerDelivery",
+      };
+    }
+
+    return {
+      x,
+      y,
+      structureType: selectedStructureType,
+    };
   }
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
