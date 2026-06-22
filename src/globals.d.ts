@@ -60,6 +60,7 @@ declare global {
     buildPlan?: RoomBuildPlanItem[];
     buildPlanHash?: string;
     desiredBuilders?: number;
+    desiredCarriers?: number;
     desiredUpgraders?: number;
   }
 

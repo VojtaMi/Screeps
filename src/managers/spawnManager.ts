@@ -10,8 +10,10 @@ import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
 
-const MAX_DESIRED_CARRIER_CAPACITY = 1600;
-const HAULABLE_ENERGY_BUFFER = 1.25;
+const BASE_CARRIER_CAPACITY_PER_SOURCE = 400;
+const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
+const MAX_BASE_CARRIERS = 4;
+const EXTRA_CARRIER_PROBE_INTERVAL = 100;
 
 // Controller-container energy that marks the economy as having spare throughput.
 // The upgrader holds this near the threshold in equilibrium, so we treat it as a
@@ -149,13 +151,18 @@ export const spawnManager = {
     }
 
     const haulableEnergy = getHaulableEnergy(room);
-    const minimumCarriers = sources.length > 1 || haulableEnergy > 0 ? 2 : 1;
-    const desiredCarrierCapacity = getDesiredCarrierCapacity(haulableEnergy);
-    const needsMoreCarrierCapacity =
-      getCarrierCapacity(carriers) < desiredCarrierCapacity;
+    const desiredCarriers = getDesiredCarrierCount(
+      room,
+      sources,
+      haulableEnergy,
+    );
+    const needsBaseCarrierCapacity = needsMoreBaseCarrierCapacity(
+      sources,
+      carriers,
+    );
     if (
       harvesters.length > 0 &&
-      (carriers.length < minimumCarriers || needsMoreCarrierCapacity)
+      (needsBaseCarrierCapacity || carriers.length < desiredCarriers)
     ) {
       return {
         role: CREEP_ROLE.CARRIER,
@@ -318,11 +325,37 @@ function getCarrierCapacity(carriers: Creep[]): number {
   );
 }
 
-function getDesiredCarrierCapacity(haulableEnergy: number): number {
-  return Math.min(
-    MAX_DESIRED_CARRIER_CAPACITY,
-    Math.ceil(haulableEnergy * HAULABLE_ENERGY_BUFFER),
+function needsMoreBaseCarrierCapacity(
+  sources: Source[],
+  carriers: Creep[],
+): boolean {
+  return (
+    carriers.length < MAX_BASE_CARRIERS &&
+    getCarrierCapacity(carriers) <
+      sources.length * BASE_CARRIER_CAPACITY_PER_SOURCE
   );
+}
+
+function getDesiredCarrierCount(
+  room: Room,
+  sources: Source[],
+  haulableEnergy: number,
+): number {
+  const baseCarriers = sources.length > 1 || haulableEnergy > 0 ? 2 : 1;
+  let desiredCarriers = Math.max(
+    room.memory.desiredCarriers ?? baseCarriers,
+    baseCarriers,
+  );
+
+  if (Game.time % EXTRA_CARRIER_PROBE_INTERVAL === 0) {
+    desiredCarriers =
+      haulableEnergy > sources.length * EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE
+        ? baseCarriers + 1
+        : baseCarriers;
+    room.memory.desiredCarriers = desiredCarriers;
+  }
+
+  return desiredCarriers;
 }
 
 function getDesiredRepairerCount(room: Room): number {
