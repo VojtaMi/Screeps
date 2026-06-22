@@ -59,6 +59,8 @@ declare global {
   interface RoomMemory {
     buildPlan?: RoomBuildPlanItem[];
     buildPlanHash?: string;
+    desiredBuilders?: number;
+    desiredUpgraders?: number;
   }
 
   interface Memory {

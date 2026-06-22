@@ -10,11 +10,20 @@ import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
 
-const CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS = [
-  { energy: 2000, upgraders: 2 },
-] as const;
 const MAX_DESIRED_CARRIER_CAPACITY = 1600;
 const HAULABLE_ENERGY_BUFFER = 1.25;
+
+// Controller-container energy that marks the economy as having spare throughput.
+// The upgrader holds this near the threshold in equilibrium, so we treat it as a
+// feedback setpoint: while it stays above, the economy can absorb another sink.
+const SURPLUS_CONTROLLER_CONTAINER_ENERGY = 2000;
+// Ticks between probe adjustments, long enough for the last added worker to reach
+// steady consumption and show up in the setpoint before we nudge the count again.
+const DISCRETIONARY_PROBE_INTERVAL = 100;
+// Count caps. Builders saturate a queued site fast, so they cap low; upgraders are
+// the deeper surplus sink.
+const BUILDER_CAP = 3;
+const UPGRADER_CAP = 3;
 
 type CreepsByRole = (role: CreepRole) => Creep[];
 
@@ -164,7 +173,13 @@ export const spawnManager = {
       return expansionRequest;
     }
 
-    if (hasConstructionWork(room) && builders.length === 0) {
+    const { desiredBuilders, desiredUpgraders } = getDiscretionaryPlan(
+      room,
+      builders,
+      upgraders,
+    );
+
+    if (hasConstructionWork(room) && builders.length < desiredBuilders) {
       return {
         role: CREEP_ROLE.BUILDER,
         body: buildBodyFromMaxPattern({
@@ -185,7 +200,6 @@ export const spawnManager = {
       };
     }
 
-    const desiredUpgraders = getDesiredUpgraderCount(room);
     if (
       harvesters.length >= sources.length &&
       carriers.length > 0 &&
@@ -319,16 +333,58 @@ function getDesiredRepairerCount(room: Room): number {
   return 0;
 }
 
-function getDesiredUpgraderCount(room: Room): number {
-  const controllerContainerEnergy = getControllerContainerEnergy(room);
+interface DiscretionaryPlan {
+  desiredBuilders: number;
+  desiredUpgraders: number;
+}
 
-  for (const threshold of CONTROLLER_CONTAINER_UPGRADER_THRESHOLDS) {
-    if (controllerContainerEnergy >= threshold.energy) {
-      return threshold.upgraders;
+// Builder/upgrader counts are surplus-funded "probes" stored in room memory.
+// On a fixed cadence we nudge them: grow by one while the economy has spare
+// throughput (controller container above the setpoint), shrink toward baseline
+// when it doesn't. Construction work gets first claim when growing; upgraders
+// give way first when shrinking. Growing only past a filled target keeps small
+// early-game bodies from running the count ahead of the spawns.
+function getDiscretionaryPlan(
+  room: Room,
+  builders: Creep[],
+  upgraders: Creep[],
+): DiscretionaryPlan {
+  let desiredBuilders = room.memory.desiredBuilders ?? 1;
+  let desiredUpgraders = room.memory.desiredUpgraders ?? 1;
+
+  if (Game.time % DISCRETIONARY_PROBE_INTERVAL === 0) {
+    const hasWork = hasConstructionWork(room);
+
+    if (isSurplusEconomy(room)) {
+      if (
+        hasWork &&
+        desiredBuilders < BUILDER_CAP &&
+        builders.length >= desiredBuilders
+      ) {
+        desiredBuilders += 1;
+      } else if (
+        desiredUpgraders < UPGRADER_CAP &&
+        upgraders.length >= desiredUpgraders
+      ) {
+        desiredUpgraders += 1;
+      }
+    } else if (desiredUpgraders > 1) {
+      desiredUpgraders -= 1;
+    } else if (desiredBuilders > 1) {
+      desiredBuilders -= 1;
     }
+
+    room.memory.desiredBuilders = desiredBuilders;
+    room.memory.desiredUpgraders = desiredUpgraders;
   }
 
-  return 1;
+  return { desiredBuilders, desiredUpgraders };
+}
+
+function isSurplusEconomy(room: Room): boolean {
+  return (
+    getControllerContainerEnergy(room) >= SURPLUS_CONTROLLER_CONTAINER_ENERGY
+  );
 }
 
 function getControllerContainerEnergy(room: Room): number {
