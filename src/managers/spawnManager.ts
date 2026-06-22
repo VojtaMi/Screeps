@@ -16,7 +16,9 @@ const HAULABLE_ENERGY_BUFFER = 1.25;
 // Controller-container energy that marks the economy as having spare throughput.
 // The upgrader holds this near the threshold in equilibrium, so we treat it as a
 // feedback setpoint: while it stays above, the economy can absorb another sink.
-const SURPLUS_CONTROLLER_CONTAINER_ENERGY = 2000;
+// Kept below the 2000 container capacity so the signal has headroom to trigger
+// instead of needing the container pegged full (which it rarely is).
+const SURPLUS_CONTROLLER_CONTAINER_ENERGY = 1200;
 // Ticks between probe adjustments, long enough for the last added worker to reach
 // steady consumption and show up in the setpoint before we nudge the count again.
 const DISCRETIONARY_PROBE_INTERVAL = 100;
