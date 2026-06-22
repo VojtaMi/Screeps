@@ -31,15 +31,80 @@ function shouldAvoidRoomEdges(
   return getTargetPosition(target).roomName === creep.room.name;
 }
 
+function getExitTowardRoom(roomName: string, targetRoomName: string) {
+  if (roomName === targetRoomName) {
+    return null;
+  }
+
+  const route = Game.map.findRoute(roomName, targetRoomName);
+  if (route === ERR_NO_PATH) {
+    return null;
+  }
+
+  return route[0]?.exit ?? null;
+}
+
+function shouldKeepRoomEdgeOpen(
+  x: number,
+  y: number,
+  exit: ReturnType<typeof getExitTowardRoom>,
+): boolean {
+  switch (exit) {
+    case FIND_EXIT_TOP:
+      return y === 0;
+    case FIND_EXIT_RIGHT:
+      return x === 49;
+    case FIND_EXIT_BOTTOM:
+      return y === 49;
+    case FIND_EXIT_LEFT:
+      return x === 0;
+    default:
+      return false;
+  }
+}
+
+function avoidRoomEdges(
+  costs: CostMatrix,
+  roomName: string,
+  targetRoomName: string,
+): CostMatrix {
+  const openExit = getExitTowardRoom(roomName, targetRoomName);
+
+  for (let coord = 0; coord < 50; coord += 1) {
+    if (!shouldKeepRoomEdgeOpen(coord, 0, openExit)) {
+      costs.set(coord, 0, 255);
+    }
+    if (!shouldKeepRoomEdgeOpen(coord, 49, openExit)) {
+      costs.set(coord, 49, 255);
+    }
+    if (!shouldKeepRoomEdgeOpen(0, coord, openExit)) {
+      costs.set(0, coord, 255);
+    }
+    if (!shouldKeepRoomEdgeOpen(49, coord, openExit)) {
+      costs.set(49, coord, 255);
+    }
+  }
+
+  return costs;
+}
+
 function withRoomEdgeAvoidance(
   creep: Creep,
   target: Parameters<Creep["moveTo"]>[0],
   opts?: MoveToAvoidingRoomEdgesOpts,
 ): MoveToOpts {
   const moveToOpts = toMoveToOpts(opts);
+  const targetPos = getTargetPosition(target);
 
   if (!shouldAvoidRoomEdges(creep, target)) {
-    return moveToOpts ?? {};
+    return {
+      ignoreCreeps: true,
+      ...moveToOpts,
+      costCallback(roomName, matrix) {
+        const costs = opts?.costCallback?.(roomName, matrix) ?? matrix;
+        return avoidRoomEdges(costs, roomName, targetPos.roomName);
+      },
+    };
   }
 
   const existingCostCallback = opts?.costCallback;
@@ -55,14 +120,7 @@ function withRoomEdgeAvoidance(
         return costs;
       }
 
-      for (let coord = 0; coord < 50; coord += 1) {
-        costs.set(coord, 0, 255);
-        costs.set(coord, 49, 255);
-        costs.set(0, coord, 255);
-        costs.set(49, coord, 255);
-      }
-
-      return costs;
+      return avoidRoomEdges(costs, roomName, targetPos.roomName);
     },
   };
 }
@@ -106,13 +164,8 @@ function findNextStep(
   target: Parameters<Creep["moveTo"]>[0],
   opts?: MoveToAvoidingRoomEdgesOpts,
 ): RoomPosition | null {
-  const targetPos = getTargetPosition(target);
-  if (targetPos.roomName !== creep.room.name) {
-    return null;
-  }
-
   const path = creep.pos.findPathTo(
-    targetPos,
+    getTargetPosition(target),
     withRoomEdgeAvoidance(creep, target, opts),
   );
   const nextStep = path[0];
