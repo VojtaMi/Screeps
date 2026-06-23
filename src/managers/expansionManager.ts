@@ -116,8 +116,22 @@ function getMemory(
 }
 
 function isTargetCoolingDown(roomName: string): boolean {
-  const failedUntilTick = Memory.expansionTargets?.[roomName]?.failedUntilTick;
-  return failedUntilTick !== undefined && failedUntilTick > Game.time;
+  const memory = Memory.expansionTargets?.[roomName];
+  if (!memory?.failedUntilTick) {
+    return false;
+  }
+
+  const maxFailedUntilTick =
+    (memory.lastAttemptTick ?? memory.failedUntilTick) +
+    EXPANSION_FAILURE_COOLDOWN_TICKS;
+  memory.failedUntilTick = Math.min(memory.failedUntilTick, maxFailedUntilTick);
+
+  if (memory.failedUntilTick <= Game.time) {
+    delete memory.failedUntilTick;
+    return false;
+  }
+
+  return true;
 }
 
 function recordSpawn(creepName: string, request: SpawnRequest): void {
