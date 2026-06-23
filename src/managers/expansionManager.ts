@@ -59,7 +59,13 @@ function findTargetRoom(room: Room): string | null {
     return null;
   }
 
-  return getAdjacentRoomNames(room.name).filter(isCandidate).sort()[0] ?? null;
+  const candidates = getAdjacentRoomNames(room.name).filter(isCandidate);
+
+  // Rooms already claimed by us need a settler urgently; unclaimed rooms still
+  // need a claimer first. Sort claimed candidates ahead of unclaimed ones so we
+  // don't accidentally send a second claimer while the first settler is pending.
+  const claimed = candidates.filter((name) => Game.rooms[name]?.controller?.my);
+  return (claimed.length > 0 ? claimed : candidates).sort()[0] ?? null;
 }
 
 function isCandidate(roomName: string): boolean {
