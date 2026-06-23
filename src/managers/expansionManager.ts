@@ -60,10 +60,6 @@ function findTargetRoom(room: Room): string | null {
   }
 
   const candidates = getAdjacentRoomNames(room.name).filter(isCandidate);
-
-  // Rooms already claimed by us need a settler urgently; unclaimed rooms still
-  // need a claimer first. Sort claimed candidates ahead of unclaimed ones so we
-  // don't accidentally send a second claimer while the first settler is pending.
   const claimed = candidates.filter((name) => Game.rooms[name]?.controller?.my);
   return (claimed.length > 0 ? claimed : candidates).sort()[0] ?? null;
 }
@@ -76,12 +72,6 @@ function isCandidate(roomName: string): boolean {
   const room = Game.rooms[roomName];
   if (!room) {
     return true;
-  }
-
-  // We already own this room — decaying hostile structures from the previous
-  // owner must not block settler dispatch; only the spawn check matters.
-  if (room.controller?.my) {
-    return !hasMySpawn(room);
   }
 
   return hasInspectableExpansionState(room) && !hasMySpawn(room);
@@ -104,10 +94,7 @@ function hasInspectableExpansionState(room: Room): boolean {
     return false;
   }
 
-  return (
-    room.find(FIND_HOSTILE_CREEPS).length === 0 &&
-    room.find(FIND_HOSTILE_STRUCTURES).length === 0
-  );
+  return room.find(FIND_HOSTILE_CREEPS).length === 0;
 }
 
 function hasNonEmptyDefaultBuildPlan(roomName: string): boolean {
