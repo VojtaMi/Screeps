@@ -8,10 +8,10 @@ interface RoomIntel {
 }
 
 const ROOM_INTEL: Record<string, RoomIntel> = {
-  E58S28: { controller: { x: 31, y: 33 } },
-  E58S29: { controller: { x: 44, y: 14 } },
-  E59S28: { controller: { x: 39, y: 10 } },
-  E59S29: { controller: { x: 10, y: 8 } },
+  E58S28: { controller: { x: 22, y: 44 } },
+  E58S29: { controller: { x: 24, y: 21 } },
+  E59S28: { controller: { x: 41, y: 34 } },
+  E59S29: { controller: { x: 6, y: 28 } },
 };
 
 export function getKnownControllerPosition(
