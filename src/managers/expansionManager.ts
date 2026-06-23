@@ -197,13 +197,16 @@ function reconcileAttempt(
     memory.settlerName !== undefined && !Game.creeps[memory.settlerName];
 
   if (controllerMine) {
-    delete memory.failedUntilTick;
-
     if (claimerMissing) {
       delete memory.claimerName;
+      delete memory.failedUntilTick;
     }
     if (settlerMissing) {
       delete memory.settlerName;
+      memory.failedUntilTick = Game.time + EXPANSION_FAILURE_COOLDOWN_TICKS;
+      console.log(
+        `Settler for ${roomName} died; cooling down until tick ${memory.failedUntilTick}`,
+      );
     }
     return;
   }
