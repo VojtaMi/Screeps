@@ -18,10 +18,6 @@ function canClaimRoom(creep: Creep, controller: StructureController): boolean {
     return false;
   }
 
-  if (creep.room.find(FIND_HOSTILE_STRUCTURES).length > 0) {
-    return false;
-  }
-
   if (controller.owner && !controller.my) {
     return false;
   }
