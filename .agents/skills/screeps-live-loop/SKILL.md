@@ -19,7 +19,9 @@ Use this workflow to connect local code changes, GitHub Actions deployment, and 
 1. Inspect the current state.
    - Check `git status --short`.
    - Read the relevant code and any existing user changes before editing.
-   - If live state matters, use Screeps MCP read tools to inspect the current branch, console output, CPU, room state, and relevant Memory.
+   - If live state matters, first confirm the active account and shard. This repo's MMO bot currently runs on `shard3`; pin all room-object, room-status, Memory, and tick-time reads to that shard unless the account data says otherwise.
+   - Use Screeps MCP read tools to inspect the current branch, console output, CPU, room state, and relevant Memory.
+   - Treat unpinned or wrong-shard room data as suspect even when room names and controller coordinates look plausible.
 
 2. Make the change locally.
    - Follow existing TypeScript and Screeps patterns.
@@ -38,7 +40,7 @@ Use this workflow to connect local code changes, GitHub Actions deployment, and 
 
 5. Verify live behavior.
    - After the deploy completes, wait long enough for Screeps to tick and load the new code.
-   - Use MCP read tools to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change.
+   - Use MCP read tools to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change, with every live read pinned to the active shard.
    - If behavior depends on multiple ticks, sample more than once and compare before/after observations.
 
 6. Report the result.
