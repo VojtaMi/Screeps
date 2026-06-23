@@ -22,6 +22,12 @@ Use these npm scripts:
 - `npm run build`: typecheck then bundle to `dist/main.js`.
 - `npm run deploy:screeps`: deploys `dist/main.js`; requires `SCREEPS_TOKEN`, optional `SCREEPS_BRANCH`.
 
+## Game Access And MCP
+
+This repo has a project-local Screeps MCP server in `.codex/config.toml`. It starts through `scripts/screeps-mcp.sh`, which loads `.env` and uses `.screeps-mcp/config.json`.
+
+For local setup on each machine, copy `.env.example` to `.env` and set `SCREEPS_MMO_TOKEN`. Use the MCP tools when live game state helps, but do not deploy or take destructive live-game actions unless explicitly requested.
+
 ## Formatting And Hooks
 
 Biome is the source of truth for formatting and linting. Do not hand-format around Biome preferences.

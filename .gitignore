@@ -4,3 +4,7 @@ node_modules/
 dist/
 tools/artifacts/
 .playwright-mcp/
+.screeps-mcp/
+.env
+.env.*
+!.env.example

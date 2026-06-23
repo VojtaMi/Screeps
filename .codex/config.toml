@@ -1,0 +1,5 @@
+[mcp_servers.screeps]
+args = ["scripts/screeps-mcp.sh"]
+command = "bash"
+cwd = ".."
+env_vars = ["HOME", "TMPDIR", "XDG_CACHE_HOME"]
