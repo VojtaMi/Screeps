@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Live Check"
+  short_description: "Read-only live Screeps inspection"
+  default_prompt: "Use $screeps-live-check to inspect live Screeps account, shard, branch, console, CPU, Memory, rooms, creeps, spawns, and tick timing without changing code or game state."

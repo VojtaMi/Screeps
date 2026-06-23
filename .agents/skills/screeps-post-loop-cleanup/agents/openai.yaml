@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Post Loop Cleanup"
+  short_description: "Clean Screeps code after a live loop"
+  default_prompt: "Use $screeps-post-loop-cleanup to review the recent Screeps loop diff, preserve behavior, improve responsibility boundaries, and run local verification."

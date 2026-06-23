@@ -1,4 +1,4 @@
 interface:
   display_name: "Screeps Live Loop"
-  short_description: "Edit, deploy, and verify the Screeps bot against live game state"
-  default_prompt: "Use the Screeps live loop to make a bot change, verify locally, push/deploy through GitHub Actions when requested, and inspect live game state afterward."
+  short_description: "Goal-driven Screeps edit, deploy, and live verify"
+  default_prompt: "Use $screeps-live-loop to make a Screeps bot change, verify locally, publish only when explicitly requested, and confirm the result in live game state."

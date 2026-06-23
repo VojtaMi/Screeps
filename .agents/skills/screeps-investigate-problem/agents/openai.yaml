@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Investigate Problem"
+  short_description: "Diagnose Screeps issues before implementation"
+  default_prompt: "Use $screeps-investigate-problem to analyze a Screeps bot symptom, inspect relevant code and optional live state, then prepare a handoff into $screeps-live-loop."
