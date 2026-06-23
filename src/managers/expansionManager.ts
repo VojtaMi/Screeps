@@ -74,7 +74,17 @@ function isCandidate(roomName: string): boolean {
   }
 
   const room = Game.rooms[roomName];
-  return !room || (hasInspectableExpansionState(room) && !hasMySpawn(room));
+  if (!room) {
+    return true;
+  }
+
+  // We already own this room — decaying hostile structures from the previous
+  // owner must not block settler dispatch; only the spawn check matters.
+  if (room.controller?.my) {
+    return !hasMySpawn(room);
+  }
+
+  return hasInspectableExpansionState(room) && !hasMySpawn(room);
 }
 
 function hasInspectableExpansionState(room: Room): boolean {
