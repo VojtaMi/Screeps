@@ -24,9 +24,11 @@ Use these npm scripts:
 
 ## Game Access And MCP
 
-This repo has a project-local Screeps MCP server in `.codex/config.toml`. It starts through `scripts/screeps-mcp.sh`, which loads `.env` and uses `.screeps-mcp/config.json`.
+This repo has a project-local Screeps MCP server in `.codex/config.toml` for Codex and `.mcp.json` for Claude Code. Both start through `scripts/screeps-mcp.sh`, which loads `.env` and uses `.screeps-mcp/config.json`.
 
 For local setup on each machine, copy `.env.example` to `.env` and set `SCREEPS_MMO_TOKEN`. Use the MCP tools when live game state helps, but do not deploy or take destructive live-game actions unless explicitly requested.
+
+Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.
 
 ## Formatting And Hooks
 
