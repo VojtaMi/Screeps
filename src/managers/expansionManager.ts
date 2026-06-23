@@ -2,7 +2,8 @@ import { DEFAULT_BUILD_PLANS } from "../buildPlans";
 import { bodyCost, buildBodyFromMaxPattern, CREEP_BODY } from "../creepBodies";
 import { CREEP_ROLE, type SpawnRequest } from "../types";
 
-const EXPANSION_FAILURE_COOLDOWN_TICKS = CREEP_LIFE_TIME * 10;
+const EXPANSION_FAILURE_COOLDOWN_TICKS = CREEP_CLAIM_LIFE_TIME;
+const MIN_USEFUL_CLAIMER_TICKS_TO_LIVE = 200;
 
 function getSpawnRequest(
   room: Room,
@@ -17,12 +18,15 @@ function getSpawnRequest(
   const expansionCreeps = Object.values(Game.creeps).filter(
     (creep) => creep.memory.targetRoom === targetRoom,
   );
-  const hasClaimer = expansionCreeps.some(
-    (creep) => creep.memory.role === CREEP_ROLE.CLAIMER,
+  const hasUsefulClaimer = expansionCreeps.some(
+    (creep) =>
+      creep.memory.role === CREEP_ROLE.CLAIMER &&
+      (creep.ticksToLive ?? CREEP_CLAIM_LIFE_TIME) >
+        MIN_USEFUL_CLAIMER_TICKS_TO_LIVE,
   );
 
   if (!expansionRoom?.controller?.my) {
-    if (hasClaimer || energyBudget < bodyCost(CREEP_BODY.CLAIMER)) {
+    if (hasUsefulClaimer || energyBudget < bodyCost(CREEP_BODY.CLAIMER)) {
       return null;
     }
 
