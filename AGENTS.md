@@ -30,8 +30,6 @@ For local setup on each machine, copy `.env.example` to `.env` and set `SCREEPS_
 
 Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.
 
-Live MMO verification must pin the same shard as the running bot. This account currently runs on `shard3`; confirm with account/CPU shard data before comparing room objects, Memory, or controller coordinates. Unpinned or wrong-shard reads can return plausible but unrelated room data.
-
 ## Formatting And Hooks
 
 Biome is the source of truth for formatting and linting. Do not hand-format around Biome preferences.
