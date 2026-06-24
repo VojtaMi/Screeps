@@ -37,7 +37,6 @@ interface CanvasSectionProps {
   setTilePicker: (state: TilePickerState | null) => void;
   editorMode: EditorMode;
   selectedStructureType: string;
-  showCoordinates: boolean;
   showLandmarks: boolean;
   landmarks: RoomLandmark[];
   terrain: string;
@@ -57,7 +56,6 @@ export function CanvasSection({
   setTilePicker,
   editorMode,
   selectedStructureType,
-  showCoordinates,
   showLandmarks,
   landmarks,
   terrain,
@@ -80,7 +78,6 @@ export function CanvasSection({
     terrain,
     plans,
     validationErrors,
-    showCoordinates,
     showLandmarks,
     landmarks,
   ]);
@@ -98,7 +95,7 @@ export function CanvasSection({
     ctx.fillRect(0, 0, width, height);
 
     drawTerrain(ctx, terrain);
-    drawGrid(ctx, showCoordinates);
+    drawGrid(ctx);
     if (showLandmarks) {
       drawLandmarks(ctx, landmarks);
     }

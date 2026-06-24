@@ -4,7 +4,7 @@ import {
   STRUCTURE_TYPES,
   STRUCTURE_TYPE_LABELS,
 } from "../types";
-import { remainingForRcl } from "../rcl";
+import { isUnlimitedStructure, limitFor, remainingForRcl } from "../rcl";
 
 interface StructureSelectorProps {
   plan: BuildPlanItem[];
@@ -21,10 +21,19 @@ export function StructureSelector({
   selectedStructureType,
   onTypeChange,
 }: StructureSelectorProps) {
-  const available = STRUCTURE_TYPES.map((type) => ({
-    type,
-    remaining: remainingForRcl(plan, currentStep, type, currentRcl),
-  })).filter((entry) => entry.remaining > 0);
+  // Unlimited structures (road/wall/rampart) are offered without a counter as
+  // long as they are buildable at this RCL; the rest show their remaining count.
+  const available = STRUCTURE_TYPES.map((type) => {
+    const unlimited = isUnlimitedStructure(type);
+    return {
+      type,
+      unlimited,
+      remaining: remainingForRcl(plan, currentStep, type, currentRcl),
+      buildable: unlimited
+        ? limitFor(type, currentRcl) > 0
+        : remainingForRcl(plan, currentStep, type, currentRcl) > 0,
+    };
+  }).filter((entry) => entry.buildable);
 
   const isSelectedAvailable = available.some(
     (entry) => entry.type === selectedStructureType,
@@ -58,9 +67,10 @@ export function StructureSelector({
         value={effectiveType}
         onChange={(event) => onTypeChange(event.target.value)}
       >
-        {available.map(({ type, remaining }) => (
+        {available.map(({ type, remaining, unlimited }) => (
           <option key={type} value={type}>
-            {STRUCTURE_TYPE_LABELS[type]} ({remaining} left)
+            {STRUCTURE_TYPE_LABELS[type]}
+            {unlimited ? "" : ` (${remaining} left)`}
           </option>
         ))}
       </select>

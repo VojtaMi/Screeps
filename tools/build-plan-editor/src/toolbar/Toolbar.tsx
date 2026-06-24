@@ -6,8 +6,6 @@ interface ToolbarProps {
   plans: BuildPlansData;
   currentRcl: number;
   onRclChange: (rcl: number) => void;
-  showCoordinates: boolean;
-  setShowCoordinates: (show: boolean) => void;
   showLandmarks: boolean;
   setShowLandmarks: (show: boolean) => void;
   onRoomChange: (room: string) => void;
@@ -18,8 +16,6 @@ export function Toolbar({
   plans,
   currentRcl,
   onRclChange,
-  showCoordinates,
-  setShowCoordinates,
   showLandmarks,
   setShowLandmarks,
   onRoomChange,
@@ -55,12 +51,6 @@ export function Toolbar({
           ))}
         </select>
       </label>
-      <button
-        type="button"
-        onClick={() => setShowCoordinates(!showCoordinates)}
-      >
-        Coordinates
-      </button>
       <label className="toggle-switch">
         <input
           type="checkbox"

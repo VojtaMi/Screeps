@@ -41,7 +41,6 @@ export default function App() {
   const [selectedStructureType, setSelectedStructureType] = useState<string>(
     STRUCTURE_TYPES[0]
   );
-  const [showCoordinates, setShowCoordinates] = useState(true);
   const [showLandmarks, setShowLandmarks] = useState(true);
   const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
@@ -79,8 +78,6 @@ export default function App() {
         plans={plans}
         currentRcl={currentRcl}
         onRclChange={(rcl) => setCurrentStep(endStepForRcl(plan, rcl))}
-        showCoordinates={showCoordinates}
-        setShowCoordinates={setShowCoordinates}
         showLandmarks={showLandmarks}
         setShowLandmarks={setShowLandmarks}
         onRoomChange={(nextRoom) => {
@@ -100,7 +97,6 @@ export default function App() {
           setTilePicker={setTilePicker}
           editorMode={editorMode}
           selectedStructureType={selectedStructureType}
-          showCoordinates={showCoordinates}
           showLandmarks={showLandmarks}
           landmarks={landmarks}
           terrain={terrain}

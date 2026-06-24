@@ -485,9 +485,17 @@ body,
   gap: 4px;
 }
 
+.map-step-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .map-step-rcl {
   color: var(--accent, #7dd3fc);
   font-weight: 600;
+  text-align: center;
 }
 
 .map-step-input {

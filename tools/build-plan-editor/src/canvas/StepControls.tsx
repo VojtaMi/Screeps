@@ -32,6 +32,7 @@ export function StepControls({
   };
 
   return (
+    <div className="map-step-stack">
     <div className="map-step-controls">
       <button
         type="button"
@@ -72,7 +73,6 @@ export function StepControls({
           title="Jump to step"
         />{" "}
         / {totalSteps}
-        <span className="map-step-rcl"> · RCL {currentRcl}</span>
       </div>
       <button
         type="button"
@@ -90,6 +90,8 @@ export function StepControls({
       >
         &gt;&gt;
       </button>
+    </div>
+      <div className="map-step-rcl">RCL {currentRcl}</div>
     </div>
   );
 }

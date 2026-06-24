@@ -26,6 +26,18 @@ export const RCL_STRUCTURE_LIMITS: Record<string, number[]> = {
   STRUCTURE_NUKER: [0, 0, 0, 0, 0, 0, 0, 0, 1],
 };
 
+// Structures bounded only by room tiles, not by an RCL count. They are offered
+// without a remaining counter whenever they are buildable at the current level.
+export const UNLIMITED_STRUCTURE_TYPES = new Set([
+  "STRUCTURE_ROAD",
+  "STRUCTURE_WALL",
+  "STRUCTURE_RAMPART",
+]);
+
+export function isUnlimitedStructure(structureType: string): boolean {
+  return UNLIMITED_STRUCTURE_TYPES.has(structureType);
+}
+
 // The controller-container pseudo-type is a real container for limit purposes.
 function resolveLimitType(structureType: string): string {
   return structureType === BUILD_SELECTION_CONTROLLER_CONTAINER

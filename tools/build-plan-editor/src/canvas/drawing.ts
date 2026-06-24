@@ -31,10 +31,7 @@ export function drawTerrain(
   }
 }
 
-export function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  showCoordinates: boolean
-): void {
+export function drawGrid(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = "#2c3444";
   ctx.lineWidth = 1;
 
@@ -46,17 +43,6 @@ export function drawGrid(
     ctx.moveTo(0, pos);
     ctx.lineTo(GRID_SIZE * CELL_SIZE, pos);
     ctx.stroke();
-  }
-
-  if (!showCoordinates) {
-    return;
-  }
-
-  ctx.fillStyle = "#cad1dd";
-  ctx.font = "8px ui-monospace, SFMono-Regular, Menlo, monospace";
-  for (let i = 0; i < GRID_SIZE; i += 5) {
-    ctx.fillText(String(i), i * CELL_SIZE + 2, 9);
-    ctx.fillText(String(i), 2, i * CELL_SIZE + 10);
   }
 }
 
