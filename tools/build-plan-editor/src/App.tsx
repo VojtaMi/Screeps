@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
-import { endStepForRcl, rclForStep } from "./rcl";
+import { endStepForRcl, planMaxRcl } from "./rcl";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
 import { useLandmarks } from "./terrain/useLandmarks";
@@ -46,6 +46,10 @@ export default function App() {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
+  // Target RCL the user is authoring at. Explicit (not derived from the plan) so
+  // it can be raised above the plan's current max to unlock the next tier's
+  // structures before any of them exist.
+  const [selectedRcl, setSelectedRcl] = useState(0);
 
   useEffect(() => {
     if (selectedRoom) {
@@ -53,10 +57,19 @@ export default function App() {
     }
   }, [plans, selectedRoom, terrain]);
 
+  // When switching rooms, default the target RCL to that room's highest level.
+  useEffect(() => {
+    setSelectedRcl(planMaxRcl(plans[selectedRoom]?.plan ?? []));
+  }, [selectedRoom]);
+
   useKeyboardShortcuts(undoPlans, redoPlans, () => setTilePicker(null));
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
-  const currentRcl = rclForStep(plan, currentStep);
+
+  function changeRcl(rcl: number) {
+    setSelectedRcl(rcl);
+    setCurrentStep(endStepForRcl(plan, rcl));
+  }
 
   return (
     <div className="editor">
@@ -76,8 +89,8 @@ export default function App() {
       <Toolbar
         selectedRoom={selectedRoom}
         plans={plans}
-        currentRcl={currentRcl}
-        onRclChange={(rcl) => setCurrentStep(endStepForRcl(plan, rcl))}
+        currentRcl={selectedRcl}
+        onRclChange={changeRcl}
         showLandmarks={showLandmarks}
         setShowLandmarks={setShowLandmarks}
         onRoomChange={(nextRoom) => {
@@ -107,7 +120,7 @@ export default function App() {
         <Sidebar
           plan={plan}
           currentStep={currentStep}
-          currentRcl={currentRcl}
+          currentRcl={selectedRcl}
           selectedRoom={selectedRoom}
           selectedStructureType={selectedStructureType}
           setSelectedStructureType={setSelectedStructureType}

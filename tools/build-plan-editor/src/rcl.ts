@@ -8,7 +8,9 @@ export const MAX_RCL = 8;
 // index = RCL level 0..8. Mirrors Screeps' CONTROLLER_STRUCTURES so the editor
 // can enforce per-level limits without access to the game globals.
 export const RCL_STRUCTURE_LIMITS: Record<string, number[]> = {
-  STRUCTURE_SPAWN: [0, 1, 1, 1, 1, 1, 1, 2, 3],
+  // Diverges from the game table (spawn[0] = 0): the editor treats the primary
+  // spawn as the RCL-0 room seed so it appears in the level-0 starting state.
+  STRUCTURE_SPAWN: [1, 1, 1, 1, 1, 1, 1, 2, 3],
   STRUCTURE_EXTENSION: [0, 0, 5, 10, 20, 30, 40, 50, 60],
   STRUCTURE_CONTAINER: [5, 5, 5, 5, 5, 5, 5, 5, 5],
   STRUCTURE_ROAD: [2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
