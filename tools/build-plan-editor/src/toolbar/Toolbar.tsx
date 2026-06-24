@@ -1,8 +1,11 @@
 import { BuildPlansData } from "../types";
+import { MAX_RCL } from "../rcl";
 
 interface ToolbarProps {
   selectedRoom: string;
   plans: BuildPlansData;
+  currentRcl: number;
+  onRclChange: (rcl: number) => void;
   showCoordinates: boolean;
   setShowCoordinates: (show: boolean) => void;
   showLandmarks: boolean;
@@ -13,6 +16,8 @@ interface ToolbarProps {
 export function Toolbar({
   selectedRoom,
   plans,
+  currentRcl,
+  onRclChange,
   showCoordinates,
   setShowCoordinates,
   showLandmarks,
@@ -33,6 +38,19 @@ export function Toolbar({
           {Object.keys(plans).map((room) => (
             <option key={room} value={room}>
               {room}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        RCL
+        <select
+          value={currentRcl}
+          onChange={(event) => onRclChange(Number(event.target.value))}
+        >
+          {Array.from({ length: MAX_RCL + 1 }, (_, rcl) => (
+            <option key={rcl} value={rcl}>
+              {rcl}
             </option>
           ))}
         </select>

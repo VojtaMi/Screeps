@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 interface StepControlsProps {
   currentStep: number;
   totalSteps: number;
+  currentRcl: number;
   onStepChange: (step: number) => void;
 }
 
 export function StepControls({
   currentStep,
   totalSteps,
+  currentRcl,
   onStepChange,
 }: StepControlsProps) {
   const [draft, setDraft] = useState(String(currentStep));
@@ -70,6 +72,7 @@ export function StepControls({
           title="Jump to step"
         />{" "}
         / {totalSteps}
+        <span className="map-step-rcl"> · RCL {currentRcl}</span>
       </div>
       <button
         type="button"

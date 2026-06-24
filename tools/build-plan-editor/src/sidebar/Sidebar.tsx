@@ -14,6 +14,7 @@ interface ValidationError {
 interface SidebarProps {
   plan: BuildPlanItem[];
   currentStep: number;
+  currentRcl: number;
   selectedRoom: string;
   selectedStructureType: string;
   setSelectedStructureType: (type: string) => void;
@@ -33,6 +34,7 @@ interface SidebarProps {
 export function Sidebar({
   plan,
   currentStep,
+  currentRcl,
   selectedRoom,
   selectedStructureType,
   setSelectedStructureType,
@@ -96,6 +98,9 @@ export function Sidebar({
 
       {editorMode === "build" && (
         <StructureSelector
+          plan={plan}
+          currentStep={currentStep}
+          currentRcl={currentRcl}
           selectedStructureType={selectedStructureType}
           onTypeChange={setSelectedStructureType}
         />

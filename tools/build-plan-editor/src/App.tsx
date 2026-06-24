@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
+import { endStepForRcl, rclForStep } from "./rcl";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
 import { useLandmarks } from "./terrain/useLandmarks";
@@ -56,6 +57,7 @@ export default function App() {
   useKeyboardShortcuts(undoPlans, redoPlans, () => setTilePicker(null));
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
+  const currentRcl = rclForStep(plan, currentStep);
 
   return (
     <div className="editor">
@@ -75,6 +77,8 @@ export default function App() {
       <Toolbar
         selectedRoom={selectedRoom}
         plans={plans}
+        currentRcl={currentRcl}
+        onRclChange={(rcl) => setCurrentStep(endStepForRcl(plan, rcl))}
         showCoordinates={showCoordinates}
         setShowCoordinates={setShowCoordinates}
         showLandmarks={showLandmarks}
@@ -107,6 +111,7 @@ export default function App() {
         <Sidebar
           plan={plan}
           currentStep={currentStep}
+          currentRcl={currentRcl}
           selectedRoom={selectedRoom}
           selectedStructureType={selectedStructureType}
           setSelectedStructureType={setSelectedStructureType}

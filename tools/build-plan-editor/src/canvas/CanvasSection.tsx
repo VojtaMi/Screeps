@@ -7,6 +7,7 @@ import {
   RoomLandmark,
 } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
+import { rclForStep } from "../rcl";
 import { validateSameTile } from "../plan/validation";
 import { drawTerrain, drawGrid, drawLandmarks, drawPlan } from "./drawing";
 import { TilePicker } from "./TilePicker";
@@ -259,6 +260,7 @@ export function CanvasSection({
         <StepControls
           currentStep={currentStep}
           totalSteps={plan.length}
+          currentRcl={rclForStep(plan, currentStep)}
           onStepChange={setCurrentStep}
         />
       </div>

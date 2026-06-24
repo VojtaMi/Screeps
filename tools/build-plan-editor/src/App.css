@@ -485,6 +485,11 @@ body,
   gap: 4px;
 }
 
+.map-step-rcl {
+  color: var(--accent, #7dd3fc);
+  font-weight: 600;
+}
+
 .map-step-input {
   width: 48px;
   min-height: 26px;
