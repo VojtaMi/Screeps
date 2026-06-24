@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 interface StepControlsProps {
   currentStep: number;
   totalSteps: number;
@@ -9,6 +11,24 @@ export function StepControls({
   totalSteps,
   onStepChange,
 }: StepControlsProps) {
+  const [draft, setDraft] = useState(String(currentStep));
+
+  // Keep the input in sync when the step changes from elsewhere (buttons, etc.).
+  useEffect(() => {
+    setDraft(String(currentStep));
+  }, [currentStep]);
+
+  const commit = () => {
+    const parsed = parseInt(draft, 10);
+    if (Number.isNaN(parsed)) {
+      setDraft(String(currentStep));
+      return;
+    }
+    const clamped = Math.min(totalSteps, Math.max(0, parsed));
+    onStepChange(clamped);
+    setDraft(String(clamped));
+  };
+
   return (
     <div className="map-step-controls">
       <button
@@ -28,7 +48,28 @@ export function StepControls({
         &lt;
       </button>
       <div className="map-step-display">
-        Step {currentStep} / {totalSteps}
+        Step{" "}
+        <input
+          type="number"
+          className="map-step-input"
+          min={0}
+          max={totalSteps}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              commit();
+              e.currentTarget.blur();
+            } else if (e.key === "Escape") {
+              setDraft(String(currentStep));
+              e.currentTarget.blur();
+            }
+          }}
+          title="Jump to step"
+        />{" "}
+        / {totalSteps}
       </div>
       <button
         type="button"

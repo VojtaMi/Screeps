@@ -482,6 +482,31 @@ body,
   border-radius: 6px;
   font-size: 0.9rem;
   white-space: nowrap;
+  gap: 4px;
+}
+
+.map-step-input {
+  width: 48px;
+  min-height: 26px;
+  padding: 2px 4px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: inherit;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-step-input::-webkit-outer-spin-button,
+.map-step-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.map-step-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 select {
