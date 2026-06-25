@@ -7,7 +7,6 @@ import {
 import { hasRepairWork } from "../../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type Role } from "../../types";
 import { LOCAL_ENERGY_RANGE } from "../support/localEnergy";
-import { findSameRoomSpawn } from "../support/spawns";
 import { collectResourceLoot, deliverResourceLoot } from "./loot";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
@@ -751,14 +750,6 @@ export const carrier: Role = {
         return;
       }
 
-      const spawn = findSameRoomSpawn(creep);
-      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
-        creep.moveToAvoidingRoomEdges(spawn, {
-          ...CARRIER_DELIVERY_MOVE_OPTS,
-          requestSwap: false,
-        });
-        return;
-      }
       creep.moveOffRoad();
       return;
     }
