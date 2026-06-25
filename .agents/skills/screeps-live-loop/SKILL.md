@@ -61,6 +61,7 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
    - After deploy completes or the code fingerprint appears, wait long enough for Screeps to tick and load the new code.
    - Use read-only MCP tools or side-effect-free console expressions to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change.
    - If behavior depends on multiple ticks, sample more than once and compare before/after observations.
+   - Use `$screeps-screenshot-inspection` only when verification depends on spatial interpretation, such as rampart positioning, pathing, rally points, traffic jams, breach locations, or visual room-layout questions.
    - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization.
 
 6. Report the result.

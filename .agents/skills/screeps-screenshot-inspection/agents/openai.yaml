@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Screenshot Inspection"
+  short_description: "Use Screeps room visuals for spatial diagnosis"
+  default_prompt: "Use $screeps-screenshot-inspection when Screeps diagnosis needs visual room context, such as pathing, ramparts, choke points, defender positioning, traffic jams, or breach routes, after structured JSON or MCP checks identify the relevant room and ticks."

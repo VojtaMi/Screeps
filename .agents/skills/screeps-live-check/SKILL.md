@@ -37,6 +37,7 @@ Use this read-only workflow to inspect live Screeps state efficiently and report
    - Confirm account, active branch/code context, and shard before room or Memory reads.
    - Check console output, CPU, tick time, Memory, rooms, creeps, and spawns relevant to the question.
    - Use side-effect-free console expressions for current room and creep summaries when direct MCP reads would be oversized or stale.
+   - Use `$screeps-screenshot-inspection` only when the live question depends on spatial interpretation, such as pathing, ramparts, rally points, traffic jams, or breach locations.
 
 3. Sample over time when needed.
    - If behavior depends on ticks, wait for Screeps tick cadence and take at least two timestamped or tick-numbered samples.
