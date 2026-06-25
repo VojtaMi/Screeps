@@ -1,1 +1,0 @@
-../../.agents/skills/screeps-live-loop/SKILL.md

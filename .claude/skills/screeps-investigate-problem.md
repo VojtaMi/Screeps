@@ -1,1 +1,0 @@
-../../.agents/skills/screeps-investigate-problem/SKILL.md

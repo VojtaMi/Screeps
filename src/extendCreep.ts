@@ -543,7 +543,9 @@ export function extendCreep(): void {
   };
 
   Creep.prototype.findBuildTarget = function (): ConstructionSite | null {
-    return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES, {
+      ignoreCreeps: true,
+    });
   };
 
   Creep.prototype.findAndBuild = function (): boolean {

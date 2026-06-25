@@ -11,7 +11,7 @@ function usage() {
   console.log(`Usage:
   node scripts/sync-claude-skills.mjs [--dry-run] [--check]
 
-Creates .claude/skills/<skill>.md symlinks to .agents/skills/<skill>/SKILL.md.
+Creates .claude/skills/<skill> symlinks to .agents/skills/<skill>.
 Refuses to overwrite non-symlink files or symlinks that do not point into .agents/skills.
 
 Options:
@@ -56,17 +56,18 @@ async function listCodexSkills() {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
-    const skillFile = path.join(codexSkillsDir, entry.name, "SKILL.md");
+    const skillDir = path.join(codexSkillsDir, entry.name);
+    const skillFile = path.join(skillDir, "SKILL.md");
     if (await pathExists(skillFile)) {
-      skills.push({ name: entry.name, skillFile });
+      skills.push({ name: entry.name, skillDir });
     }
   }
 
   return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function expectedTarget(skillFile) {
-  return path.relative(claudeSkillsDir, skillFile);
+function expectedTarget(skillDir) {
+  return path.relative(claudeSkillsDir, skillDir);
 }
 
 function pointsIntoCodexSkills(linkTarget) {
@@ -76,8 +77,8 @@ function pointsIntoCodexSkills(linkTarget) {
 }
 
 async function syncSkill(skill, args) {
-  const linkPath = path.join(claudeSkillsDir, `${skill.name}.md`);
-  const linkTarget = expectedTarget(skill.skillFile);
+  const linkPath = path.join(claudeSkillsDir, skill.name);
+  const linkTarget = expectedTarget(skill.skillDir);
 
   try {
     const stat = await lstat(linkPath);
@@ -115,7 +116,7 @@ async function syncSkill(skill, args) {
 }
 
 async function removeStaleLinks(skills, args) {
-  const wanted = new Set(skills.map((skill) => `${skill.name}.md`));
+  const wanted = new Set(skills.map((skill) => skill.name));
   let changed = false;
   let entries = [];
 
@@ -126,7 +127,7 @@ async function removeStaleLinks(skills, args) {
   }
 
   for (const entry of entries) {
-    if (!entry.isSymbolicLink() || !entry.name.endsWith(".md") || wanted.has(entry.name)) {
+    if (!entry.isSymbolicLink() || wanted.has(entry.name)) {
       continue;
     }
 

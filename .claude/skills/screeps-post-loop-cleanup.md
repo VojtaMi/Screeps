@@ -1,1 +1,0 @@
-../../.agents/skills/screeps-post-loop-cleanup/SKILL.md

@@ -11,7 +11,8 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
 
 - Follow project instructions from `AGENTS.md`; if they are not already in context, read `AGENTS.md` before acting.
 - Start by restating the requested goal and the observable success criteria.
-- Treat explicit invocation of `$screeps-live-loop`, "full live loop", "deploy and check", "push then inspect", or equivalent wording as authorization to stage relevant files, commit, push the current branch, wait for deployment, and verify live behavior.
+- Treat explicit invocation of `$screeps-live-loop`, "full live loop", "deploy and check", "push then inspect", or equivalent wording as authorization to build, deploy with the project's `npm run deploy:screeps` script, verify live behavior, iterate on clear mismatches, then stage relevant files, commit, and push the current branch after the requested behavior is verified.
+- Do not use MCP code-publishing tools such as `push_code` for this repo. Project scripts own code publishing; MCP is for live inspection, side-effect-free console probes, and explicitly authorized one-off live operations.
 - Do not switch active branches, mutate live Memory, or run side-effecting console commands unless the user explicitly asks for that specific live action.
 - Automatically fix routine failures: typecheck, lint, build, obvious deploy-log failures, and clear live-verification mismatches.
 - Ask the user before non-obvious Screeps strategy, architecture, or product-behavior decisions.
@@ -27,8 +28,8 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
 - Read full Memory once when broad state is unknown instead of probing many likely-empty paths.
 - Poll console output no faster than Screeps tick cadence; wait between reads instead of making rapid empty calls.
 - Do not clear the console buffer until the expected expression output is captured or deliberately abandoned.
-- For deployment verification, prefer the deterministic code-update check over GitHub Actions status: after `npm run build`, run `npm run code:fingerprint -- dist/main.js`, then `npm run check:update -- --file dist/main.js`.
-- Use GitHub Actions status/logs only when the code-update check times out or deployment failure details are needed.
+- For deployment verification, prefer the deterministic code-update check over GitHub Actions status: after `npm run build` and `npm run deploy:screeps`, run `npm run code:fingerprint -- dist/main.js`, then `npm run check:update -- --file dist/main.js`.
+- Use GitHub Actions status/logs only when the user specifically asked to validate the GitHub Actions path, after the final push, or when the code-update check times out and deployment failure details are needed.
 
 ## Workflow
 
@@ -55,20 +56,25 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
    - Fix formatting with `npm run check:write` only when Biome reports safe fixes or formatting problems.
    - Iterate automatically on routine local failures.
 
-4. Publish when the loop is authorized.
-   - If the user invoked this skill or asked for the full live loop, stage only relevant files, commit with a concise message, and push the current branch.
+4. Deploy for live iteration when the loop is authorized.
+   - If the user invoked this skill or asked for the full live loop, use the project's deploy script for fast iteration instead of GitHub Actions: run `npm run build`, then `npm run deploy:screeps`.
+   - Do not call MCP `push_code` or equivalent code-publishing tools.
    - Generate the expected deployed-code fingerprint with `npm run code:fingerprint -- dist/main.js`.
    - Wait for deploy by running `npm run check:update -- --file dist/main.js`; pass `--branch` if the target branch is not `SCREEPS_BRANCH` or `default`.
-   - If the code-update check times out, inspect GitHub Actions status/logs when available to diagnose why deploy did not reach Screeps.
-   - If the workflow fails, inspect logs, fix routine causes, rerun local checks, and ask before pushing additional changes when the fix requires a non-obvious decision.
+   - If the code-update check times out, inspect deploy output and available Screeps branch/code state to diagnose why deploy did not reach Screeps.
+   - If the deploy fails, inspect logs, fix routine causes, rerun local checks, and ask when the fix requires a non-obvious decision.
 
 5. Verify live behavior.
    - After deploy completes or the code fingerprint appears, wait long enough for Screeps to tick and load the new code.
    - Use read-only MCP tools or side-effect-free console expressions to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change.
    - If behavior depends on multiple ticks, sample more than once and compare before/after observations.
-   - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization. A re-commit and re-push to fix a live mismatch caused by the same change counts as covered; a new behavioral decision does not.
+   - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization. Rebuild and redeploy through `npm run deploy:screeps` for each iteration; a new behavioral decision still requires asking the user.
 
-6. Report the result.
-   - Summarize the goal, code change, local verification, publish/deploy result, and live Screeps observations.
+6. Publish the verified change.
+   - After live behavior is verified, stage only relevant files, commit with a concise message, and push the current branch.
+   - If the user specifically asked to test the GitHub Actions deployment path, wait for the workflow and confirm the deployed-code fingerprint again after the push.
+
+7. Report the result.
+   - Summarize the goal, code change, local verification, deploy result, final git publication, and live Screeps observations.
    - Include any remaining uncertainty, such as behavior that needs more game ticks, energy availability, spawn timing, or hostile room conditions.
    - When the change is behavioral and the diff is non-trivial, suggest running `$screeps-post-loop-cleanup` as the next step.

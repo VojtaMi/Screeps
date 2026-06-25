@@ -1,1 +1,0 @@
-../../.agents/skills/screeps-live-check/SKILL.md
