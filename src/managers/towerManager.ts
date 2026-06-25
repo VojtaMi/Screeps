@@ -1,7 +1,13 @@
 import {
   findPriorityHostile,
+  hasHostileCombatCreeps,
   shouldTowersFireAtHostile,
 } from "../hostileTargeting";
+
+// Keep enough energy to resume attacking if the fight suddenly becomes winnable.
+const TOWER_REPAIR_RESERVE = 200;
+// Only shore up ramparts the attackers are actually pressing against.
+const THREATENED_RAMPART_RANGE = 3;
 
 export const towerManager = {
   manageTowers(): void {
@@ -26,7 +32,16 @@ export const towerManager = {
     const shouldFire =
       target !== null && shouldTowersFireAtHostile(room, target, hostiles);
 
-    const woundedFriendly = shouldFire ? null : findMostWoundedFriendly(room);
+    // While holding fire during an attack, the breached rampart is the thing
+    // actually failing. Towers repair it (800/tick, and never walk into danger)
+    // far more safely and quickly than a creep repairer, buying time before a
+    // safe mode is spent. Outside an attack, repair stays with creeps.
+    const repairTarget =
+      !shouldFire && hasHostileCombatCreeps(room, hostiles)
+        ? findThreatenedRampart(room, hostiles)
+        : null;
+    const woundedFriendly =
+      shouldFire || repairTarget ? null : findMostWoundedFriendly(room);
 
     for (const tower of towers) {
       if (shouldFire && target) {
@@ -34,13 +49,41 @@ export const towerManager = {
         continue;
       }
 
-      // Hold fire to save energy; spend idle ticks healing defenders instead.
+      if (repairTarget && tower.store[RESOURCE_ENERGY] > TOWER_REPAIR_RESERVE) {
+        tower.repair(repairTarget);
+        continue;
+      }
+
+      // Otherwise spend idle ticks healing defenders.
       if (woundedFriendly) {
         tower.heal(woundedFriendly);
       }
     }
   },
 };
+
+// The most-damaged rampart an attacker is currently pressing against.
+function findThreatenedRampart(
+  room: Room,
+  hostiles: Creep[],
+): StructureRampart | null {
+  const threatened = room.find(FIND_MY_STRUCTURES, {
+    filter: (structure): structure is StructureRampart =>
+      structure.structureType === STRUCTURE_RAMPART &&
+      structure.hits < structure.hitsMax &&
+      hostiles.some((hostile) =>
+        hostile.pos.inRangeTo(structure, THREATENED_RAMPART_RANGE),
+      ),
+  });
+
+  return threatened.reduce<StructureRampart | null>((weakest, rampart) => {
+    if (!weakest || rampart.hits < weakest.hits) {
+      return rampart;
+    }
+
+    return weakest;
+  }, null);
+}
 
 function findMostWoundedFriendly(room: Room): Creep | null {
   return room

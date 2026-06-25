@@ -1,6 +1,21 @@
 const repeatBody = (count: number, parts: BodyPartConstant[]) =>
   Array.from({ length: count }).flatMap(() => parts);
 
+// Combat body with self-heal woven through the pattern (not just appended) so
+// that budget-trimmed bodies still get a proportional ~25% HEAL share. Self-heal
+// keeps defenders alive when towers are busy, drained, or destroyed.
+const defenderBody = (offensive: BodyPartConstant): BodyPartConstant[] =>
+  repeatBody(5, [
+    TOUGH,
+    offensive,
+    MOVE,
+    offensive,
+    MOVE,
+    offensive,
+    HEAL,
+    MOVE,
+  ]);
+
 interface BodyBuildOptions {
   maxBody: BodyPartConstant[];
   energyBudget: number;
@@ -26,7 +41,8 @@ export const CREEP_BODY = {
     ...repeatBody(4, [WORK, WORK, WORK, WORK, MOVE, CARRY]),
   ],
   CARRIER: [...repeatBody(4, [MOVE, CARRY, CARRY])],
-  DEFENDER: [...repeatBody(15, [TOUGH, ATTACK, MOVE])],
+  DEFENDER: defenderBody(ATTACK),
+  RANGED_DEFENDER: defenderBody(RANGED_ATTACK),
   WORKER: [
     WORK,
     CARRY,

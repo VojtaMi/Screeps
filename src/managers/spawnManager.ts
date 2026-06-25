@@ -4,7 +4,10 @@ import {
   CREEP_BODY,
   minimumBodyCost,
 } from "../creepBodies";
-import { canTowersOverpowerHostile } from "../hostileTargeting";
+import {
+  canTowersOverpowerHostile,
+  isHostileCombatCreep,
+} from "../hostileTargeting";
 import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
@@ -106,7 +109,10 @@ export const spawnManager = {
       };
     }
 
-    const hasUnsafeHostiles = hostiles.some(
+    // Only combat creeps warrant defenders; a lone scout (common at low RCL
+    // with no towers) must not trigger defender spawning.
+    const combatHostiles = hostiles.filter(isHostileCombatCreep);
+    const hasUnsafeHostiles = combatHostiles.some(
       (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
     );
     if (hasUnsafeHostiles) {
@@ -115,15 +121,9 @@ export const spawnManager = {
           ? availableEnergy - minimumBodyCost(CREEP_BODY.CARRIER)
           : availableEnergy;
 
-      if (defenderEnergyBudget >= minimumBodyCost(CREEP_BODY.DEFENDER)) {
-        return {
-          role: CREEP_ROLE.DEFENDER,
-          body: buildBodyFromMaxPattern({
-            maxBody: CREEP_BODY.DEFENDER,
-            energyBudget: defenderEnergyBudget,
-            sortBody: sortCombatBody,
-          }),
-        };
+      const defenderRequest = getDefenderRequest(context, defenderEnergyBudget);
+      if (defenderRequest) {
+        return defenderRequest;
       }
     }
 
@@ -251,6 +251,45 @@ function groupCreepsByRole(creeps: Creep[]): CreepsByRole {
 
 function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
+}
+
+// During an attack, field ranged defenders first (they hold ramparts and focus
+// fire with towers) then a melee blocker. Ranged count scales up slightly for
+// larger hostile groups. Both stay independently useful before any squad logic.
+function getDefenderRequest(
+  context: SpawnContext,
+  energyBudget: number,
+): SpawnRequest | null {
+  const { creepsByRole, hostiles } = context;
+  const rangedDefenders = creepsByRole(CREEP_ROLE.RANGED_DEFENDER);
+  const meleeDefenders = creepsByRole(CREEP_ROLE.DEFENDER);
+  const hostileCombatCount = hostiles.filter(isHostileCombatCreep).length;
+  const desiredRanged = hostileCombatCount > 2 ? 2 : 1;
+
+  let role: CreepRole;
+  let maxBody: BodyPartConstant[];
+  if (rangedDefenders.length < desiredRanged) {
+    role = CREEP_ROLE.RANGED_DEFENDER;
+    maxBody = CREEP_BODY.RANGED_DEFENDER;
+  } else if (meleeDefenders.length < 1) {
+    role = CREEP_ROLE.DEFENDER;
+    maxBody = CREEP_BODY.DEFENDER;
+  } else {
+    return null;
+  }
+
+  if (energyBudget < minimumBodyCost(maxBody)) {
+    return null;
+  }
+
+  return {
+    role,
+    body: buildBodyFromMaxPattern({
+      maxBody,
+      energyBudget,
+      sortBody: sortCombatBody,
+    }),
+  };
 }
 
 function sortCombatBody(body: BodyPartConstant[]): BodyPartConstant[] {

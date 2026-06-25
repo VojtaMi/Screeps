@@ -1,3 +1,10 @@
+import { isHostileCombatCreep } from "./hostileTargeting";
+
+// Repair targets within this range of a hostile combat creep are "contested":
+// a creep repairing them must stand in enemy fire. Towers cover breach repair
+// instead, so creep repairers steer clear.
+export const REPAIR_DANGER_RANGE = 5;
+
 export const CRITICAL_INFRASTRUCTURE_DAMAGE_RATIO = 0.5;
 export const MAINTENANCE_INFRASTRUCTURE_DAMAGE_RATIO = 0.9;
 export const DEFENSE_TARGET_HITS = 10_000;
@@ -135,10 +142,33 @@ function isBetterRepairTargetForCreep(
   );
 }
 
+function getCombatHostiles(room: Room): Creep[] {
+  return room.find(FIND_HOSTILE_CREEPS, { filter: isHostileCombatCreep });
+}
+
+function isContestedBy(target: RepairTarget, combatHostiles: Creep[]): boolean {
+  return combatHostiles.some((hostile) =>
+    hostile.pos.inRangeTo(target, REPAIR_DANGER_RANGE),
+  );
+}
+
+// True when a hostile combat creep is close enough that repairing the target
+// would put the repairer in the fight. Used to drop committed targets that
+// become dangerous mid-repair.
+export function isRepairTargetContested(
+  target: RepairTarget,
+  room: Room,
+): boolean {
+  return isContestedBy(target, getCombatHostiles(room));
+}
+
 export function findBestRepairTarget(room: Room): RepairTarget | null {
+  const combatHostiles = getCombatHostiles(room);
   const repairTargets = room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) && getRepairPriority(structure) !== Infinity,
+      isRepairTarget(structure) &&
+      getRepairPriority(structure) !== Infinity &&
+      !isContestedBy(structure, combatHostiles),
   });
 
   return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
@@ -153,9 +183,12 @@ export function findBestRepairTarget(room: Room): RepairTarget | null {
 export function findBestRepairTargetForCreep(
   creep: Creep,
 ): RepairTarget | null {
+  const combatHostiles = getCombatHostiles(creep.room);
   const repairTargets = creep.room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) && getRepairPriority(structure) !== Infinity,
+      isRepairTarget(structure) &&
+      getRepairPriority(structure) !== Infinity &&
+      !isContestedBy(structure, combatHostiles),
   });
 
   return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {

@@ -150,52 +150,72 @@ breaching a rampart or within range 3 of a spawn/storage/tower/terminal. Towers
 focus one shared target and heal the most-wounded friendly creep when holding
 fire.
 
-Still open: repairing key ramparts while holding fire (left out to avoid energy
-drain).
+While holding fire during an attack, towers repair the most-damaged rampart an
+attacker is pressing against (within range 3) instead of sitting idle. A tower
+repairs ~800 hits/tick and never walks into danger, so this shores up a breach
+far faster and more safely than a creep repairer — buying time before a safe
+mode is spent. A `TOWER_REPAIR_RESERVE` keeps enough energy to resume attacking
+if the fight turns winnable, and the behavior is gated on a live hostile combat
+presence so it never drains energy in peacetime.
+
+Creep repairers now stay out of the fight (`src/repairPolicy.ts`,
+`src/roles/repairer.ts`). Repair targets within `REPAIR_DANGER_RANGE` of a
+hostile combat creep are treated as contested and excluded from target
+selection (and dropped if a committed target becomes contested), so a repairer
+never paths to the breach where the attackers are. A repairer that finds a
+combat hostile closing within range also abandons its job and falls back toward
+the spawn. Breach repair under fire is left entirely to the towers.
+
+### Defender Tactics — `src/roles/defender.ts`, `src/roles/rangedDefender.ts`, `src/roles/support/defense.ts`
+
+Defenders no longer chase a coordinated ranged/heal group into open ground.
+
+Melee defenders (`defender`) now hold the standable rampart nearest the threat
+and only swing at hostiles that come adjacent. They engage directly only when a
+hostile has committed into the defended area (`isHostileThreateningCore`:
+breaching a rampart line or next to a critical structure) and there are no
+ramparts to hold; pure edge-drainers are left to the towers. With no hostiles
+they post on a central rampart near the spawn.
+
+A new ranged defender (`rangedDefender`) sits on the rampart nearest the threat,
+focus-fires alongside the towers, and uses `rangedMassAttack` when several
+hostiles cluster in range. If the room has no ramparts it kites at range 3
+instead of diving into melee.
+
+Both defender bodies (`defenderBody`) now weave ~25% HEAL parts through the
+pattern (not just appended) so even budget-trimmed bodies get self-heal, and
+both roles call `creep.heal(creep)` each tick when wounded. Self-heal keeps
+defenders alive when towers are busy, drained, or destroyed — exactly the
+scenario that lost the room — and needs no coordination, so it works at any RCL.
+
+Shared rampart selection lives in `src/roles/support/defense.ts`
+(`findGuardRampart` skips ramparts blocked by a structure beneath them and
+spreads defenders across breach points instead of stacking).
+
+The spawn manager (`getDefenderRequest`) fields ranged defenders first (one,
+two against larger hostile groups) then a melee blocker, so each is
+independently useful before any squad coordination exists. Defender spawning is
+gated on a live hostile *combat* presence, so a lone scout (common at low RCL
+with no towers) no longer triggers defender spawning.
+
+Still open: grouped squad coordination (melee + ranged + healer choosing and
+guarding a shared defense point) and dedicated defender healers.
+
+### Safe Mode — `src/managers/safeModeManager.ts`
+
+Automated safe mode now runs each tick but stays conservative so the limited
+charges are not wasted. It activates only when a base-kill is plausibly
+underway: we own the controller, a safe mode is available and off cooldown,
+hostile combat creeps are present, and either a hostile has committed next to a
+critical structure or a critical structure is already taking damage — and the
+towers cannot out-heal the attackers (or a critical structure is already being
+chewed down). Pure edge-draining away from the core does not trigger it.
+
+Still open: an explicit "defender died near the core" trigger (left out to avoid
+tracking per-tick death state; the critical-structure-damage signal covers the
+real base-kill case).
 
 ## Remaining Work
-
-### Safe Mode
-
-Manual safe mode was probably the correct immediate action.
-
-The bot should eventually have automated safe-mode logic, but it should not fire
-on every hostile. Safe modes are limited, so the trigger should be reserved for
-clear base-risk conditions, such as:
-
-- Hostile combat creeps are in the room.
-- Tower damage cannot overpower hostile healing.
-- Spawn, storage, towers, or key ramparts are threatened.
-- A defender dies or is critically damaged near the core.
-- A hostile is inside the defended area or adjacent to critical structures.
-
-Safe mode should probably not trigger for pure edge-draining unless the attacker
-commits deeper or starts damaging important assets.
-
-### Defender Tactics
-
-The current melee defender behavior is too simple for this kind of fight. A
-melee defender that chases a coordinated ranged/heal group will usually die.
-
-Recommended behavior:
-
-- Defenders should hold ramparts or choke positions instead of chasing into open
-  ground.
-- Melee defenders should block breach points.
-- Ranged defenders should sit on ramparts and focus fire with towers.
-- Healers can be added later, but defenders should still be useful if the full
-  group has not spawned yet.
-
-The proposed complete defense group idea is sound:
-
-- One melee/blocker.
-- One ranged attacker.
-- One healer.
-- Group chooses a defense point and guards it once complete.
-
-The main caution is that partial groups must not be useless while waiting for the
-rest of the group. Start with independently useful ranged defenders on ramparts,
-then add squad coordination later.
 
 ### Cross-Room Aid
 
@@ -229,14 +249,13 @@ Possible response:
 
 ## Remaining Implementation Order
 
-Wartime tower refill priority and tower fire discipline are done (see
+Wartime tower refill priority, tower fire discipline, defender rampart tactics,
+ranged defenders, and conservative safe-mode automation are done (see
 **Implemented** above). Remaining work, in order:
 
-1. Change defenders to hold defensive positions instead of chasing.
-2. Add ranged defender bodies and rampart behavior.
-3. Add safe-mode automation with conservative triggers.
-4. Add cross-room aid and recovery behavior.
-5. Add more advanced grouped defense behavior.
+1. Add cross-room aid and recovery behavior.
+2. Add more advanced grouped defense behavior (melee + ranged + healer squad
+   guarding a shared defense point) and dedicated defender healers.
 
 ## Candidate Live-Loop Goal
 

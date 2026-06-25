@@ -101,19 +101,33 @@ export function shouldTowersFireAtHostile(
   return isHostileThreateningCore(hostile);
 }
 
-function isHostileThreateningCore(hostile: Creep): boolean {
-  const onOrNextToRampart =
+/** Hostile is standing on or directly beside one of our ramparts. */
+export function isHostileBreachingRampart(hostile: Creep): boolean {
+  return (
     hostile.pos.findInRange(FIND_MY_STRUCTURES, 1, {
       filter: (structure) => structure.structureType === STRUCTURE_RAMPART,
-    }).length > 0;
-  if (onOrNextToRampart) {
-    return true;
-  }
+    }).length > 0
+  );
+}
 
+/** Hostile is within striking range of a spawn, storage, tower, or terminal. */
+export function isHostileNearCriticalStructure(hostile: Creep): boolean {
   return (
     hostile.pos.findInRange(FIND_MY_STRUCTURES, HOSTILE_CORE_THREAT_RANGE, {
       filter: (structure) => CORE_STRUCTURE_TYPES.has(structure.structureType),
     }).length > 0
+  );
+}
+
+/**
+ * Hostile has committed into the defended area: breaching a rampart line or
+ * sitting next to a critical structure. Used to decide when defenders should
+ * engage instead of holding, and as one signal for safe mode.
+ */
+export function isHostileThreateningCore(hostile: Creep): boolean {
+  return (
+    isHostileBreachingRampart(hostile) ||
+    isHostileNearCriticalStructure(hostile)
   );
 }
 

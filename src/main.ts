@@ -1,6 +1,7 @@
 import { extendCreep } from "./extendCreep";
 import { buildPlanManager } from "./managers/buildPlanManager";
 import { memoryManager } from "./managers/memoryManager";
+import { safeModeManager } from "./managers/safeModeManager";
 import { spawnManager } from "./managers/spawnManager";
 import { spawnRecoveryManager } from "./managers/spawnRecoveryManager";
 import { towerManager } from "./managers/towerManager";
@@ -10,6 +11,7 @@ import { claimer } from "./roles/claimer";
 import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
 import { pioneer } from "./roles/pioneer";
+import { rangedDefender } from "./roles/rangedDefender";
 import { repairer } from "./roles/repairer";
 import { settler } from "./roles/settler";
 import { upgrader } from "./roles/upgrader";
@@ -24,6 +26,7 @@ const roles: Record<CreepRole, Role> = {
   [CREEP_ROLE.HARVESTER]: harvester,
   [CREEP_ROLE.CARRIER]: carrier,
   [CREEP_ROLE.DEFENDER]: defender,
+  [CREEP_ROLE.RANGED_DEFENDER]: rangedDefender,
   [CREEP_ROLE.UPGRADER]: upgrader,
   [CREEP_ROLE.BUILDER]: builder,
   [CREEP_ROLE.REPAIRER]: repairer,
@@ -34,6 +37,7 @@ export function loop(): void {
   spawnRecoveryManager.manageSpawnRecovery();
   buildPlanManager.manageBuildPlans();
   towerManager.manageTowers();
+  safeModeManager.manageSafeMode();
   spawnManager.manageSpawning();
 
   for (const name in Game.creeps) {
