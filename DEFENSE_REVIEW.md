@@ -125,7 +125,35 @@ Follow-up history confirms most important structures were destroyed later:
 - Storage was destroyed at `81080437`.
 - The spawn was destroyed at `81080443`.
 
-## Assessment
+## Implemented
+
+These items from the original review are now in code (commit `b11f078`).
+
+### Tower Refueling — `src/roles/carrier/carrier.ts`
+
+During an attack, towers are treated as emergency delivery targets: any tower
+below the wartime reserve (`TOWER_WARTIME_RESERVE = 700`) is refilled ahead of
+storage, and carriers may withdraw directly from storage to refuel them. The
+attack gate uses `hasHostileCombatCreeps`, so a harmless scout no longer drains
+storage. This fixes the previous priority where partially drained towers lost
+out to storage.
+
+Still open: spawning or retaining extra carriers when towers are below reserve
+(deferred to the spawn manager).
+
+### Tower Fire Discipline — `src/managers/towerManager.ts`, `src/hostileTargeting.ts`
+
+Towers no longer blindly fire on the priority hostile. `shouldTowersFireAtHostile`
+fires only when the shot is lethal this tick or when combined tower damage
+out-paces incoming hostile healing; otherwise it holds fire unless the hostile is
+breaching a rampart or within range 3 of a spawn/storage/tower/terminal. Towers
+focus one shared target and heal the most-wounded friendly creep when holding
+fire.
+
+Still open: repairing key ramparts while holding fire (left out to avoid energy
+drain).
+
+## Remaining Work
 
 ### Safe Mode
 
@@ -143,64 +171,6 @@ clear base-risk conditions, such as:
 
 Safe mode should probably not trigger for pure edge-draining unless the attacker
 commits deeper or starts damaging important assets.
-
-### Tower Refueling
-
-Status: implemented in `src/roles/carrier/carrier.ts`.
-
-Tower refueling was the highest-leverage short-term code improvement.
-
-The previous carrier priority was:
-
-1. Spawn/extensions.
-2. Empty towers.
-3. Storage.
-4. Non-empty towers.
-5. Workers/controller container.
-
-That meant partially drained towers could lose priority to storage. During an
-attack, towers are now treated as emergency delivery targets, and carriers can
-withdraw directly from storage to refill them during combat.
-
-Recommended behavior:
-
-- If hostile combat creeps are present, refill towers before storage. *(Done:
-  when `hasHostileCombatCreeps` is true, towers below the wartime reserve are
-  selected ahead of storage in `findCarrierDeliveryTarget`.)*
-- Keep towers above a wartime reserve threshold, not merely above zero. *(Done:
-  `TOWER_WARTIME_RESERVE = 700`; `isTowerBelowWartimeReserve` drives both
-  delivery priority and storage withdrawal.)*
-- Allow storage-to-tower hauling during attacks. *(Done:
-  `isAttackStorageRefillTarget` now gates on `hasHostileCombatCreeps` so a
-  harmless scout no longer drains storage.)*
-- Consider spawning or retaining extra carriers when towers are below reserve.
-  *(Not done: deferred to the spawn manager.)*
-
-### Tower Fire Discipline
-
-Status: implemented in `src/managers/towerManager.ts` and
-`src/hostileTargeting.ts`.
-
-The towers previously attacked the priority hostile whenever one existed.
-
-Against this kind of group, that wasted energy. Two towers at long range are not
-enough to overcome two strong healers. The attacker can edge in and out,
-draining tower energy when tower damage is least effective.
-
-Recommended behavior:
-
-- Do not fire if expected tower damage is lower than incoming hostile healing,
-  unless the target is already damaged enough to finish. *(Done:
-  `shouldTowersFireAtHostile` compares combined tower damage against incoming
-  healing and still fires when the shot is lethal this tick.)*
-- Prefer firing when hostiles are close, breaching, or on/near critical ramparts.
-  *(Done: when healing wins, towers only fire if the hostile is on/next to a
-  rampart or within range 3 of a spawn/storage/tower/terminal.)*
-- Prefer focused fire with defenders when a kill is realistic. *(Done: towers
-  share one priority target so they focus fire instead of splitting damage.)*
-- Otherwise save energy for a better engagement, healing defenders, or repairing
-  key ramparts. *(Partly done: when holding fire, towers heal the most-wounded
-  friendly creep; rampart repair was left out to avoid energy drain.)*
 
 ### Defender Tactics
 
@@ -257,16 +227,16 @@ Possible response:
 - Overwrite it later with one of our creeps using `signController`.
 - Do not treat the sign alone as a threat signal.
 
-## Recommended Implementation Order
+## Remaining Implementation Order
 
-1. ~~Add wartime tower refill priority.~~ *(Done.)*
-2. ~~Add tower fire discipline so towers do not waste energy into unkillable
-   healing.~~ *(Done.)*
-3. Change defenders to hold defensive positions instead of chasing.
-4. Add ranged defender bodies and rampart behavior.
-5. Add safe-mode automation with conservative triggers.
-6. Add cross-room aid and recovery behavior.
-7. Add more advanced grouped defense behavior.
+Wartime tower refill priority and tower fire discipline are done (see
+**Implemented** above). Remaining work, in order:
+
+1. Change defenders to hold defensive positions instead of chasing.
+2. Add ranged defender bodies and rampart behavior.
+3. Add safe-mode automation with conservative triggers.
+4. Add cross-room aid and recovery behavior.
+5. Add more advanced grouped defense behavior.
 
 ## Candidate Live-Loop Goal
 
