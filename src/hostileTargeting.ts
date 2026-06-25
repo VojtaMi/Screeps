@@ -1,3 +1,26 @@
+const HOSTILE_CORE_THREAT_RANGE = 3;
+const CORE_STRUCTURE_TYPES = new Set<StructureConstant>([
+  STRUCTURE_SPAWN,
+  STRUCTURE_STORAGE,
+  STRUCTURE_TOWER,
+  STRUCTURE_TERMINAL,
+]);
+
+export function isHostileCombatCreep(hostile: Creep): boolean {
+  return (
+    hostile.getActiveBodyparts(ATTACK) > 0 ||
+    hostile.getActiveBodyparts(RANGED_ATTACK) > 0 ||
+    hostile.getActiveBodyparts(HEAL) > 0
+  );
+}
+
+export function hasHostileCombatCreeps(
+  room: Room,
+  hostiles = room.find(FIND_HOSTILE_CREEPS),
+): boolean {
+  return hostiles.some(isHostileCombatCreep);
+}
+
 export function getHostilePriority(hostile: Creep): number {
   if (hostile.getActiveBodyparts(HEAL) > 0) {
     return 0;
@@ -41,6 +64,57 @@ export function canTowersOverpowerHostile(
   const incomingHealing = getIncomingHostileHealing(hostile, hostiles);
 
   return towerDamage > incomingHealing;
+}
+
+/**
+ * Decide whether the room's towers should spend energy firing at `hostile`.
+ *
+ * Towers fire when the shot can finish the target this tick, or when combined
+ * tower damage out-paces incoming hostile healing. When healing wins, towers
+ * hold fire to conserve energy unless the hostile is breaching ramparts or
+ * threatening core structures, where spending energy is still worthwhile.
+ */
+export function shouldTowersFireAtHostile(
+  room: Room,
+  hostile: Creep,
+  hostiles = room.find(FIND_HOSTILE_CREEPS),
+): boolean {
+  const towerDamage = getTowerDamageAtPosition(room, hostile.pos);
+  if (towerDamage === 0) {
+    return false;
+  }
+
+  const incomingHealing = getIncomingHostileHealing(hostile, hostiles);
+
+  // Already damaged enough to finish despite healing this tick.
+  if (towerDamage >= hostile.hits + incomingHealing) {
+    return true;
+  }
+
+  // We out-damage their healing, so firing makes real progress.
+  if (towerDamage > incomingHealing) {
+    return true;
+  }
+
+  // Healing wins the long game; only spend energy if the hostile is breaching
+  // or sitting on/near critical structures.
+  return isHostileThreateningCore(hostile);
+}
+
+function isHostileThreateningCore(hostile: Creep): boolean {
+  const onOrNextToRampart =
+    hostile.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+      filter: (structure) => structure.structureType === STRUCTURE_RAMPART,
+    }).length > 0;
+  if (onOrNextToRampart) {
+    return true;
+  }
+
+  return (
+    hostile.pos.findInRange(FIND_MY_STRUCTURES, HOSTILE_CORE_THREAT_RANGE, {
+      filter: (structure) => CORE_STRUCTURE_TYPES.has(structure.structureType),
+    }).length > 0
+  );
 }
 
 function getTowerDamageAtPosition(room: Room, position: RoomPosition): number {

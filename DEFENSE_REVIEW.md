@@ -146,9 +146,11 @@ commits deeper or starts damaging important assets.
 
 ### Tower Refueling
 
-Tower refueling is the highest-leverage short-term code improvement.
+Status: implemented in `src/roles/carrier/carrier.ts`.
 
-The current carrier priority appears to be:
+Tower refueling was the highest-leverage short-term code improvement.
+
+The previous carrier priority was:
 
 1. Spawn/extensions.
 2. Empty towers.
@@ -156,33 +158,49 @@ The current carrier priority appears to be:
 4. Non-empty towers.
 5. Workers/controller container.
 
-That means partially drained towers can lose priority to storage. During an
-attack, towers should be treated as emergency delivery targets. Carriers should
-also be allowed to withdraw directly from storage to refill towers during combat.
+That meant partially drained towers could lose priority to storage. During an
+attack, towers are now treated as emergency delivery targets, and carriers can
+withdraw directly from storage to refill them during combat.
 
 Recommended behavior:
 
-- If hostile combat creeps are present, refill towers before storage.
-- Keep towers above a wartime reserve threshold, not merely above zero.
-- Allow storage-to-tower hauling during attacks.
+- If hostile combat creeps are present, refill towers before storage. *(Done:
+  when `hasHostileCombatCreeps` is true, towers below the wartime reserve are
+  selected ahead of storage in `findCarrierDeliveryTarget`.)*
+- Keep towers above a wartime reserve threshold, not merely above zero. *(Done:
+  `TOWER_WARTIME_RESERVE = 700`; `isTowerBelowWartimeReserve` drives both
+  delivery priority and storage withdrawal.)*
+- Allow storage-to-tower hauling during attacks. *(Done:
+  `isAttackStorageRefillTarget` now gates on `hasHostileCombatCreeps` so a
+  harmless scout no longer drains storage.)*
 - Consider spawning or retaining extra carriers when towers are below reserve.
+  *(Not done: deferred to the spawn manager.)*
 
 ### Tower Fire Discipline
 
-The towers currently attack the priority hostile whenever one exists.
+Status: implemented in `src/managers/towerManager.ts` and
+`src/hostileTargeting.ts`.
 
-Against this kind of group, that can waste energy. Two towers at long range are
-not enough to overcome two strong healers. The attacker can edge in and out,
+The towers previously attacked the priority hostile whenever one existed.
+
+Against this kind of group, that wasted energy. Two towers at long range are not
+enough to overcome two strong healers. The attacker can edge in and out,
 draining tower energy when tower damage is least effective.
 
 Recommended behavior:
 
 - Do not fire if expected tower damage is lower than incoming hostile healing,
-  unless the target is already damaged enough to finish.
+  unless the target is already damaged enough to finish. *(Done:
+  `shouldTowersFireAtHostile` compares combined tower damage against incoming
+  healing and still fires when the shot is lethal this tick.)*
 - Prefer firing when hostiles are close, breaching, or on/near critical ramparts.
-- Prefer focused fire with defenders when a kill is realistic.
+  *(Done: when healing wins, towers only fire if the hostile is on/next to a
+  rampart or within range 3 of a spawn/storage/tower/terminal.)*
+- Prefer focused fire with defenders when a kill is realistic. *(Done: towers
+  share one priority target so they focus fire instead of splitting damage.)*
 - Otherwise save energy for a better engagement, healing defenders, or repairing
-  key ramparts.
+  key ramparts. *(Partly done: when holding fire, towers heal the most-wounded
+  friendly creep; rampart repair was left out to avoid energy drain.)*
 
 ### Defender Tactics
 
@@ -241,9 +259,9 @@ Possible response:
 
 ## Recommended Implementation Order
 
-1. Add wartime tower refill priority.
-2. Add tower fire discipline so towers do not waste energy into unkillable
-   healing.
+1. ~~Add wartime tower refill priority.~~ *(Done.)*
+2. ~~Add tower fire discipline so towers do not waste energy into unkillable
+   healing.~~ *(Done.)*
 3. Change defenders to hold defensive positions instead of chasing.
 4. Add ranged defender bodies and rampart behavior.
 5. Add safe-mode automation with conservative triggers.

@@ -1,4 +1,4 @@
-import { findPriorityHostile } from "../../hostileTargeting";
+import { hasHostileCombatCreeps } from "../../hostileTargeting";
 import {
   getControllerDeliveryBuildPlan,
   getControllerDeliveryContainer,
@@ -12,6 +12,11 @@ import { collectResourceLoot, deliverResourceLoot } from "./loot";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 const STORAGE_ENERGY_RESERVE = 50_000;
+// During an attack, keep towers topped up to this reserve rather than merely
+// above empty, and treat any tower below it as an emergency delivery target.
+const TOWER_WARTIME_RESERVE = 700;
+// A delivery threshold of 1 matches only fully empty (0-energy) towers.
+const EMPTY_TOWER_THRESHOLD = 1;
 const CARRIER_REFILL_MOVE_OPTS: MoveToOpts = {
   reusePath: 10,
   visualizePathStyle: { stroke: "#ffaa00" },
@@ -155,8 +160,8 @@ function isTargetInCreepRoom(
   return target.pos.roomName === creep.room.name;
 }
 
-function isEmptyTower(target: StructureTower): boolean {
-  return target.store[RESOURCE_ENERGY] === 0;
+function isTowerBelowWartimeReserve(target: StructureTower): boolean {
+  return target.store[RESOURCE_ENERGY] < TOWER_WARTIME_RESERVE;
 }
 
 function isUrgentAttackDeliveryTarget(
@@ -169,7 +174,8 @@ function isUrgentAttackDeliveryTarget(
   return (
     target.structureType === STRUCTURE_SPAWN ||
     target.structureType === STRUCTURE_EXTENSION ||
-    (target.structureType === STRUCTURE_TOWER && isEmptyTower(target))
+    (target.structureType === STRUCTURE_TOWER &&
+      isTowerBelowWartimeReserve(target))
   );
 }
 
@@ -248,7 +254,7 @@ function isAttackStorageRefillTarget(
   deliveryTarget: EnergyDeliveryTarget | null,
 ): target is StructureStorage {
   return (
-    findPriorityHostile(creep.room, creep.pos) !== null &&
+    hasHostileCombatCreeps(creep.room) &&
     isStorageTarget(target) &&
     isUrgentAttackDeliveryTarget(deliveryTarget) &&
     hasRefillEnergy(target) &&
@@ -484,12 +490,12 @@ function findRefuelDeliveryTarget(
 
 function findTowerDeliveryTarget(
   creep: Creep,
-  emptyOnly = false,
+  belowEnergy = TOWER_CAPACITY,
 ): StructureTower | null {
   return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
     filter: (structure): structure is StructureTower =>
       structure.structureType === STRUCTURE_TOWER &&
-      (!emptyOnly || isEmptyTower(structure)) &&
+      structure.store[RESOURCE_ENERGY] < belowEnergy &&
       canTowerAcceptFullCarrierLoad(creep, structure),
   });
 }
@@ -594,9 +600,18 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
     return rememberDeliveryTarget(creep, refuelTarget);
   }
 
-  const emptyTower = findTowerDeliveryTarget(creep, true);
-  if (emptyTower) {
-    return rememberDeliveryTarget(creep, emptyTower);
+  // During an attack, treat any tower below the wartime reserve as an emergency
+  // delivery target ahead of storage. Otherwise only fully empty towers jump
+  // the storage queue.
+  const emergencyTowerThreshold = hasHostileCombatCreeps(creep.room)
+    ? TOWER_WARTIME_RESERVE
+    : EMPTY_TOWER_THRESHOLD;
+  const emergencyTower = findTowerDeliveryTarget(
+    creep,
+    emergencyTowerThreshold,
+  );
+  if (emergencyTower) {
+    return rememberDeliveryTarget(creep, emergencyTower);
   }
 
   const storage = findStorageDeliveryTarget(creep);
