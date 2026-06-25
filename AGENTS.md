@@ -62,3 +62,9 @@ Do not deploy, push, commit, or modify Git history unless explicitly requested.
 Preserve existing user changes in the working tree. If files are already modified, inspect them and work with the current state rather than reverting.
 
 Prefer existing project patterns over new abstractions. Keep Screeps logic simple and tick-conscious. Avoid adding dependencies unless they clearly improve the bot or tooling.
+
+Do not break scalability. New behavior must work across the bot's full lifecycle, not just the current room's state. The bot must be able to recover and rebuild a room automatically from a low RCL (after an attack, claim, or reset), so changes should degrade gracefully when assets are missing rather than assuming the current setup. Concretely:
+
+- Do not hardcode the current RCL, room layout, structure counts, or creep counts. Derive behavior from live game state (`controller.level`, what structures actually exist, available energy) so it adapts as the room grows or is rebuilt.
+- Guard for missing structures. Code that reads towers, storage, links, terminal, or key ramparts must handle their absence (e.g. early RCL or after destruction) instead of assuming they exist.
+- When in doubt, ask: "would this still work if the room dropped to RCL 2 with one spawn and had to rebuild itself?" If not, generalize it.
