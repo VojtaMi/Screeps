@@ -527,7 +527,7 @@ export function extendCreep(): void {
     | null {
     return this.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: (structure): structure is RepairTarget =>
-        isRepairTarget(structure) && getRepairPriority(structure) !== null,
+        isRepairTarget(structure) && getRepairPriority(structure) !== Infinity,
     });
   };
 
