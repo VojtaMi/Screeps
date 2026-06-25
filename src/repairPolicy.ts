@@ -9,6 +9,7 @@ export const CRITICAL_INFRASTRUCTURE_DAMAGE_RATIO = 0.5;
 export const MAINTENANCE_INFRASTRUCTURE_DAMAGE_RATIO = 0.9;
 export const DEFENSE_TARGET_HITS = 10_000;
 export const DEFENSE_MAINTENANCE_TARGET_HITS = 100_000;
+export const DEFENSE_UPGRADE_TARGET_HITS = 500_000;
 const REPAIR_PRIORITY_WEIGHT = 50;
 
 export type RepairTarget =
@@ -72,8 +73,12 @@ export function getRepairPriority(target: RepairTarget): number {
     return 4;
   }
 
-  if (isInfrastructureTarget(target) && target.hits < target.hitsMax) {
+  if (isDefenseTarget(target) && target.hits < DEFENSE_UPGRADE_TARGET_HITS) {
     return 5;
+  }
+
+  if (isInfrastructureTarget(target) && target.hits < target.hitsMax) {
+    return 6;
   }
 
   return Infinity;
@@ -84,7 +89,9 @@ function getRepairScore(target: RepairTarget): number {
     const targetHits =
       target.hits < DEFENSE_TARGET_HITS
         ? DEFENSE_TARGET_HITS
-        : DEFENSE_MAINTENANCE_TARGET_HITS;
+        : target.hits < DEFENSE_MAINTENANCE_TARGET_HITS
+          ? DEFENSE_MAINTENANCE_TARGET_HITS
+          : DEFENSE_UPGRADE_TARGET_HITS;
 
     return target.hits / targetHits;
   }
