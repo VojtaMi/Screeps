@@ -2,3 +2,7 @@ if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(src/.*\.ts|pac
   npm run check:staged
   git diff --name-only --cached --diff-filter=ACMR -z | xargs -0 git add --
 fi
+
+if git diff --cached --name-only --diff-filter=ACMRD | grep -Eq '^(\.agents/skills/|\.claude/skills/|scripts/sync-claude-skills\.mjs|package\.json)$'; then
+  npm run skills:check:claude
+fi

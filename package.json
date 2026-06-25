@@ -18,6 +18,8 @@
     "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js",
     "deploy:screeps": "node scripts/deploy-screeps.mjs",
     "history:inspect": "node scripts/inspect-room-history.mjs",
+    "skills:sync:claude": "node scripts/sync-claude-skills.mjs",
+    "skills:check:claude": "node scripts/sync-claude-skills.mjs --check",
     "code:fingerprint": "node scripts/screeps-code-fingerprint.mjs",
     "check:update": "node scripts/check-screeps-code-update.mjs"
   },
