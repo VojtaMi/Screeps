@@ -62,13 +62,7 @@ Useful options:
    - If windows are non-contiguous, say "returned or reappeared" rather than
      assuming exact movement through the gap.
 
-4. Escalate to visuals only when coordinates are not enough.
-   - Use `$screeps-screenshot-inspection` for breach routes, rampart/choke
-     evaluation, defender positioning, pathing, or human-readable raid visuals.
-   - Render only key ticks found by `history:inspect`, not the whole window.
-   - Keep exact facts grounded in JSON output.
-
-5. Report the diagnosis.
+4. Report the diagnosis.
    - Separate confirmed history facts from inferred bot behavior.
    - Include a compact timeline of the important ticks.
    - Point to likely code areas only after the historical sequence is clear.

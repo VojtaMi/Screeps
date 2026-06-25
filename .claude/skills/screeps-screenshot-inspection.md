@@ -1,1 +1,0 @@
-../../.agents/skills/screeps-screenshot-inspection/SKILL.md
