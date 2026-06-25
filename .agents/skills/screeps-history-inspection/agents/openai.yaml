@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps History Inspection"
+  short_description: "Inspect static Screeps room history"
+  default_prompt: "Use $screeps-history-inspection to reconstruct Screeps room-history snapshots, summarize raids, structure losses, creep deaths, hostile movement, tower energy, and safe-mode context without mutating live game state."

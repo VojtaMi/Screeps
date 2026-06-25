@@ -1,0 +1,1 @@
+../../.agents/skills/screeps-history-inspection/SKILL.md

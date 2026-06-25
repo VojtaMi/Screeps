@@ -6,17 +6,21 @@ Room history reviewed:
 `https://screeps.com/a/#!/history/shard3/E58S28?t=81080000`
 
 History window inspected:
-`shard3/E58S28`, ticks `81080000` through `81080099`.
+`shard3/E58S28`, ticks `81080000` through `81080099`, with follow-up
+context from ticks `81080300` through `81080499`.
 
 ## Summary
 
-This was a planned edge/drain raid, not a random hostile visit. The attacker used a
-compact four-creep combat group with strong healing, tested tower and defender
-response, killed at least one local melee defender, then left the room.
+This was a planned edge/drain raid that became a full base kill, not a random
+hostile visit. The attacker used a compact four-creep combat group with strong
+healing, tested tower and defender response, killed local melee defenders, then
+walked the same group through the room core and destroyed the storage, spawn,
+towers, and most extensions.
 
 The current bot response is vulnerable to this pattern because it spends tower
-energy into heavy healing, does not prioritize wartime tower refueling strongly
-enough, and spawns simple melee defenders that chase into open ground.
+attack energy on targets that are quickly healed, does not prioritize wartime
+tower refueling strongly enough, and spawns simple melee defenders that chase
+into open ground.
 
 ## Observed Attack
 
@@ -35,7 +39,62 @@ Important combat ticks:
 - Around `81080068`, hostiles switched fire toward `28,43`.
 - Around `81080070`, a local defender at `28,43` was down to roughly `410/2200`.
 - By `81080080`, that defender was gone.
-- By `81080090`, no hostile creeps remained in the inspected room history window.
+- By `81080090`, no hostile creeps remained in the first inspected room history
+  window, but later history shows the group returned or reappeared inside the
+  room core before tick `81080300`.
+
+## Follow-Up Destruction Window
+
+Follow-up history reviewed:
+`https://screeps.com/a/#!/history/shard3/E58S28?t=81080400`
+
+History files inspected:
+`shard3/E58S28`, ticks `81080300` through `81080499`.
+
+By tick `81080300`, the same four-creep squad was already inside the room core:
+
+- Hostiles were around `32,32` through `35,33`, adjacent to the controller-side
+  extension and road cluster.
+- The room had already lost one tower and several extensions. The remaining
+  visible tower at `31,39` had only `6` energy.
+- `Spawn2` at `47,48` was spawning `defender-Spawn2-81080267`.
+- Two upgraders near `32,34` and `32,35` were being hit by the hostile group.
+
+The destruction sequence was:
+
+- At `81080304`, `upgrader-Spawn2-81079765` died at `32,34`.
+- At `81080305`, `defender-Spawn2-81080153` died at `35,32`.
+- At `81080310`, `upgrader-Spawn2-81079600` died at `32,35`.
+- Around `81080320` to `81080324`, extensions near `41,35`, `41,36`, `42,35`,
+  and `43,38` were destroyed.
+- Around `81080345` to `81080354`, roads around the room core were destroyed,
+  including positions near `43,37`, `39,35`, `36,32`, `35,32`, and `33,34`.
+- At `81080373`, the remaining visible tower at `31,39` was destroyed with `6`
+  energy still inside it.
+- At `81080400`, the room still had `Spawn2`, storage, three containers, two
+  ramparts, roughly thirty roads, and three extensions. No towers remained.
+- At `81080406`, `carrier-Spawn2-81079183` died around `44,36`.
+- At `81080407`, an extension at `44,34` was destroyed.
+- At `81080414`, `defender-Spawn2-81080381` died around `47,43`.
+- At `81080418`, `defender-Spawn2-81080267` died around `47,43`.
+- At `81080419`, an extension at `48,41` was destroyed.
+- By `81080430`, storage at `45,45` was down to roughly `5772` hits and the
+  spawn at `47,48` had started taking damage.
+- At `81080437`, storage at `45,45` was destroyed with about `46267` energy and
+  small mineral amounts still inside.
+- By `81080440`, only the spawn remained among the main owned structures.
+- At `81080443`, the spawn at `47,48` was destroyed with `62` energy still
+  inside.
+- By `81080450`, only containers, roads, and ramparts remained from the built
+  room infrastructure.
+- By `81080475`, the hostile group was leaving northward around `37,24` through
+  `40,21`.
+- By `81080499`, no hostile creeps were visible in the room history window.
+
+This confirms the first reviewed window was only the opening probe/drain. The
+later room loss happened after the towers were empty or gone, while melee
+defenders continued to engage a fully healed 50-part squad near the spawn and
+storage.
 
 ## Current Room State From History
 
@@ -55,12 +114,16 @@ Spawn behavior:
 - `Spawn2` was already spawning `defender-Spawn2-81079925`.
 - A later defender, `defender-Spawn2-81080039`, was queued/spawning afterward.
 
-Structures mostly survived in the inspected 100-tick window:
+Structures mostly survived in the first inspected 100-tick window:
 
 - Spawn, storage, towers, containers, and ramparts were still present.
 - The rampart at `29,42` only dropped from about `122881` to `121657` hits.
-- If most structures were destroyed, that likely happened outside this specific
-  inspected window.
+
+Follow-up history confirms most important structures were destroyed later:
+
+- The remaining visible tower was destroyed at `81080373`.
+- Storage was destroyed at `81080437`.
+- The spawn was destroyed at `81080443`.
 
 ## Assessment
 
