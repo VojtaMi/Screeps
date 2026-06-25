@@ -16,6 +16,7 @@ import { expansionManager } from "./expansionManager";
 const BASE_CARRIER_CAPACITY_PER_SOURCE = 400;
 const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
 const MAX_BASE_CARRIERS = 4;
+const MAX_CARRIERS_PER_ROOM = 5;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
 
 // Controller-container energy that marks the economy as having spare throughput.
@@ -403,6 +404,11 @@ function getDesiredCarrierCount(
     } else if (!isHaulSurplus && desiredCarriers > baseCarriers) {
       desiredCarriers -= 1;
     }
+    room.memory.desiredCarriers = desiredCarriers;
+  }
+
+  if (desiredCarriers > MAX_CARRIERS_PER_ROOM) {
+    desiredCarriers = MAX_CARRIERS_PER_ROOM;
     room.memory.desiredCarriers = desiredCarriers;
   }
 
