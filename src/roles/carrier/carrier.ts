@@ -692,6 +692,32 @@ function hasRepairerWork(room: Room): boolean {
   return hasRepairWork(room);
 }
 
+function collectAdjacentDecayingEnergy(creep: Creep): void {
+  if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) return;
+
+  const tombstone = creep.pos.findInRange(FIND_TOMBSTONES, 1, {
+    filter: (t) => t.store[RESOURCE_ENERGY] > 0,
+  })[0];
+  if (tombstone) {
+    creep.withdraw(tombstone, RESOURCE_ENERGY);
+    return;
+  }
+
+  const ruin = creep.pos.findInRange(FIND_RUINS, 1, {
+    filter: (r) => r.store[RESOURCE_ENERGY] > 0,
+  })[0];
+  if (ruin) {
+    creep.withdraw(ruin, RESOURCE_ENERGY);
+    return;
+  }
+
+  const dropped = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 1, {
+    filter: (r): r is Resource<RESOURCE_ENERGY> =>
+      r.resourceType === RESOURCE_ENERGY && r.amount > 0,
+  })[0];
+  if (dropped) creep.pickup(dropped);
+}
+
 export const carrier: Role = {
   run(creep: Creep): void {
     if (creep.store[RESOURCE_ENERGY] === 0 && collectResourceLoot(creep)) {
@@ -701,6 +727,8 @@ export const carrier: Role = {
     if (deliverResourceLoot(creep)) {
       return;
     }
+
+    collectAdjacentDecayingEnergy(creep);
 
     if (creep.memory.working && !creep.hasEnergy()) {
       creep.memory.working = false;
