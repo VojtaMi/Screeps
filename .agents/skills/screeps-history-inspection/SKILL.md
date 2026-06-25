@@ -1,6 +1,6 @@
 ---
 name: screeps-history-inspection
-description: Use when the user asks to inspect Screeps room history, raid timelines, historical room destruction, creep deaths, structure losses, tower energy, safe-mode context, hostile movement, or static room-history JSON without mutating live game state.
+description: Use when the user asks to inspect Screeps room history — including raid timelines, room destruction, creep deaths, structure losses, hostile movement, safe-mode context, energy economy over time, creep movement patterns, spawn throughput, or any question about what happened in a room during a past tick range — without mutating live game state.
 ---
 
 # Screeps History Inspection
@@ -8,8 +8,9 @@ description: Use when the user asks to inspect Screeps room history, raid timeli
 ## Overview
 
 Use this read-only workflow to analyze Screeps static room history. It is for
-questions like "what destroyed this room?", "when did this structure die?",
-"what were the hostile creeps doing?", and "was safe mode/tower energy relevant?"
+any question about what happened in a room across a tick range — defensive
+("what destroyed this room?", "what were hostile creeps doing?") or peaceful
+("when did energy dry up?", "how did carriers move?", "was spawn idle?").
 
 ## Guardrails
 
@@ -59,6 +60,10 @@ Useful options:
    - Check whether towers existed and had energy before claiming tower behavior.
    - Check controller `safe` and `safeAvailable` values before discussing safe
      mode.
+   - For energy economy questions, track `store` values on containers, storage,
+     and spawns across ticks; compare against creep counts and positions.
+   - For movement/pathing questions, use `--ticks` on specific ticks and trace
+     creep positions across the range rather than relying on summary events.
    - If windows are non-contiguous, say "returned or reappeared" rather than
      assuming exact movement through the gap.
 
