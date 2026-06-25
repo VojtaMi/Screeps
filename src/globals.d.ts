@@ -46,6 +46,7 @@ declare global {
     lastSwapCreepName?: string;
     lastSwapTick?: number;
     working?: boolean;
+    remoteOperate?: number;
   }
 
   interface RoomBuildPlanItem {

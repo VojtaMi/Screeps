@@ -241,6 +241,12 @@ function groupCreepsByRole(creeps: Creep[]): CreepsByRole {
   const creepsByRole = new Map<CreepRole, Creep[]>();
 
   for (const creep of creeps) {
+    if (
+      creep.memory.remoteOperate !== undefined &&
+      Game.time < creep.memory.remoteOperate
+    ) {
+      continue;
+    }
     const group = creepsByRole.get(creep.memory.role) ?? [];
     group.push(creep);
     creepsByRole.set(creep.memory.role, group);

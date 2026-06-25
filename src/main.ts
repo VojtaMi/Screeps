@@ -42,6 +42,14 @@ export function loop(): void {
 
   for (const name in Game.creeps) {
     const creep = Game.creeps[name];
+
+    if (creep.memory.remoteOperate !== undefined) {
+      if (Game.time < creep.memory.remoteOperate) {
+        continue;
+      }
+      delete creep.memory.remoteOperate;
+    }
+
     if (creep.handleSwapRequest()) {
       continue;
     }

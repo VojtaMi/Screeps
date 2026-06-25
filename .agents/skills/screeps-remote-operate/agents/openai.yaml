@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Remote Operate"
+  short_description: "Direct console control of live Screeps creeps"
+  default_prompt: "Use $screeps-remote-operate to take direct console control of one or more live creeps for a one-off task without deploying a code change."

@@ -35,6 +35,7 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
 0. Diagnose first when the goal is unclear.
    - If the stated goal requires understanding a symptom, unexpected behavior, or root cause before coding, run `$screeps-investigate-problem` and wait for a clear implementation target before continuing.
    - Skip this step when the goal is a concrete, already-diagnosed change.
+   - If the goal is a one-off live action or a hypothesis you want to test before committing to a code change (move a creep, try a behavior manually, validate an assumption live), consider using `$screeps-remote-operate` first before writing permanent code.
 
 1. Inspect the current state.
    - Check `git status --short`.
