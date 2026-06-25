@@ -32,6 +32,10 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
 
 ## Workflow
 
+0. Diagnose first when the goal is unclear.
+   - If the stated goal requires understanding a symptom, unexpected behavior, or root cause before coding, run `$screeps-investigate-problem` and wait for a clear implementation target before continuing.
+   - Skip this step when the goal is a concrete, already-diagnosed change.
+
 1. Inspect the current state.
    - Check `git status --short`.
    - Read relevant code and any existing user changes before editing.
@@ -61,8 +65,9 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
    - After deploy completes or the code fingerprint appears, wait long enough for Screeps to tick and load the new code.
    - Use read-only MCP tools or side-effect-free console expressions to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change.
    - If behavior depends on multiple ticks, sample more than once and compare before/after observations.
-   - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization.
+   - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization. A re-commit and re-push to fix a live mismatch caused by the same change counts as covered; a new behavioral decision does not.
 
 6. Report the result.
    - Summarize the goal, code change, local verification, publish/deploy result, and live Screeps observations.
    - Include any remaining uncertainty, such as behavior that needs more game ticks, energy availability, spawn timing, or hostile room conditions.
+   - When the change is behavioral and the diff is non-trivial, suggest running `$screeps-post-loop-cleanup` as the next step.
