@@ -154,6 +154,7 @@ export const spawnManager = {
     const desiredCarriers = getDesiredCarrierCount(
       room,
       sources,
+      carriers,
       haulableEnergy,
     );
     const needsBaseCarrierCapacity = needsMoreBaseCarrierCapacity(
@@ -384,6 +385,7 @@ function needsMoreBaseCarrierCapacity(
 function getDesiredCarrierCount(
   room: Room,
   sources: Source[],
+  carriers: Creep[],
   haulableEnergy: number,
 ): number {
   const baseCarriers = sources.length > 1 || haulableEnergy > 0 ? 2 : 1;
@@ -393,10 +395,14 @@ function getDesiredCarrierCount(
   );
 
   if (Game.time % EXTRA_CARRIER_PROBE_INTERVAL === 0) {
-    desiredCarriers =
-      haulableEnergy > sources.length * EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE
-        ? baseCarriers + 1
-        : baseCarriers;
+    const isHaulSurplus =
+      haulableEnergy >
+      sources.length * EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE;
+    if (isHaulSurplus && carriers.length >= desiredCarriers) {
+      desiredCarriers += 1;
+    } else if (!isHaulSurplus && desiredCarriers > baseCarriers) {
+      desiredCarriers -= 1;
+    }
     room.memory.desiredCarriers = desiredCarriers;
   }
 
