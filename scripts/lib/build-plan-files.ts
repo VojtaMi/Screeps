@@ -1,8 +1,17 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-export function parseBuildPlans(source) {
-  const plans = {};
+export interface BuildPlanItem {
+  x: number;
+  y: number;
+  structureType: string;
+  purpose?: string;
+}
+
+export type BuildPlansData = Record<string, { plan: BuildPlanItem[] }>;
+
+export function parseBuildPlans(source: string): BuildPlansData {
+  const plans: BuildPlansData = {};
   const roomBlockPattern =
     /"?([WE]\d+[NS]\d+)"?\s*:\s*{\s*"?plan"?\s*:\s*\[([\s\S]*?)\]\s*,?\s*}/g;
   const defaultPlansIndex = source.indexOf("export const DEFAULT_BUILD_PLANS");
@@ -16,7 +25,7 @@ export function parseBuildPlans(source) {
 
   while ((roomMatch = roomBlockPattern.exec(planText))) {
     const [, roomName, itemsText] = roomMatch;
-    const items = [];
+    const items: BuildPlanItem[] = [];
     const itemPattern = /\{([^{}]+)\}/g;
     let itemMatch;
 
@@ -44,12 +53,12 @@ export function parseBuildPlans(source) {
   return plans;
 }
 
-export function readBuildPlans(root) {
+export function readBuildPlans(root: string): BuildPlansData {
   const source = readFileSync(path.join(root, "src", "buildPlans.ts"), "utf8");
   return parseBuildPlans(source);
 }
 
-export function loadTerrain(root, roomName) {
+export function loadTerrain(root: string, roomName: string): string {
   const terrainPath = path.join(
     root,
     "tools",
@@ -59,7 +68,7 @@ export function loadTerrain(root, roomName) {
   );
 
   try {
-    return JSON.parse(readFileSync(terrainPath, "utf8")).terrain ?? "";
+    return (JSON.parse(readFileSync(terrainPath, "utf8")) as { terrain?: string }).terrain ?? "";
   } catch {
     return "";
   }

@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const DEFAULT_HOST = "https://screeps.com";
 const DEFAULT_EVENTS = [
   "summary",
@@ -30,9 +28,123 @@ const OWNED_STRUCTURE_TYPES = new Set([
   "tower",
 ]);
 
+interface Args {
+  shard: string;
+  host: string;
+  events: string[];
+  every: number;
+  ticks: number[];
+  json: boolean;
+  lookahead: number;
+  help?: boolean;
+  room?: string;
+  from?: number;
+  to?: number;
+  owner?: string;
+}
+
+type BodyPart = string | { type: string; hits?: number };
+
+interface BaseHistoryObject {
+  _id?: string;
+  type: string;
+  x: number;
+  y: number;
+  user?: string;
+}
+
+interface RuinObject extends BaseHistoryObject {
+  type: "ruin";
+  destroyTime?: number;
+  structure?: { type: string; user?: string };
+  store?: Record<string, number>;
+}
+
+interface TombstoneObject extends BaseHistoryObject {
+  type: "tombstone";
+  deathTime?: number;
+  creepName?: string;
+  creepTicksToLive?: number;
+  creepBody?: BodyPart[];
+  store?: Record<string, number>;
+}
+
+interface CreepObject extends BaseHistoryObject {
+  type: "creep";
+  name?: string;
+  user?: string;
+  hits?: number;
+  hitsMax?: number;
+  body?: BodyPart[];
+  actionLog?: Record<string, unknown>;
+}
+
+interface StorageObject extends BaseHistoryObject {
+  user?: string;
+  hits?: number;
+  store?: Record<string, number>;
+}
+
+interface TowerObject extends BaseHistoryObject {
+  type: "tower";
+  user?: string;
+  hits?: number;
+  store?: Record<string, number>;
+}
+
+interface SpawnObject extends BaseHistoryObject {
+  type: "spawn";
+  user?: string;
+  hits?: number;
+  store?: Record<string, number>;
+  spawning?: { name: string };
+}
+
+interface ControllerObject extends BaseHistoryObject {
+  type: "controller";
+  user?: string;
+  level?: number;
+  safeMode?: number;
+  safeModeAvailable?: number;
+}
+
+type HistoryObject =
+  | RuinObject
+  | TombstoneObject
+  | CreepObject
+  | TowerObject
+  | SpawnObject
+  | ControllerObject
+  | StorageObject
+  | BaseHistoryObject;
+
+type RoomState = Record<string, Record<string, unknown>>;
+
+interface StateSummary {
+  tick: number;
+  structures: string;
+  controller: string;
+  storage: string;
+  towers: string[];
+  spawns: string[];
+}
+
+type TimelineItem =
+  | ({ type: "summary" } & StateSummary)
+  | { type: "event"; tick: number; text: string };
+
+interface HistoryReport {
+  shard: string;
+  room: string;
+  from: number;
+  to: number;
+  owner: string | undefined;
+  timeline: TimelineItem[];
+}
+
 function printUsage() {
   console.log(`Usage:
-  node scripts/inspect-room-history.mjs --room E58S28 --from 81080300 --to 81080499 [options]
+  npm run history:inspect -- --room E58S28 --from 81080300 --to 81080499 [options]
 
 Options:
   --shard <name>          Shard name, default shard3
@@ -46,8 +158,8 @@ Options:
   --help                  Show this message`);
 }
 
-function parseArgs(argv) {
-  const args = {
+function parseArgs(argv: string[]): Args {
+  const args: Args = {
     shard: "shard3",
     host: DEFAULT_HOST,
     events: DEFAULT_EVENTS,
@@ -100,7 +212,7 @@ function parseArgs(argv) {
   if (!args.room) throw new Error("--room is required");
   if (!Number.isInteger(args.from)) throw new Error("--from tick is required");
   if (!Number.isInteger(args.to)) throw new Error("--to tick is required");
-  if (args.from > args.to) throw new Error("--from must be <= --to");
+  if ((args.from ?? 0) > (args.to ?? 0)) throw new Error("--from must be <= --to");
   if (!Number.isInteger(args.every) || args.every < 0) {
     throw new Error("--every must be a non-negative integer");
   }
@@ -115,61 +227,66 @@ function parseArgs(argv) {
   return args;
 }
 
-function historyBase(tick) {
+function historyBase(tick: number): number {
   return Math.floor(tick / 100) * 100;
 }
 
-function isNumericKey(key) {
+function isNumericKey(key: string): boolean {
   return String(Number(key)) === key;
 }
 
-function clone(value) {
+function clone(value: unknown): unknown {
   if (Array.isArray(value)) return value.map((item) => clone(item));
-  if (value && typeof value === "object") {
+  if (value !== null && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, clone(item)]),
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, clone(item)]),
     );
   }
   return value;
 }
 
-function mergeValue(current, patch) {
+function mergeValue(current: unknown, patch: unknown): unknown {
   if (patch === null || typeof patch !== "object") return patch;
 
   if (Array.isArray(patch)) return patch.map((item) => clone(item));
 
-  if (Array.isArray(current) && Object.keys(patch).every(isNumericKey)) {
+  const patchObj = patch as Record<string, unknown>;
+
+  if (Array.isArray(current) && Object.keys(patchObj).every(isNumericKey)) {
     const next = current.map((item) => clone(item));
-    for (const [key, value] of Object.entries(patch)) {
+    for (const [key, value] of Object.entries(patchObj)) {
       const index = Number(key);
       next[index] = mergeValue(next[index], value);
     }
     return next;
   }
 
-  const next =
-    current && typeof current === "object" && !Array.isArray(current)
-      ? clone(current)
+  const next: Record<string, unknown> =
+    current !== null && typeof current === "object" && !Array.isArray(current)
+      ? (clone(current) as Record<string, unknown>)
       : {};
 
-  for (const [key, value] of Object.entries(patch)) {
+  for (const [key, value] of Object.entries(patchObj)) {
     next[key] = mergeValue(next[key], value);
   }
 
   return next;
 }
 
-function applyTickPatch(state, patch) {
+function applyTickPatch(state: RoomState, patch: Record<string, unknown>): void {
   for (const [id, objectPatch] of Object.entries(patch)) {
     if (objectPatch === null) {
       delete state[id];
     } else {
-      state[id] = mergeValue(state[id], objectPatch);
+      state[id] = mergeValue(state[id], objectPatch) as Record<string, unknown>;
     }
   }
 }
 
-async function fetchHistoryWindow(args, base) {
+async function fetchHistoryWindow(
+  args: Args,
+  base: number,
+): Promise<{ ticks: Record<string, Record<string, unknown>> }> {
   const url = `${args.host}/room-history/${args.shard}/${args.room}/${base}.json`;
   const response = await fetch(url, {
     headers: { "accept-encoding": "gzip, deflate, br" },
@@ -179,13 +296,17 @@ async function fetchHistoryWindow(args, base) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<{ ticks: Record<string, Record<string, unknown>> }>;
 }
 
-function bodySummary(body) {
+function asHistoryObject(raw: Record<string, unknown>): HistoryObject {
+  return raw as unknown as HistoryObject;
+}
+
+function bodySummary(body: BodyPart[] | undefined): string {
   if (!Array.isArray(body)) return "unknown body";
 
-  const parts = new Map();
+  const parts = new Map<string, number>();
   let liveParts = 0;
   for (const part of body) {
     const type = typeof part === "string" ? part : part.type;
@@ -201,30 +322,33 @@ function bodySummary(body) {
   return `${summary}; live ${liveParts}/${body.length}`;
 }
 
-function countActiveParts(body, type) {
+function countActiveParts(body: BodyPart[] | undefined, type: string): number {
   if (!Array.isArray(body)) return 0;
-  return body.filter((part) => part.type === type && (part.hits ?? 100) > 0)
-    .length;
+  return body.filter(
+    (part): part is { type: string; hits?: number } =>
+      typeof part !== "string" && part.type === type && (part.hits ?? 100) > 0,
+  ).length;
 }
 
-function shortStore(store) {
+function shortStore(store: Record<string, number> | undefined): string {
   if (!store || Object.keys(store).length === 0) return "{}";
   return `{${Object.entries(store)
     .map(([resource, amount]) => `${resource}:${amount}`)
     .join(",")}}`;
 }
 
-function position(object) {
+function position(object: BaseHistoryObject): string {
   return `${object.x},${object.y}`;
 }
 
-function structureCounts(objects, owner) {
-  const counts = {};
+function structureCounts(objects: HistoryObject[], owner: string | undefined): string {
+  const counts: Record<string, number> = {};
   for (const object of objects) {
     if (!OWNED_STRUCTURE_TYPES.has(object.type)) continue;
+    const obj = object as StorageObject;
     if (
-      object.user &&
-      object.user !== owner &&
+      obj.user &&
+      obj.user !== owner &&
       object.type !== "road" &&
       object.type !== "container"
     ) {
@@ -238,25 +362,26 @@ function structureCounts(objects, owner) {
     .join(" ");
 }
 
-function findOwner(objects, explicitOwner) {
+function findOwner(objects: HistoryObject[], explicitOwner: string | undefined): string | undefined {
   if (explicitOwner) return explicitOwner;
-  const controller = objects.find((object) => object.type === "controller");
+  const controller = objects.find((obj): obj is ControllerObject => obj.type === "controller");
   return controller?.user;
 }
 
-function summarizeState(tick, objects, owner) {
-  const controller = objects.find((object) => object.type === "controller");
+function summarizeState(tick: number, objects: HistoryObject[], owner: string | undefined): StateSummary {
+  const controller = objects.find((obj): obj is ControllerObject => obj.type === "controller");
   const storage = objects.find(
-    (object) => object.type === "storage" && (!owner || object.user === owner),
-  );
+    (obj): obj is StorageObject =>
+      obj.type === "storage" && (!owner || (obj as StorageObject).user === owner),
+  ) as (StorageObject & { store?: Record<string, number> }) | undefined;
   const towers = objects
-    .filter((object) => object.type === "tower" && (!owner || object.user === owner))
+    .filter((obj): obj is TowerObject => obj.type === "tower" && (!owner || obj.user === owner))
     .map(
       (tower) =>
         `tower@${position(tower)} e=${tower.store?.energy ?? 0} hits=${tower.hits}`,
     );
   const spawns = objects
-    .filter((object) => object.type === "spawn" && (!owner || object.user === owner))
+    .filter((obj): obj is SpawnObject => obj.type === "spawn" && (!owner || obj.user === owner))
     .map(
       (spawn) =>
         `spawn@${position(spawn)} e=${spawn.store?.energy ?? 0} hits=${spawn.hits} spawning=${spawn.spawning?.name ?? "false"}`,
@@ -276,46 +401,57 @@ function summarizeState(tick, objects, owner) {
   };
 }
 
-function eventLines(tick, state, patch, events, emitted, from, to) {
-  const objects = Object.values(state);
-  const lines = [];
+function eventLines(
+  tick: number,
+  state: RoomState,
+  previous: RoomState,
+  patch: Record<string, unknown>,
+  events: Set<string>,
+  emitted: Set<string>,
+  from: number,
+  to: number,
+): string[] {
+  const objects = Object.values(state).map(asHistoryObject);
+  const lines: string[] = [];
 
   if (events.has("ruins")) {
     for (const object of objects) {
-      const key = `ruin:${object._id}`;
+      if (object.type !== "ruin") continue;
+      const ruin = object as RuinObject;
+      const key = `ruin:${ruin._id}`;
       if (
-        object.type !== "ruin" ||
-        !object.destroyTime ||
-        object.destroyTime < from ||
-        object.destroyTime > to ||
-        object.destroyTime > tick ||
+        !ruin.destroyTime ||
+        ruin.destroyTime < from ||
+        ruin.destroyTime > to ||
+        ruin.destroyTime > tick ||
         emitted.has(key)
       ) {
         continue;
       }
       emitted.add(key);
       lines.push(
-        `${object.destroyTime} ruin ${object.structure?.type ?? "structure"}@${position(object)} observed=${tick} store=${shortStore(object.store)}`,
+        `${ruin.destroyTime} ruin ${ruin.structure?.type ?? "structure"}@${position(ruin)} observed=${tick} store=${shortStore(ruin.store)}`,
       );
     }
   }
 
   if (events.has("deaths")) {
     for (const object of objects) {
-      const key = `death:${object._id}`;
+      if (object.type !== "tombstone") continue;
+      const tombstone = object as TombstoneObject;
+      const key = `death:${tombstone._id}`;
       if (
-        object.type !== "tombstone" ||
-        !object.deathTime ||
-        object.deathTime < from ||
-        object.deathTime > to ||
-        object.deathTime > tick ||
+        !tombstone.deathTime ||
+        tombstone.deathTime < from ||
+        tombstone.deathTime > to ||
+        tombstone.deathTime > tick ||
         emitted.has(key)
       ) {
         continue;
       }
       emitted.add(key);
       lines.push(
-        `${object.deathTime} death ${object.creepName}@${position(object)} observed=${tick} ttl=${object.creepTicksToLive ?? "?"} body=${object.creepBody?.join(",") ?? "?"} store=${shortStore(object.store)}`,
+        `${tombstone.deathTime} death ${tombstone.creepName}@${position(tombstone)} observed=${tick} ttl=${tombstone.creepTicksToLive ?? "?"} body=${tombstone.creepBody?.join(",") ?? "?"} store=${shortStore(tombstone.store)}`,
       );
     }
   }
@@ -323,20 +459,26 @@ function eventLines(tick, state, patch, events, emitted, from, to) {
   if (events.has("structures")) {
     for (const [id, objectPatch] of Object.entries(patch)) {
       if (objectPatch !== null) continue;
-      const previous = state.__previous?.[id];
-      if (!previous || !OWNED_STRUCTURE_TYPES.has(previous.type)) continue;
-      lines.push(`${tick} gone ${previous.type}@${position(previous)}`);
+      const prev = previous[id];
+      if (!prev || !OWNED_STRUCTURE_TYPES.has(prev.type as string)) continue;
+      const prevObj = asHistoryObject(prev);
+      lines.push(`${tick} gone ${prevObj.type}@${position(prevObj)}`);
     }
   }
 
   return lines;
 }
 
-function creepLines(tick, objects, owner, kind) {
+function creepLines(
+  tick: number,
+  objects: HistoryObject[],
+  owner: string | undefined,
+  kind: "hostiles" | "friendly",
+): string[] {
   const hostile = kind === "hostiles";
-  const creeps = objects.filter((object) => {
-    if (object.type !== "creep") return false;
-    return hostile ? object.user !== owner : object.user === owner;
+  const creeps = objects.filter((obj): obj is CreepObject => {
+    if (obj.type !== "creep") return false;
+    return hostile ? (obj as CreepObject).user !== owner : (obj as CreepObject).user === owner;
   });
 
   if (creeps.length === 0) return [];
@@ -348,7 +490,7 @@ function creepLines(tick, objects, owner, kind) {
       ["ranged", countActiveParts(creep.body, "ranged_attack")],
       ["heal", countActiveParts(creep.body, "heal")],
     ]
-      .filter(([, count]) => count > 0)
+      .filter(([, count]) => (count as number) > 0)
       .map(([label, count]) => `${label}:${count}`)
       .join(" ");
 
@@ -356,7 +498,7 @@ function creepLines(tick, objects, owner, kind) {
   });
 }
 
-function renderText(report) {
+function renderText(report: HistoryReport): string {
   const lines = [
     `History inspection ${report.shard}/${report.room} ticks ${report.from}-${report.to}`,
     `Owner: ${report.owner ?? "unknown"}`,
@@ -386,18 +528,22 @@ async function main() {
     return;
   }
 
+  const from = args.from!;
+  const to = args.to!;
+  const room = args.room!;
+
   const events = new Set(args.events);
   const summaryTicks = new Set(args.ticks);
-  const bases = [];
-  const readThrough = args.to + args.lookahead;
-  for (let base = historyBase(args.from); base <= historyBase(readThrough); base += 100) {
+  const bases: number[] = [];
+  const readThrough = to + args.lookahead;
+  for (let base = historyBase(from); base <= historyBase(readThrough); base += 100) {
     bases.push(base);
   }
 
-  const state = {};
+  const state: RoomState = {};
   let owner = args.owner;
-  const timeline = [];
-  const emitted = new Set();
+  const timeline: TimelineItem[] = [];
+  const emitted = new Set<string>();
 
   for (const base of bases) {
     const window = await fetchHistoryWindow(args, base);
@@ -407,37 +553,32 @@ async function main() {
       const tick = Number(tickText);
       if (tick > readThrough) break;
 
-      const previous = clone(state);
+      const previous = clone(state) as RoomState;
       applyTickPatch(state, patch);
-      state.__previous = previous;
 
-      if (tick < args.from) {
-        delete state.__previous;
+      if (tick < from) {
         continue;
       }
 
-      if (tick > args.to && !events.has("ruins") && !events.has("deaths")) {
-        delete state.__previous;
+      if (tick > to && !events.has("ruins") && !events.has("deaths")) {
         continue;
       }
 
-      const objects = Object.values(state).filter(
-        (object) => object && object !== state.__previous,
-      );
+      const objects = Object.values(state).map(asHistoryObject);
       owner = findOwner(objects, owner);
 
       if (
         events.has("summary") &&
-        tick <= args.to &&
-        (tick === args.from ||
-          tick === args.to ||
+        tick <= to &&
+        (tick === from ||
+          tick === to ||
           summaryTicks.has(tick) ||
-          (args.every > 0 && (tick - args.from) % args.every === 0))
+          (args.every > 0 && (tick - from) % args.every === 0))
       ) {
         timeline.push({ type: "summary", ...summarizeState(tick, objects, owner) });
       }
 
-      for (const text of eventLines(tick, state, patch, events, emitted, args.from, args.to)) {
+      for (const text of eventLines(tick, state, previous, patch, events, emitted, from, to)) {
         timeline.push({ type: "event", tick, text });
       }
 
@@ -452,16 +593,14 @@ async function main() {
           timeline.push({ type: "event", tick, text });
         }
       }
-
-      delete state.__previous;
     }
   }
 
-  const report = {
+  const report: HistoryReport = {
     shard: args.shard,
-    room: args.room,
-    from: args.from,
-    to: args.to,
+    room,
+    from,
+    to,
     owner,
     timeline,
   };
@@ -473,7 +612,8 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
+main().catch((error: unknown) => {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error(msg);
   process.exitCode = 1;
 });

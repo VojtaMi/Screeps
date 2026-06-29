@@ -1,35 +1,125 @@
-#!/usr/bin/env node
-
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { inspectTile } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
-import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.mjs";
+import { inspectTile, type TileInspection } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
+import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(__filename), "..");
 
-function usage() {
-  console.log(`Usage:
-  node scripts/inspect-tile.mjs <room> <x> <y> [--json] [--no-live] [--shard shard3]
-
-Examples:
-  node scripts/inspect-tile.mjs E59S29 37 5
-  node scripts/inspect-tile.mjs E59S29 13 9 --json
-  node scripts/inspect-tile.mjs E59S29 37 5 --no-live`);
+interface Options {
+  json: boolean;
+  live: boolean;
+  shard: string;
+  help?: boolean;
+  roomName?: string;
+  x?: number;
+  y?: number;
+  valid?: boolean;
 }
 
-function parseArgs(args) {
-  const positional = [];
-  const options = {
+interface LiveCreepSummary {
+  name: string | undefined;
+  store: Record<string, number> | undefined;
+  bodyParts: number | undefined;
+  hits: number | undefined;
+  hitsMax: number | undefined;
+}
+
+interface LiveConstructionSite {
+  structureType: string;
+  progress: number | undefined;
+  progressTotal: number | undefined;
+}
+
+interface LiveLandmark {
+  type: string;
+  id: string | undefined;
+  level: number | undefined;
+  mineralType: string | undefined;
+  depositType: string | undefined;
+  energy: number | undefined;
+  energyCapacity: number | undefined;
+}
+
+interface LiveResource {
+  type: string;
+  resourceType: string | undefined;
+  amount: number | undefined;
+}
+
+interface LiveStructure {
+  type: string;
+  name: string | undefined;
+  hits: number | undefined;
+  hitsMax: number | undefined;
+  store: Record<string, number> | undefined;
+}
+
+interface LiveOther {
+  type: string;
+  id: string | undefined;
+}
+
+interface LiveSummary {
+  structures: LiveStructure[];
+  constructionSites: LiveConstructionSite[];
+  creeps: LiveCreepSummary[];
+  landmarks: LiveLandmark[];
+  resources: LiveResource[];
+  other: LiveOther[];
+}
+
+interface RawRoomObject {
+  type: string;
+  x: number;
+  y: number;
+  _id?: string;
+  name?: string;
+  hits?: number;
+  hitsMax?: number;
+  store?: Record<string, number>;
+  energy?: number;
+  energyCapacity?: number;
+  level?: number;
+  mineralType?: string;
+  depositType?: string;
+  structureType?: string;
+  progress?: number;
+  progressTotal?: number;
+  amount?: number;
+  resourceType?: string;
+  body?: unknown[];
+  spawning?: { name: string };
+  user?: string;
+}
+
+type TileReport = TileInspection & {
+  shard: string;
+  live: LiveSummary | null;
+};
+
+function usage() {
+  console.log(`Usage:
+  npm run inspect:tile -- <room> <x> <y> [--json] [--no-live] [--shard shard3]
+
+Examples:
+  npm run inspect:tile -- E59S29 37 5
+  npm run inspect:tile -- E59S29 13 9 --json
+  npm run inspect:tile -- E59S29 37 5 --no-live`);
+}
+
+function parseArgs(args: string[]): Options {
+  const positional: string[] = [];
+  const options: Options = {
     json: false,
     live: true,
-    shard: process.env.SCREEPS_SHARD ?? "shard3",
+    shard: process.env["SCREEPS_SHARD"] ?? "shard3",
   };
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === "--help" || arg === "-h") {
-      return { help: true };
+      return { ...options, help: true };
     }
     if (arg === "--json") {
       options.json = true;
@@ -40,7 +130,7 @@ function parseArgs(args) {
       continue;
     }
     if (arg === "--shard") {
-      options.shard = args[i + 1];
+      options.shard = args[i + 1] ?? options.shard;
       i += 1;
       continue;
     }
@@ -57,7 +147,7 @@ function parseArgs(args) {
   };
 }
 
-async function fetchRoomObjects(roomName, shard) {
+async function fetchRoomObjects(roomName: string, shard: string): Promise<RawRoomObject[]> {
   const url = new URL("https://screeps.com/api/game/room-objects");
   url.searchParams.set("room", roomName);
   url.searchParams.set("shard", shard);
@@ -70,24 +160,24 @@ async function fetchRoomObjects(roomName, shard) {
     );
   }
 
-  const result = JSON.parse(responseText);
+  const result = JSON.parse(responseText) as { ok?: number; objects?: unknown[] };
   if (result.ok !== 1 || !Array.isArray(result.objects)) {
     throw new Error(`Screeps room object fetch failed: ${responseText}`);
   }
 
-  return result.objects;
+  return result.objects as RawRoomObject[];
 }
 
-function pickStore(object) {
+function pickStore(object: RawRoomObject): Record<string, number> | undefined {
   if (!object.store || Object.keys(object.store).length === 0) {
     return undefined;
   }
   return object.store;
 }
 
-function summarizeLiveObjects(objects, x, y) {
+function summarizeLiveObjects(objects: RawRoomObject[], x: number, y: number): LiveSummary {
   const tileObjects = objects.filter((object) => object.x === x && object.y === y);
-  const summary = {
+  const summary: LiveSummary = {
     structures: [],
     constructionSites: [],
     creeps: [],
@@ -110,7 +200,7 @@ function summarizeLiveObjects(objects, x, y) {
 
     if (object.type === "constructionSite") {
       summary.constructionSites.push({
-        structureType: object.structureType,
+        structureType: object.structureType ?? object.type,
         progress: object.progress,
         progressTotal: object.progressTotal,
       });
@@ -159,21 +249,37 @@ function summarizeLiveObjects(objects, x, y) {
   return summary;
 }
 
-function liveLandmarks(objects) {
+function liveLandmarks(objects: RawRoomObject[]) {
   return objects
     .filter((object) =>
       ["controller", "source", "mineral", "deposit"].includes(object.type),
     )
     .map((object) => ({
       id: object._id ?? `${object.type}-${object.x}-${object.y}`,
-      type: object.type,
+      type: object.type as "controller" | "source" | "mineral" | "deposit",
       x: object.x,
       y: object.y,
       label: object.mineralType ?? object.depositType,
     }));
 }
 
-function buildTileReport({ roomName, x, y, shard, plans, terrain, liveObjects }) {
+function buildTileReport({
+  roomName,
+  x,
+  y,
+  shard,
+  plans,
+  terrain,
+  liveObjects,
+}: {
+  roomName: string;
+  x: number;
+  y: number;
+  shard: string;
+  plans: ReturnType<typeof readBuildPlans>;
+  terrain: string;
+  liveObjects: RawRoomObject[] | null;
+}): TileReport {
   const plan = plans[roomName]?.plan ?? [];
   const inspection = inspectTile({
     roomName,
@@ -192,7 +298,7 @@ function buildTileReport({ roomName, x, y, shard, plans, terrain, liveObjects })
   };
 }
 
-function printSection(label, rows, render) {
+function printSection<T>(label: string, rows: T[], render: (row: T) => string) {
   if (rows.length === 0) {
     console.log(`${label}: none`);
     return;
@@ -204,7 +310,7 @@ function printSection(label, rows, render) {
   }
 }
 
-function printReport(report, liveError) {
+function printReport(report: TileReport, liveError: Error | null) {
   console.log(`${report.room} ${report.x},${report.y} (${report.shard})`);
   console.log(`terrain: ${report.terrain}`);
   console.log(`edge: ${report.isEdge ? "yes" : "no"}`);
@@ -262,7 +368,7 @@ function printReport(report, liveError) {
   printSection("other", report.live.other, (item) => item.type);
 }
 
-function landmarkLabel(type) {
+function landmarkLabel(type: string): string {
   if (type === "controller") return "room controller";
   if (type === "source") return "energy source";
   if (type === "mineral") return "mineral deposit";
@@ -288,29 +394,33 @@ async function main() {
     return;
   }
 
+  const roomName = options.roomName!;
+  const x = options.x!;
+  const y = options.y!;
+
   const plans = readBuildPlans(root);
-  if (!plans[options.roomName]) {
-    console.error(`Unknown build plan room: ${options.roomName}`);
+  if (!plans[roomName]) {
+    console.error(`Unknown build plan room: ${roomName}`);
     process.exitCode = 2;
     return;
   }
 
-  const terrain = loadTerrain(root, options.roomName);
-  let liveObjects = null;
-  let liveError = null;
+  const terrain = loadTerrain(root, roomName);
+  let liveObjects: RawRoomObject[] | null = null;
+  let liveError: Error | null = null;
 
   if (options.live) {
     try {
-      liveObjects = await fetchRoomObjects(options.roomName, options.shard);
-    } catch (error) {
-      liveError = error;
+      liveObjects = await fetchRoomObjects(roomName, options.shard);
+    } catch (err) {
+      liveError = err instanceof Error ? err : new Error(String(err));
     }
   }
 
   const report = buildTileReport({
-    roomName: options.roomName,
-    x: options.x,
-    y: options.y,
+    roomName,
+    x,
+    y,
     shard: options.shard,
     plans,
     terrain,

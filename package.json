@@ -14,13 +14,13 @@
     "editor:build": "cd tools/build-plan-editor && npm run build",
     "editor:preview": "cd tools/build-plan-editor && npm run preview",
     "ci": "npm run typecheck && biome ci .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "build": "npm run typecheck && esbuild src/main.ts --bundle --platform=node --target=es2019 --format=cjs --outfile=dist/main.js",
     "deploy:screeps": "node scripts/deploy-screeps.mjs",
-    "history:inspect": "node scripts/inspect-room-history.mjs",
-    "history:attacks": "node scripts/find-attack-windows.mjs",
+    "history:inspect": "tsx scripts/inspect-room-history.ts",
+    "history:attacks": "tsx scripts/find-attack-windows.ts",
     "check:build-plan": "node scripts/check-build-plan-terrain.mjs",
-    "inspect:tile": "node scripts/inspect-tile.mjs",
+    "inspect:tile": "tsx scripts/inspect-tile.ts",
     "skills:sync:claude": "node scripts/sync-claude-skills.mjs",
     "skills:check:claude": "node scripts/sync-claude-skills.mjs --check",
     "code:fingerprint": "node scripts/screeps-code-fingerprint.mjs",
@@ -32,6 +32,7 @@
     "@types/screeps": "^3.3.13",
     "esbuild": "^0.27.0",
     "husky": "^9.1.7",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
 }
