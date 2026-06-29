@@ -2,6 +2,7 @@
 node_modules/
 
 dist/
+*.tsbuildinfo
 tools/artifacts/
 .playwright-mcp/
 .screeps-mcp/

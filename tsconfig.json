@@ -12,5 +12,6 @@
     "skipLibCheck": true,
     "types": ["screeps"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "./tsconfig.scripts.json" }]
 }
