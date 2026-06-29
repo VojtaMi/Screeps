@@ -1,4 +1,5 @@
 import { BuildPlanItem, BuildPlansData, EditorMode } from "../types";
+import type { TileInspection } from "../plan/validationCore.mjs";
 import { StructureSelector } from "./StructureSelector";
 import { Legend } from "./Legend";
 import { SelectedItemPanel } from "./SelectedItemPanel";
@@ -21,6 +22,8 @@ interface SidebarProps {
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
   selectedItemIndex: number | null;
+  selectedTileInspection: TileInspection | null;
+  onSelectItem: (index: number) => void;
   validationErrors: ValidationError[];
   terrain: string;
   plans: BuildPlansData;
@@ -41,6 +44,8 @@ export function Sidebar({
   editorMode,
   setEditorMode,
   selectedItemIndex,
+  selectedTileInspection,
+  onSelectItem,
   validationErrors,
   terrain,
   plans,
@@ -108,10 +113,12 @@ export function Sidebar({
 
       <Legend plan={plan} currentStep={currentStep} />
 
-      {selectedItemIndex !== null && (
+      {selectedTileInspection !== null && (
         <SelectedItemPanel
-          selectedItem={plan[selectedItemIndex]}
-          onRemove={() => deletePlanItem(selectedItemIndex)}
+          tile={selectedTileInspection}
+          selectedItemIndex={selectedItemIndex}
+          onSelectItem={onSelectItem}
+          onRemove={deletePlanItem}
         />
       )}
 

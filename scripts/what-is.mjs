@@ -3,9 +3,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  getTerrainAt,
-  isRoomEdge,
-  validateRoomPlan,
+  inspectTile,
 } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
 import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.mjs";
 
@@ -59,16 +57,6 @@ function parseArgs(args) {
     y: Number(rawY),
     valid: positional.length === 3,
   };
-}
-
-function terrainName(code) {
-  if (code & 1) {
-    return "wall";
-  }
-  if (code & 2) {
-    return "swamp";
-  }
-  return "plain";
 }
 
 async function fetchRoomObjects(roomName, shard) {
@@ -174,25 +162,18 @@ function summarizeLiveObjects(objects, x, y) {
 
 function buildTileReport({ roomName, x, y, shard, plans, terrain, liveObjects }) {
   const plan = plans[roomName]?.plan ?? [];
-  const terrainCode = getTerrainAt(terrain, x, y);
-  const planned = plan
-    .map((item, step) => ({ step, ...item }))
-    .filter((item) => item.x === x && item.y === y);
-  const validation = validateRoomPlan(plan, terrain).filter((error) => {
-    const item = plan[error.step];
-    return item?.x === x && item?.y === y;
+  const inspection = inspectTile({
+    roomName,
+    x,
+    y,
+    plan,
+    terrain,
+    currentStep: plan.length,
   });
 
   return {
-    room: roomName,
+    ...inspection,
     shard,
-    x,
-    y,
-    terrain: terrain ? terrainName(terrainCode) : "unknown",
-    terrainCode: terrain ? terrainCode : null,
-    isEdge: isRoomEdge(x, y),
-    planned,
-    validation,
     live: liveObjects ? summarizeLiveObjects(liveObjects, x, y) : null,
   };
 }

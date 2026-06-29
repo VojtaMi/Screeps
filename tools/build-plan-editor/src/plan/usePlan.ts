@@ -2,12 +2,9 @@ import { useEffect, useState } from "react";
 import { BuildPlansData } from "../types";
 import { loadPlans as loadPlansAPI } from "./api";
 
-interface TilePickerState {
+interface SelectedTile {
   x: number;
   y: number;
-  left: number;
-  top: number;
-  itemIndexes: number[];
 }
 
 export function usePlan() {
@@ -17,7 +14,7 @@ export function usePlan() {
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
-  const [tilePicker, setTilePicker] = useState<TilePickerState | null>(null);
+  const [selectedTile, setSelectedTile] = useState<SelectedTile | null>(null);
 
   useEffect(() => {
     loadInitialPlans();
@@ -46,7 +43,7 @@ export function usePlan() {
 
   function clearTransientSelection() {
     setSelectedItemIndex(null);
-    setTilePicker(null);
+    setSelectedTile(null);
   }
 
   function clampStep(nextPlans: BuildPlansData) {
@@ -112,8 +109,8 @@ export function usePlan() {
     futurePlans,
     selectedItemIndex,
     setSelectedItemIndex,
-    tilePicker,
-    setTilePicker,
+    selectedTile,
+    setSelectedTile,
     commitPlans,
     undoPlans,
     redoPlans,

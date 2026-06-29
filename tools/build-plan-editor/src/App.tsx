@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
 import { endStepForRcl, planMaxRcl } from "./rcl";
+import { inspectTile, type TileInspection } from "./plan/validationCore.mjs";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
 import { useLandmarks } from "./terrain/useLandmarks";
@@ -27,8 +28,8 @@ export default function App() {
     futurePlans,
     selectedItemIndex,
     setSelectedItemIndex,
-    tilePicker,
-    setTilePicker,
+    selectedTile,
+    setSelectedTile,
     commitPlans,
     undoPlans,
     redoPlans,
@@ -62,9 +63,23 @@ export default function App() {
     setSelectedRcl(planMaxRcl(plans[selectedRoom]?.plan ?? []));
   }, [selectedRoom]);
 
-  useKeyboardShortcuts(undoPlans, redoPlans, () => setTilePicker(null));
+  useKeyboardShortcuts(undoPlans, redoPlans, () => {
+    setSelectedItemIndex(null);
+    setSelectedTile(null);
+  });
 
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
+  const selectedTileInspection: TileInspection | null =
+    selectedRoom && selectedTile
+      ? inspectTile({
+          roomName: selectedRoom,
+          x: selectedTile.x,
+          y: selectedTile.y,
+          plan,
+          terrain,
+          currentStep,
+        })
+      : null;
 
   function changeRcl(rcl: number) {
     setSelectedRcl(rcl);
@@ -106,8 +121,8 @@ export default function App() {
           setCurrentStep={setCurrentStep}
           selectedItemIndex={selectedItemIndex}
           setSelectedItemIndex={setSelectedItemIndex}
-          tilePicker={tilePicker}
-          setTilePicker={setTilePicker}
+          selectedTile={selectedTile}
+          setSelectedTile={setSelectedTile}
           editorMode={editorMode}
           selectedStructureType={selectedStructureType}
           showLandmarks={showLandmarks}
@@ -127,9 +142,10 @@ export default function App() {
           editorMode={editorMode}
           setEditorMode={(mode) => {
             setEditorMode(mode);
-            setTilePicker(null);
           }}
           selectedItemIndex={selectedItemIndex}
+          selectedTileInspection={selectedTileInspection}
+          onSelectItem={setSelectedItemIndex}
           validationErrors={validationErrors}
           terrain={terrain}
           plans={plans}

@@ -10,6 +10,22 @@ export interface ValidationError {
   message: string;
 }
 
+export interface TileInspection {
+  room: string;
+  x: number;
+  y: number;
+  terrain: "plain" | "swamp" | "wall" | "unknown";
+  terrainCode: number | null;
+  isEdge: boolean;
+  planned: Array<
+    BuildPlanItem & {
+      step: number;
+      state: "past" | "current" | "future";
+    }
+  >;
+  validation: ValidationError[];
+}
+
 export function getTerrainAt(terrain: string, x: number, y: number): number;
 export function isNaturalWall(
   terrain: string,
@@ -27,3 +43,11 @@ export function validateBuildPlans(
   plans: BuildPlansData,
   terrains?: Record<string, string>,
 ): ValidationError[];
+export function inspectTile(options: {
+  roomName: string;
+  x: number;
+  y: number;
+  plan: BuildPlanItem[];
+  terrain?: string;
+  currentStep?: number;
+}): TileInspection;

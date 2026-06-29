@@ -7,11 +7,19 @@ interface ValidationError {
   message: string;
 }
 
+interface SelectedTile {
+  x: number;
+  y: number;
+}
+
 export function drawTerrain(
   ctx: CanvasRenderingContext2D,
   terrain: string
 ): void {
-  if (!terrain) return;
+  if (!terrain) {
+    drawEdgeOverlay(ctx, "");
+    return;
+  }
 
   const colors = {
     plain: "rgb(44, 44, 44)",
@@ -30,6 +38,57 @@ export function drawTerrain(
       ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
   }
+
+  drawEdgeOverlay(ctx, terrain);
+}
+
+function drawEdgeOverlay(ctx: CanvasRenderingContext2D, terrain: string): void {
+  ctx.save();
+  ctx.fillStyle = "rgba(148, 163, 184, 0.48)";
+  ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (let i = 1; i < GRID_SIZE - 1; i++) {
+    drawEdgeMarkerIfWalkable(ctx, terrain, i, 0, "^");
+    drawEdgeMarkerIfWalkable(ctx, terrain, i, GRID_SIZE - 1, "v");
+    drawEdgeMarkerIfWalkable(ctx, terrain, 0, i, "<");
+    drawEdgeMarkerIfWalkable(ctx, terrain, GRID_SIZE - 1, i, ">");
+  }
+
+  ctx.globalAlpha = 0.8;
+  drawEdgeMarkerIfWalkable(ctx, terrain, 0, 0, "·");
+  drawEdgeMarkerIfWalkable(ctx, terrain, GRID_SIZE - 1, 0, "·");
+  drawEdgeMarkerIfWalkable(ctx, terrain, 0, GRID_SIZE - 1, "·");
+  drawEdgeMarkerIfWalkable(ctx, terrain, GRID_SIZE - 1, GRID_SIZE - 1, "·");
+  ctx.restore();
+}
+
+function drawEdgeMarkerIfWalkable(
+  ctx: CanvasRenderingContext2D,
+  terrain: string,
+  x: number,
+  y: number,
+  marker: string
+): void {
+  if (terrain && (getTerrainAt(terrain, x, y) & 1) !== 0) {
+    return;
+  }
+
+  drawEdgeMarker(ctx, x, y, marker);
+}
+
+function drawEdgeMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  marker: string
+): void {
+  ctx.fillText(
+    marker,
+    x * CELL_SIZE + CELL_SIZE / 2,
+    y * CELL_SIZE + CELL_SIZE / 2
+  );
 }
 
 export function drawGrid(ctx: CanvasRenderingContext2D): void {
@@ -116,6 +175,7 @@ export function drawPlan(
   plan: BuildPlanItem[],
   currentStep: number,
   selectedItemIndex: number | null,
+  selectedTile: SelectedTile | null,
   validationErrors: ValidationError[]
 ): void {
   const tileItems = new Map<
@@ -137,6 +197,24 @@ export function drawPlan(
       validationErrors
     );
   }
+
+  if (selectedTile) {
+    drawSelectedTile(ctx, selectedTile);
+  }
+}
+
+function drawSelectedTile(ctx: CanvasRenderingContext2D, tile: SelectedTile): void {
+  const x = tile.x * CELL_SIZE;
+  const y = tile.y * CELL_SIZE;
+
+  ctx.save();
+  ctx.strokeStyle = "#4fd1a5";
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3);
+  ctx.strokeStyle = "rgba(238, 242, 247, 0.85)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+  ctx.restore();
 }
 
 function drawTileStructures(

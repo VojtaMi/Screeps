@@ -10,7 +10,6 @@ import { CELL_SIZE, GRID_SIZE } from "../constants";
 import { rclForStep } from "../rcl";
 import { validateSameTile } from "../plan/validation";
 import { drawTerrain, drawGrid, drawLandmarks, drawPlan } from "./drawing";
-import { TilePicker } from "./TilePicker";
 import { StepControls } from "./StepControls";
 
 interface ValidationError {
@@ -18,12 +17,9 @@ interface ValidationError {
   message: string;
 }
 
-interface TilePickerState {
+interface SelectedTile {
   x: number;
   y: number;
-  left: number;
-  top: number;
-  itemIndexes: number[];
 }
 
 interface CanvasSectionProps {
@@ -33,8 +29,8 @@ interface CanvasSectionProps {
   setCurrentStep: (step: number) => void;
   selectedItemIndex: number | null;
   setSelectedItemIndex: (index: number | null) => void;
-  tilePicker: TilePickerState | null;
-  setTilePicker: (state: TilePickerState | null) => void;
+  selectedTile: SelectedTile | null;
+  setSelectedTile: (tile: SelectedTile | null) => void;
   editorMode: EditorMode;
   selectedStructureType: string;
   showLandmarks: boolean;
@@ -52,8 +48,8 @@ export function CanvasSection({
   setCurrentStep,
   selectedItemIndex,
   setSelectedItemIndex,
-  tilePicker,
-  setTilePicker,
+  selectedTile,
+  setSelectedTile,
   editorMode,
   selectedStructureType,
   showLandmarks,
@@ -66,15 +62,12 @@ export function CanvasSection({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    setTilePicker(null);
-  }, [currentStep, setTilePicker]);
-
-  useEffect(() => {
     redraw();
   }, [
     selectedRoom,
     currentStep,
     selectedItemIndex,
+    selectedTile,
     terrain,
     plans,
     validationErrors,
@@ -101,7 +94,14 @@ export function CanvasSection({
     }
 
     const plan = plans[selectedRoom]?.plan ?? [];
-    drawPlan(ctx, plan, currentStep, selectedItemIndex, validationErrors);
+    drawPlan(
+      ctx,
+      plan,
+      currentStep,
+      selectedItemIndex,
+      selectedTile,
+      validationErrors
+    );
   }
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -126,45 +126,36 @@ export function CanvasSection({
           index < currentStep && item.x === x && item.y === y
       )
       .map(({ index }) => index);
+    const selectedIndex =
+      visibleIndexes.length > 0
+        ? visibleIndexes[visibleIndexes.length - 1]
+        : null;
 
-    if (editorMode === "build" && canPlaceStructure(plan, x, y)) {
-      addPlanItem(plan, x, y);
+    if (editorMode === "build") {
+      if (canPlaceStructure(plan, x, y)) {
+        addPlanItem(plan, x, y);
+      } else {
+        setSelectedTile({ x, y });
+        setSelectedItemIndex(selectedIndex);
+      }
       return;
     }
 
     if (editorMode === "erase") {
       if (tileIndexes.length === 1) {
         deletePlanItem(tileIndexes[0]);
-        setTilePicker(null);
         return;
       }
 
-      if (tileIndexes.length > 1) {
-        openTilePicker(x, y, tileIndexes);
-        return;
-      }
-
-      setTilePicker(null);
+      setSelectedTile({ x, y });
+      setSelectedItemIndex(selectedIndex);
       return;
     }
 
-    if (visibleIndexes.length === 1) {
-      setSelectedItemIndex(visibleIndexes[0]);
-      setTilePicker(null);
-      return;
-    }
+    setSelectedTile({ x, y });
+    setSelectedItemIndex(selectedIndex);
 
-    if (visibleIndexes.length > 1) {
-      openTilePicker(x, y, visibleIndexes);
-      return;
-    }
-
-    if (editorMode !== "build") {
-      setTilePicker(null);
-      return;
-    }
-
-    addPlanItem(plan, x, y);
+    return;
   }
 
   function canPlaceStructure(plan: BuildPlanItem[], x: number, y: number) {
@@ -181,16 +172,6 @@ export function CanvasSection({
     return validateSameTile([...existingTypes, selectedItem.structureType]);
   }
 
-  function openTilePicker(x: number, y: number, visibleIndexes: number[]) {
-    setTilePicker({
-      x,
-      y,
-      left: x * CELL_SIZE + CELL_SIZE,
-      top: y * CELL_SIZE,
-      itemIndexes: visibleIndexes,
-    });
-  }
-
   function addPlanItem(plan: BuildPlanItem[], x: number, y: number) {
     const newItem = getSelectedBuildPlanItem(x, y);
 
@@ -201,7 +182,6 @@ export function CanvasSection({
       ...plans,
       [selectedRoom]: { plan: newPlan },
     }, Math.min(currentStep + 1, newPlan.length));
-    setTilePicker(null);
   }
 
   function getSelectedBuildPlanItem(x: number, y: number): BuildPlanItem {
@@ -224,7 +204,7 @@ export function CanvasSection({
   const plan = selectedRoom ? plans[selectedRoom]?.plan ?? [] : [];
 
   return (
-    <section className="canvas-section" onClick={() => setTilePicker(null)}>
+    <section className="canvas-section">
       <div className="map-stack">
         <div className="map-canvas-wrap">
           <canvas
@@ -234,25 +214,6 @@ export function CanvasSection({
             onClick={handleCanvasClick}
             className={`room-canvas ${editorMode === "erase" ? "erase-mode" : ""}`}
           />
-          {tilePicker && (
-            <TilePicker
-              x={tilePicker.x}
-              y={tilePicker.y}
-              left={tilePicker.left}
-              top={tilePicker.top}
-              itemIndexes={tilePicker.itemIndexes}
-              plan={plan}
-              editorMode={editorMode}
-              onSelect={(itemIndex) => {
-                setSelectedItemIndex(itemIndex);
-                setTilePicker(null);
-              }}
-              onDelete={(itemIndex) => {
-                deletePlanItem(itemIndex);
-                setTilePicker(null);
-              }}
-            />
-          )}
         </div>
         <StepControls
           currentStep={currentStep}

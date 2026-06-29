@@ -154,3 +154,51 @@ export function validateBuildPlans(plans, terrains = {}) {
 
   return errors;
 }
+
+function terrainName(code) {
+  if (code & TERRAIN_MASK_WALL) {
+    return "wall";
+  }
+  if (code & TERRAIN_MASK_SWAMP) {
+    return "swamp";
+  }
+  return "plain";
+}
+
+export function inspectTile({
+  roomName,
+  x,
+  y,
+  plan,
+  terrain = "",
+  currentStep = 0,
+}) {
+  const terrainCode = getTerrainAt(terrain, x, y);
+  const planned = plan
+    .map((item, step) => ({
+      step,
+      state:
+        step === currentStep - 1
+          ? "current"
+          : step < currentStep
+            ? "past"
+            : "future",
+      ...item,
+    }))
+    .filter((item) => item.x === x && item.y === y);
+  const validation = validateRoomPlan(plan, terrain).filter((error) => {
+    const item = plan[error.step];
+    return item?.x === x && item?.y === y;
+  });
+
+  return {
+    room: roomName,
+    x,
+    y,
+    terrain: terrain ? terrainName(terrainCode) : "unknown",
+    terrainCode: terrain ? terrainCode : null,
+    isEdge: isRoomEdge(x, y),
+    planned,
+    validation,
+  };
+}
