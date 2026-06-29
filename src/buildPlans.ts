@@ -486,7 +486,6 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 38, y: 3, structureType: STRUCTURE_ROAD },
       { x: 39, y: 2, structureType: STRUCTURE_ROAD },
       { x: 40, y: 1, structureType: STRUCTURE_ROAD },
-      { x: 41, y: 0, structureType: STRUCTURE_ROAD },
       { x: 37, y: 5, structureType: STRUCTURE_STORAGE },
       { x: 14, y: 21, structureType: STRUCTURE_WALL },
       { x: 16, y: 21, structureType: STRUCTURE_RAMPART },
