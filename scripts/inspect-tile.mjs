@@ -2,9 +2,7 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  inspectTile,
-} from "../tools/build-plan-editor/src/plan/validationCore.mjs";
+import { inspectTile } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
 import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,12 +10,12 @@ const root = path.resolve(path.dirname(__filename), "..");
 
 function usage() {
   console.log(`Usage:
-  node scripts/what-is.mjs <room> <x> <y> [--json] [--no-live] [--shard shard3]
+  node scripts/inspect-tile.mjs <room> <x> <y> [--json] [--no-live] [--shard shard3]
 
 Examples:
-  node scripts/what-is.mjs E59S29 37 5
-  node scripts/what-is.mjs E59S29 13 9 --json
-  node scripts/what-is.mjs E59S29 37 5 --no-live`);
+  node scripts/inspect-tile.mjs E59S29 37 5
+  node scripts/inspect-tile.mjs E59S29 13 9 --json
+  node scripts/inspect-tile.mjs E59S29 37 5 --no-live`);
 }
 
 function parseArgs(args) {
