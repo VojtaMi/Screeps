@@ -15,6 +15,14 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function landmarkLabel(type: string) {
+  if (type === "controller") return "Room controller";
+  if (type === "source") return "Energy source";
+  if (type === "mineral") return "Mineral deposit";
+  if (type === "deposit") return "Deposit";
+  return titleCase(type);
+}
+
 export function SelectedItemPanel({
   tile,
   selectedItemIndex,
@@ -38,6 +46,12 @@ export function SelectedItemPanel({
             <strong>Edge:</strong> Yes
           </p>
         )}
+        {tile.landmarks.map((landmark) => (
+          <p key={landmark.id}>
+            <strong>{landmarkLabel(landmark.type)}:</strong>{" "}
+            {landmark.label ?? "Yes"}
+          </p>
+        ))}
       </div>
 
       {tile.planned.length > 0 && (

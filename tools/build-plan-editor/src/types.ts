@@ -17,7 +17,7 @@ export type EditorMode = "select" | "build" | "erase";
 
 export const BUILD_SELECTION_CONTROLLER_CONTAINER = "controllerDelivery";
 
-export type RoomLandmarkType = "controller" | "source" | "mineral";
+export type RoomLandmarkType = "controller" | "source" | "mineral" | "deposit";
 
 export interface RoomLandmark {
   id: string;

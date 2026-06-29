@@ -172,6 +172,7 @@ export function inspectTile({
   plan,
   terrain = "",
   currentStep = 0,
+  landmarks = [],
 }) {
   const terrainCode = getTerrainAt(terrain, x, y);
   const planned = plan
@@ -190,6 +191,9 @@ export function inspectTile({
     const item = plan[error.step];
     return item?.x === x && item?.y === y;
   });
+  const tileLandmarks = landmarks.filter(
+    (landmark) => landmark.x === x && landmark.y === y,
+  );
 
   return {
     room: roomName,
@@ -199,6 +203,7 @@ export function inspectTile({
     terrainCode: terrain ? terrainCode : null,
     isEdge: isRoomEdge(x, y),
     planned,
+    landmarks: tileLandmarks,
     validation,
   };
 }

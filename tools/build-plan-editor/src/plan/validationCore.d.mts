@@ -1,4 +1,4 @@
-import type { BuildPlansData, BuildPlanItem } from "../types";
+import type { BuildPlansData, BuildPlanItem, RoomLandmark } from "../types";
 
 export const GRID_SIZE: number;
 export const TERRAIN_MASK_WALL: number;
@@ -23,6 +23,7 @@ export interface TileInspection {
       state: "past" | "current" | "future";
     }
   >;
+  landmarks: RoomLandmark[];
   validation: ValidationError[];
 }
 
@@ -50,4 +51,5 @@ export function inspectTile(options: {
   plan: BuildPlanItem[];
   terrain?: string;
   currentStep?: number;
+  landmarks?: RoomLandmark[];
 }): TileInspection;

@@ -78,6 +78,7 @@ export default function App() {
           plan,
           terrain,
           currentStep,
+          landmarks,
         })
       : null;
 

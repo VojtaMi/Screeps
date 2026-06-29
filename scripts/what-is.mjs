@@ -119,12 +119,13 @@ function summarizeLiveObjects(objects, x, y) {
       continue;
     }
 
-    if (["controller", "source", "mineral"].includes(object.type)) {
+    if (["controller", "source", "mineral", "deposit"].includes(object.type)) {
       summary.landmarks.push({
         type: object.type,
         id: object._id,
         level: object.level,
         mineralType: object.mineralType,
+        depositType: object.depositType,
         energy: object.energy,
         energyCapacity: object.energyCapacity,
       });
@@ -160,6 +161,20 @@ function summarizeLiveObjects(objects, x, y) {
   return summary;
 }
 
+function liveLandmarks(objects) {
+  return objects
+    .filter((object) =>
+      ["controller", "source", "mineral", "deposit"].includes(object.type),
+    )
+    .map((object) => ({
+      id: object._id ?? `${object.type}-${object.x}-${object.y}`,
+      type: object.type,
+      x: object.x,
+      y: object.y,
+      label: object.mineralType ?? object.depositType,
+    }));
+}
+
 function buildTileReport({ roomName, x, y, shard, plans, terrain, liveObjects }) {
   const plan = plans[roomName]?.plan ?? [];
   const inspection = inspectTile({
@@ -169,6 +184,7 @@ function buildTileReport({ roomName, x, y, shard, plans, terrain, liveObjects })
     plan,
     terrain,
     currentStep: plan.length,
+    landmarks: liveObjects ? liveLandmarks(liveObjects) : [],
   });
 
   return {
@@ -202,6 +218,12 @@ function printReport(report, liveError) {
       `step ${item.step}: ${item.structureType}${item.purpose ? ` (${item.purpose})` : ""}`,
   );
   printSection("validation", report.validation, (error) => error.message);
+  printSection(
+    "landmarks",
+    report.landmarks,
+    (item) =>
+      `${landmarkLabel(item.type)}${item.label ? ` (${item.label})` : ""}`,
+  );
 
   if (liveError) {
     console.log(`live: unavailable - ${liveError.message}`);
@@ -235,16 +257,19 @@ function printReport(report, liveError) {
       }`,
   );
   printSection(
-    "landmarks",
-    report.live.landmarks,
-    (item) => `${item.type}${item.level ? ` level ${item.level}` : ""}`,
-  );
-  printSection(
     "resources",
     report.live.resources,
     (item) => `${item.resourceType ?? item.type} ${item.amount}`,
   );
   printSection("other", report.live.other, (item) => item.type);
+}
+
+function landmarkLabel(type) {
+  if (type === "controller") return "room controller";
+  if (type === "source") return "energy source";
+  if (type === "mineral") return "mineral deposit";
+  if (type === "deposit") return "deposit";
+  return type;
 }
 
 async function main() {

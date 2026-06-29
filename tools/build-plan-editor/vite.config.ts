@@ -161,21 +161,29 @@ async function fetchRoomLandmarks(roomName: string): Promise<LandmarkSnapshot> {
 
   const landmarks = result.objects
     .filter((object: { type?: string }) =>
-      ["controller", "source", "mineral"].includes(object.type ?? ""),
+      ["controller", "source", "mineral", "deposit"].includes(
+        object.type ?? "",
+      ),
     )
     .map(
       (object: {
         _id?: string;
-        type: "controller" | "source" | "mineral";
+        type: "controller" | "source" | "mineral" | "deposit";
         x: number;
         y: number;
         mineralType?: string;
+        depositType?: string;
       }): RoomLandmark => ({
         id: object._id ?? `${object.type}-${object.x}-${object.y}`,
         type: object.type,
         x: object.x,
         y: object.y,
-        label: object.type === "mineral" ? object.mineralType : undefined,
+        label:
+          object.type === "mineral"
+            ? object.mineralType
+            : object.type === "deposit"
+              ? object.depositType
+              : undefined,
       }),
     );
 
