@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Retrospective"
+  short_description: "Diagnose agent misses and improve future runs"
+  default_prompt: "Use $agent-retrospective to analyze an agent failure or manual correction, then recommend whether to improve code, tests, AGENTS.md, skills, tooling, or OKF-style project knowledge."

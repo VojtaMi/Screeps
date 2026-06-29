@@ -32,6 +32,10 @@ Do not use generic MCP code-publishing tools such as `push_code` for this projec
 
 Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.
 
+Use the repo-local `agent-retrospective` skill when the user asks why an agent got stuck, made a wrong assumption, needed manual correction, lacked tools/context, or should suggest improvements for future runs.
+
+The `.knowledge/` directory stores OKF-style Markdown notes for durable project knowledge. Prefer `AGENTS.md` for mandatory repo-wide rules and skills for repeatable workflows; use `.knowledge/` for retrievable facts, decisions, incidents, and failure modes that are useful but not themselves commands.
+
 ## Formatting And Hooks
 
 Biome is the source of truth for formatting and linting. Do not hand-format around Biome preferences.
@@ -65,8 +69,4 @@ Preserve existing user changes in the working tree. If files are already modifie
 
 Prefer existing project patterns over new abstractions. Keep Screeps logic simple and tick-conscious. Avoid adding dependencies unless they clearly improve the bot or tooling.
 
-Do not break scalability. New behavior must work across the bot's full lifecycle, not just the current room's state. The bot must be able to recover and rebuild a room automatically from a low RCL (after an attack, claim, or reset), so changes should degrade gracefully when assets are missing rather than assuming the current setup. Concretely:
-
-- Do not hardcode the current RCL, room layout, structure counts, or creep counts. Derive behavior from live game state (`controller.level`, what structures actually exist, available energy) so it adapts as the room grows or is rebuilt.
-- Guard for missing structures. Code that reads towers, storage, links, terminal, or key ramparts must handle their absence (e.g. early RCL or after destruction) instead of assuming they exist.
-- When in doubt, ask: "would this still work if the room dropped to RCL 2 with one spawn and had to rebuild itself?" If not, generalize it.
+Do not break scalability. New behavior must work across the bot's full lifecycle, not just the current room's state. Screeps Bot Must Recover From Low RCL; for details, follow `.knowledge/invariants/recovery-must-degrade-gracefully.md`.
