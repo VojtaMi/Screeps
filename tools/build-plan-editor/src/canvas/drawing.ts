@@ -1,5 +1,6 @@
 import { BuildPlanItem, RoomLandmark, STRUCTURE_COLORS } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
+import { getTerrainAt } from "../plan/validationCore.mjs";
 
 interface ValidationError {
   step: number;
@@ -20,7 +21,7 @@ export function drawTerrain(
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      const code = Number(terrain[y * GRID_SIZE + x] ?? 0);
+      const code = getTerrainAt(terrain, x, y);
       let color = colors.plain;
       if (code & 1) color = colors.wall;
       else if (code & 2) color = colors.swamp;

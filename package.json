@@ -19,6 +19,8 @@
     "deploy:screeps": "node scripts/deploy-screeps.mjs",
     "history:inspect": "node scripts/inspect-room-history.mjs",
     "history:attacks": "node scripts/find-attack-windows.mjs",
+    "check:build-plan": "node scripts/check-build-plan-terrain.mjs",
+    "what-is": "node scripts/what-is.mjs",
     "skills:sync:claude": "node scripts/sync-claude-skills.mjs",
     "skills:check:claude": "node scripts/sync-claude-skills.mjs --check",
     "code:fingerprint": "node scripts/screeps-code-fingerprint.mjs",

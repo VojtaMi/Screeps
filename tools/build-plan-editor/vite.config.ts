@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "fs";
 import type { IncomingMessage, ServerResponse } from "http";
+import { validateBuildPlans as validateBuildPlansCore } from "./src/plan/validationCore.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -211,32 +212,10 @@ async function readOrFetchLandmarks(
   }
 }
 
-function validateSameTile(types: string[]): boolean {
-  if (types.length === 1) {
-    return true;
-  }
-
-  const sortedTypes = [...types].sort();
-  const hasRampart = sortedTypes.includes("STRUCTURE_RAMPART");
-  const withoutRampart = sortedTypes.filter(
-    (type) => type !== "STRUCTURE_RAMPART",
-  );
-
-  if (hasRampart && withoutRampart.length === sortedTypes.length - 1) {
-    return validateSameTile(withoutRampart);
-  }
-
-  return (
-    sortedTypes.length === 2 &&
-    sortedTypes[0] === "STRUCTURE_CONTAINER" &&
-    sortedTypes[1] === "STRUCTURE_ROAD"
-  );
-}
-
 function validateBuildPlans(plans: BuildPlansData): string[] {
-  const errors: string[] = [];
+  const terrains: Record<string, string> = {};
 
-  for (const [roomName, roomPlan] of Object.entries(plans)) {
+  for (const roomName of Object.keys(plans)) {
     const terrainPath = path.join(
       root,
       "tools",
@@ -244,53 +223,17 @@ function validateBuildPlans(plans: BuildPlansData): string[] {
       "terrain",
       `${roomName}.json`,
     );
-    let terrain = "";
-
     try {
-      terrain = JSON.parse(readFileSync(terrainPath, "utf8")).terrain ?? "";
+      terrains[roomName] =
+        JSON.parse(readFileSync(terrainPath, "utf8")).terrain ?? "";
     } catch {
-      terrain = "";
-    }
-
-    for (const [index, item] of roomPlan.plan.entries()) {
-      if (!Number.isInteger(item.x) || item.x < 0 || item.x > 49) {
-        errors.push(`${roomName} step ${index}: invalid x coordinate`);
-      }
-
-      if (!Number.isInteger(item.y) || item.y < 0 || item.y > 49) {
-        errors.push(`${roomName} step ${index}: invalid y coordinate`);
-      }
-
-      if (
-        terrain &&
-        Number(terrain[item.y * 50 + item.x] ?? 0) & 1 &&
-        item.structureType !== "STRUCTURE_ROAD"
-      ) {
-        errors.push(
-          `${roomName} step ${index}: only roads may be placed on natural walls`,
-        );
-      }
-    }
-
-    const byTile = new Map<string, BuildPlanItem[]>();
-    for (const item of roomPlan.plan) {
-      const key = `${item.x},${item.y}`;
-      byTile.set(key, [...(byTile.get(key) ?? []), item]);
-    }
-
-    for (const [tile, items] of byTile) {
-      const types = items.map((item) => item.structureType);
-      if (new Set(types).size !== types.length) {
-        errors.push(`${roomName} ${tile}: duplicate structure type`);
-      }
-
-      if (!validateSameTile(types)) {
-        errors.push(`${roomName} ${tile}: invalid same-tile combination`);
-      }
+      terrains[roomName] = "";
     }
   }
 
-  return errors;
+  return validateBuildPlansCore(plans, terrains).map(
+    (error) => `${error.roomName} step ${error.step}: ${error.message}`,
+  );
 }
 
 function serializeBuildPlans(plans: BuildPlansData): string {
