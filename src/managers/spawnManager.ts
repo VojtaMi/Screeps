@@ -12,6 +12,9 @@ import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
+import { getRoomNeighbors } from "./roomLinkManager";
+
+const FULL_HARVESTER_COST = bodyCost(CREEP_BODY.HARVESTER);
 
 const BASE_CARRIER_CAPACITY_PER_SOURCE = 400;
 const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
@@ -55,19 +58,22 @@ export const spawnManager = {
 
       const room = spawn.room;
       const creeps = Object.values(Game.creeps).filter(
-        (creep) => creep.room.name === room.name,
+        (creep) =>
+          creep.room.name === room.name &&
+          (!creep.memory.targetRoom || creep.memory.targetRoom === room.name),
       );
       const creepsByRole = groupCreepsByRole(creeps);
       const sources = room.find(FIND_SOURCES);
       const hostiles = room.find(FIND_HOSTILE_CREEPS);
 
-      const request = this.getSpawnRequest({
-        room,
-        creeps,
-        creepsByRole,
-        sources,
-        hostiles,
-      });
+      const request =
+        this.getSpawnRequest({
+          room,
+          creeps,
+          creepsByRole,
+          sources,
+          hostiles,
+        }) ?? getCrossRoomHarvesterRequest(spawn);
 
       if (!request || !canAfford(spawn, request.body)) {
         continue;
@@ -139,8 +145,15 @@ export const spawnManager = {
       };
     }
 
-    const unclaimedSource = findUnclaimedHarvesterSource(room, harvesters);
+    const unclaimedSource = findUnclaimedHarvesterSource(room);
     if (unclaimedSource) {
+      if (
+        capacityEnergy < FULL_HARVESTER_COST &&
+        hasAvailableNeighborSpawn(room)
+      ) {
+        return null;
+      }
+
       return {
         role: CREEP_ROLE.HARVESTER,
         body: buildBodyFromMaxPattern({
@@ -483,18 +496,67 @@ function getControllerContainerEnergy(room: Room): number {
   return getControllerDeliveryContainer(room)?.store[RESOURCE_ENERGY] ?? 0;
 }
 
-function findUnclaimedHarvesterSource(
-  room: Room,
-  harvesters: Creep[],
-): Source | null {
+function findUnclaimedHarvesterSource(room: Room): Source | null {
   const sources = room.find(FIND_SOURCES);
+  const allHarvesters = Object.values(Game.creeps).filter(
+    (c) => c.memory.role === CREEP_ROLE.HARVESTER,
+  );
 
   for (const source of sources) {
-    const assignedHarvester = harvesters.find(
+    const hasAssigned = allHarvesters.some(
       (creep) => creep.memory.sourceId === source.id,
     );
-    if (!assignedHarvester) {
+    if (!hasAssigned) {
       return source;
+    }
+  }
+
+  return null;
+}
+
+function hasAvailableNeighborSpawn(room: Room): boolean {
+  const neighbors = getRoomNeighbors(room.name);
+
+  for (const neighborName of neighbors) {
+    const neighborRoom = Game.rooms[neighborName];
+    if (!neighborRoom) continue;
+
+    const spawns = neighborRoom.find(FIND_MY_SPAWNS);
+    for (const spawn of spawns) {
+      if (
+        !spawn.spawning &&
+        neighborRoom.energyAvailable >= FULL_HARVESTER_COST
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getCrossRoomHarvesterRequest(
+  spawn: StructureSpawn,
+): SpawnRequest | null {
+  if (spawn.room.energyAvailable < FULL_HARVESTER_COST) {
+    return null;
+  }
+
+  const neighbors = getRoomNeighbors(spawn.room.name);
+
+  for (const neighborName of neighbors) {
+    const neighborRoom = Game.rooms[neighborName];
+    if (!neighborRoom) continue;
+
+    if (neighborRoom.energyCapacityAvailable >= FULL_HARVESTER_COST) continue;
+
+    const unclaimedSource = findUnclaimedHarvesterSource(neighborRoom);
+    if (unclaimedSource) {
+      return {
+        role: CREEP_ROLE.HARVESTER,
+        body: CREEP_BODY.HARVESTER,
+        memory: { sourceId: unclaimedSource.id, targetRoom: neighborName },
+      };
     }
   }
 

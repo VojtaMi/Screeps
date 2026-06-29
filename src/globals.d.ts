@@ -75,6 +75,8 @@ declare global {
         failedUntilTick?: number;
       }
     >;
+    ownedRoomLinks?: Record<string, string[]>;
+    ownedRoomLinksVersion?: string;
   }
 
   interface Creep {

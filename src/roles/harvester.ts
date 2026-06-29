@@ -1,4 +1,5 @@
 import type { Role } from "../types";
+import { moveToTargetRoom } from "./support/targetRoom";
 
 export const harvester: Role = {
   run(creep: Creep): void {
@@ -7,9 +8,16 @@ export const harvester: Role = {
       : null;
 
     if (!source) {
+      const { targetRoom } = creep.memory;
+      if (targetRoom && creep.room.name !== targetRoom) {
+        moveToTargetRoom(creep, targetRoom, { stroke: "#ffaa00" });
+        return;
+      }
       creep.goToSource();
       return;
     }
+
+    delete creep.memory.targetRoom;
 
     const container = creep.findAdjacentSourceContainer(source);
     if (creep.hasFullEnergy()) {
