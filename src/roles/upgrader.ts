@@ -1,3 +1,4 @@
+import { getControllerDeliveryLink } from "../managers/buildPlanManager";
 import type { Role } from "../types";
 import { runWorkRefuelLoop } from "./support/workRefuelLoop";
 
@@ -24,6 +25,13 @@ function moveToController(creep: Creep): void {
 
 export const upgrader: Role = {
   run(creep: Creep): void {
+    if (!creep.memory.working && creep.needsEnergy()) {
+      const link = getControllerDeliveryLink(creep.room);
+      if (link && link.store[RESOURCE_ENERGY] > 0) {
+        creep.withdrawEnergyFrom(link);
+        return;
+      }
+    }
     runWorkRefuelLoop(creep, upgradeController, moveToController);
   },
 };

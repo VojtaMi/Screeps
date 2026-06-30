@@ -46,6 +46,20 @@ export function isControllerDeliveryContainer(
   return !!plan && structure.pos.x === plan.x && structure.pos.y === plan.y;
 }
 
+export function getControllerDeliveryLink(room: Room): StructureLink | null {
+  const plan = getControllerDeliveryBuildPlan(room);
+  if (!plan) {
+    return null;
+  }
+
+  return (
+    room
+      .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+      .find((s): s is StructureLink => s.structureType === STRUCTURE_LINK) ??
+    null
+  );
+}
+
 export function getControllerDeliveryContainer(
   room: Room,
 ): StructureContainer | null {

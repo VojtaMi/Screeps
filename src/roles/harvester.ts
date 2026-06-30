@@ -20,16 +20,25 @@ export const harvester: Role = {
     delete creep.memory.targetRoom;
 
     const container = creep.findAdjacentSourceContainer(source);
+    const link =
+      source.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+        filter: (s): s is StructureLink => s.structureType === STRUCTURE_LINK,
+      })[0] ?? null;
+
     if (creep.hasFullEnergy()) {
-      if (container && container.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-        creep.transferEnergyTo(container);
+      const depositTarget = link ?? container;
+      if (
+        depositTarget &&
+        depositTarget.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+      ) {
+        creep.transferEnergyTo(depositTarget);
       } else {
         creep.drop(RESOURCE_ENERGY);
       }
       return;
     }
 
-    const target = container ?? source;
+    const target = link ?? container ?? source;
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
       creep.moveToAvoidingRoomEdges(target, {
         visualizePathStyle: { stroke: "#ffaa00" },

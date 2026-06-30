@@ -5,6 +5,7 @@ declare global {
   type EnergyWithdrawTarget =
     | StructureContainer
     | StructureStorage
+    | StructureLink
     | Ruin
     | Tombstone;
   type EnergyRefillTarget =

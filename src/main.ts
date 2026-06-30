@@ -1,5 +1,6 @@
 import { extendCreep } from "./extendCreep";
 import { buildPlanManager } from "./managers/buildPlanManager";
+import { linkTransferManager } from "./managers/linkTransferManager";
 import { memoryManager } from "./managers/memoryManager";
 import { safeModeManager } from "./managers/safeModeManager";
 import { spawnManager } from "./managers/spawnManager";
@@ -36,6 +37,7 @@ export function loop(): void {
   memoryManager.cleanUpCreepMemory();
   spawnRecoveryManager.manageSpawnRecovery();
   buildPlanManager.manageBuildPlans();
+  linkTransferManager.manageLinkTransfers();
   towerManager.manageTowers();
   safeModeManager.manageSafeMode();
   spawnManager.manageSpawning();
