@@ -4,13 +4,24 @@ interface BuildPlanItem extends RoomBuildPlanItem {
   priority: number;
 }
 
+function stableBuildPlanValue(value: unknown): unknown {
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(stableBuildPlanValue);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entryValue]) => [key, stableBuildPlanValue(entryValue)]),
+  );
+}
+
 function getBuildPlanHash(plan: RoomBuildPlanItem[]): string {
-  return plan
-    .map(
-      (item) =>
-        `${item.priority ?? ""}:${item.purpose ?? ""}:${item.action ?? ""}:${item.minRcl ?? ""}:${item.structureType}:${item.x}:${item.y}`,
-    )
-    .join("|");
+  return JSON.stringify(stableBuildPlanValue(plan));
 }
 
 export function getControllerDeliveryBuildPlan(

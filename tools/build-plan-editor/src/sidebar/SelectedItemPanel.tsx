@@ -2,7 +2,7 @@ import {
   STRUCTURE_COLORS,
   STRUCTURE_TYPE_LABELS,
 } from "../types";
-import type { TileInspection } from "../plan/validationCore.mjs";
+import type { TileInspection } from "../plan/validationCore";
 
 interface SelectedItemPanelProps {
   tile: TileInspection;

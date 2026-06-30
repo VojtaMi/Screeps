@@ -1,66 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import type { BuildPlanItemData, BuildPlansData } from "../../shared/buildPlans";
 
-export interface BuildPlanItem {
-  x: number;
-  y: number;
-  structureType: string;
-  purpose?: string;
-  action?: "destroy";
-  minRcl?: number;
-}
-
-export type BuildPlansData = Record<string, { plan: BuildPlanItem[] }>;
-
-export function parseBuildPlans(source: string): BuildPlansData {
-  const plans: BuildPlansData = {};
-  const roomBlockPattern =
-    /"?([WE]\d+[NS]\d+)"?\s*:\s*{\s*"?plan"?\s*:\s*\[([\s\S]*?)\]\s*,?\s*}/g;
-  const defaultPlansIndex = source.indexOf("export const DEFAULT_BUILD_PLANS");
-
-  if (defaultPlansIndex < 0) {
-    throw new Error("Could not find DEFAULT_BUILD_PLANS in src/buildPlans.ts");
-  }
-
-  const planText = source.slice(defaultPlansIndex);
-  let roomMatch;
-
-  while ((roomMatch = roomBlockPattern.exec(planText))) {
-    const [, roomName, itemsText] = roomMatch;
-    const items: BuildPlanItem[] = [];
-    const itemPattern = /\{([^{}]+)\}/g;
-    let itemMatch;
-
-    while ((itemMatch = itemPattern.exec(itemsText))) {
-      const rawItem = itemMatch[1];
-      const structureType = rawItem.match(
-        /"?structureType"?\s*:\s*"?(STRUCTURE_[A-Z_]+)"?/,
-      )?.[1];
-
-      if (!structureType) {
-        continue;
-      }
-
-      const minRclRaw = rawItem.match(/"?minRcl"?\s*:\s*(\d+)/)?.[1];
-      items.push({
-        x: Number(rawItem.match(/"?x"?\s*:\s*(\d+)/)?.[1]),
-        y: Number(rawItem.match(/"?y"?\s*:\s*(\d+)/)?.[1]),
-        structureType,
-        purpose: rawItem.match(/"?purpose"?\s*:\s*"([^"]+)"/)?.[1],
-        action: rawItem.match(/"?action"?\s*:\s*"(destroy)"/)?.[1] as "destroy" | undefined,
-        minRcl: minRclRaw !== undefined ? Number(minRclRaw) : undefined,
-      });
-    }
-
-    plans[roomName] = { plan: items };
-  }
-
-  return plans;
-}
+export type BuildPlanItem = BuildPlanItemData;
+export type { BuildPlansData };
 
 export function readBuildPlans(root: string): BuildPlansData {
-  const source = readFileSync(path.join(root, "src", "buildPlans.ts"), "utf8");
-  return parseBuildPlans(source);
+  return JSON.parse(
+    readFileSync(path.join(root, "src", "buildPlans.json"), "utf8"),
+  ) as BuildPlansData;
 }
 
 export function loadTerrain(root: string, roomName: string): string {

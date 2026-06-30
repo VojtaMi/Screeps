@@ -3,7 +3,7 @@ import {
   type ValidationError,
   validateRoomPlan,
   validateSameTile,
-} from "./validationCore.mjs";
+} from "./validationCore";
 
 export function validatePlans(
   plans: BuildPlansData,

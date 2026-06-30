@@ -5,5 +5,10 @@
     "types": ["node"],
     "target": "ES2022"
   },
-  "include": ["scripts/**/*.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "shared/**/*.ts",
+    "tools/build-plan-editor/src/types.ts",
+    "tools/build-plan-editor/src/plan/validationCore.ts"
+  ]
 }

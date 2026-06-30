@@ -1,8 +1,10 @@
+import type { BuildPlanItem, BuildPlansData, RoomLandmark } from "../types";
+
 export const GRID_SIZE = 50;
 export const TERRAIN_MASK_WALL = 1;
 export const TERRAIN_MASK_SWAMP = 2;
 
-const STRUCTURE_TYPE_LABELS = {
+const STRUCTURE_TYPE_LABELS: Record<string, string> = {
   STRUCTURE_SPAWN: "Spawn",
   STRUCTURE_EXTENSION: "Extension",
   STRUCTURE_CONTAINER: "Container",
@@ -18,7 +20,30 @@ const STRUCTURE_TYPE_LABELS = {
   STRUCTURE_RAMPART: "Rampart",
 };
 
-export function getTerrainAt(terrain, x, y) {
+export interface ValidationError {
+  roomName?: string;
+  step: number;
+  message: string;
+}
+
+export interface TileInspection {
+  room: string;
+  x: number;
+  y: number;
+  terrain: "plain" | "swamp" | "wall" | "unknown";
+  terrainCode: number | null;
+  isEdge: boolean;
+  planned: Array<
+    BuildPlanItem & {
+      step: number;
+      state: "past" | "current" | "future";
+    }
+  >;
+  landmarks: RoomLandmark[];
+  validation: ValidationError[];
+}
+
+export function getTerrainAt(terrain: string, x: number, y: number): number {
   if (!terrain || !Number.isInteger(x) || !Number.isInteger(y)) {
     return 0;
   }
@@ -26,19 +51,19 @@ export function getTerrainAt(terrain, x, y) {
   return Number(terrain[y * GRID_SIZE + x] ?? 0);
 }
 
-export function isNaturalWall(terrain, x, y) {
+export function isNaturalWall(terrain: string, x: number, y: number): boolean {
   return (getTerrainAt(terrain, x, y) & TERRAIN_MASK_WALL) !== 0;
 }
 
-export function isSwamp(terrain, x, y) {
+export function isSwamp(terrain: string, x: number, y: number): boolean {
   return (getTerrainAt(terrain, x, y) & TERRAIN_MASK_SWAMP) !== 0;
 }
 
-export function isRoomEdge(x, y) {
+export function isRoomEdge(x: number, y: number): boolean {
   return x === 0 || x === GRID_SIZE - 1 || y === 0 || y === GRID_SIZE - 1;
 }
 
-export function validateSameTile(types) {
+export function validateSameTile(types: string[]): boolean {
   if (types.length === 1) {
     return true;
   }
@@ -60,20 +85,23 @@ export function validateSameTile(types) {
   );
 }
 
-function structureLabel(structureType) {
+function structureLabel(structureType: string): string {
   return STRUCTURE_TYPE_LABELS[structureType] ?? structureType;
 }
 
-export function validateRoomPlan(plan, terrain = "") {
-  const errors = [];
+export function validateRoomPlan(
+  plan: BuildPlanItem[],
+  terrain = "",
+): ValidationError[] {
+  const errors: ValidationError[] = [];
 
-  // Collect destroyed types per position so same-tile checks can ignore transient structures
-  const destroyedAtPos = new Map();
+  const destroyedAtPos = new Map<string, Set<string>>();
   for (const item of plan) {
     if (item.action === "destroy") {
       const key = `${item.x},${item.y}`;
-      if (!destroyedAtPos.has(key)) destroyedAtPos.set(key, new Set());
-      destroyedAtPos.get(key).add(item.structureType);
+      const destroyed = destroyedAtPos.get(key) ?? new Set<string>();
+      destroyed.add(item.structureType);
+      destroyedAtPos.set(key, destroyed);
     }
   }
 
@@ -137,7 +165,10 @@ export function validateRoomPlan(plan, terrain = "") {
           !destroyed.has(other.structureType),
       );
       if (samePos.length > 0) {
-        const types = [item.structureType, ...samePos.map((s) => s.structureType)];
+        const types = [
+          item.structureType,
+          ...samePos.map((s) => s.structureType),
+        ];
         const isValid = validateSameTile(types);
         if (!isValid) {
           errors.push({
@@ -163,8 +194,11 @@ export function validateRoomPlan(plan, terrain = "") {
   return errors;
 }
 
-export function validateBuildPlans(plans, terrains = {}) {
-  const errors = [];
+export function validateBuildPlans(
+  plans: BuildPlansData,
+  terrains: Record<string, string> = {},
+): ValidationError[] {
+  const errors: ValidationError[] = [];
 
   for (const [roomName, roomPlan] of Object.entries(plans)) {
     const terrain = terrains[roomName] ?? "";
@@ -181,7 +215,7 @@ export function validateBuildPlans(plans, terrains = {}) {
   return errors;
 }
 
-function terrainName(code) {
+function terrainName(code: number): "plain" | "swamp" | "wall" {
   if (code & TERRAIN_MASK_WALL) {
     return "wall";
   }
@@ -199,7 +233,15 @@ export function inspectTile({
   terrain = "",
   currentStep = 0,
   landmarks = [],
-}) {
+}: {
+  roomName: string;
+  x: number;
+  y: number;
+  plan: BuildPlanItem[];
+  terrain?: string;
+  currentStep?: number;
+  landmarks?: RoomLandmark[];
+}): TileInspection {
   const terrainCode = getTerrainAt(terrain, x, y);
   const planned = plan
     .map((item, step) => ({
@@ -209,7 +251,7 @@ export function inspectTile({
           ? "current"
           : step < currentStep
             ? "past"
-            : "future",
+            : "future" as "past" | "current" | "future",
       ...item,
     }))
     .filter((item) => item.x === x && item.y === y);

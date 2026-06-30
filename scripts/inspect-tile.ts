@@ -1,7 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { inspectTile, type TileInspection } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
-import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.js";
+import {
+  inspectTile,
+  type TileInspection,
+} from "../tools/build-plan-editor/src/plan/validationCore";
+import { loadTerrain, readBuildPlans } from "./lib/build-plan-files";
 
 const __filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(__filename), "..");

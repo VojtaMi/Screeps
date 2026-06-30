@@ -2,19 +2,19 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateBuildPlans } from "../tools/build-plan-editor/src/plan/validationCore.mjs";
-import { loadTerrain, readBuildPlans } from "./lib/build-plan-files.mjs";
+import { validateBuildPlans } from "../tools/build-plan-editor/src/plan/validationCore";
+import { loadTerrain, readBuildPlans } from "./lib/build-plan-files";
 
 const __filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(__filename), "..");
 
 function usage() {
   console.log(`Usage:
-  node scripts/check-build-plan-terrain.mjs [room]
+  npm run check:build-plan -- [room]
 
 Examples:
-  node scripts/check-build-plan-terrain.mjs E59S29
-  node scripts/check-build-plan-terrain.mjs`);
+  npm run check:build-plan -- E59S29
+  npm run check:build-plan`);
 }
 
 function main() {
@@ -61,7 +61,9 @@ function main() {
   }
 
   for (const error of errors) {
-    const item = selectedPlans[error.roomName]?.plan[error.step];
+    const item = error.roomName
+      ? selectedPlans[error.roomName]?.plan[error.step]
+      : undefined;
     const location = item ? `${item.structureType} at ${item.x},${item.y}` : "";
     console.log(
       `${error.roomName} step ${error.step}: ${location} - ${error.message}`,

@@ -1,5 +1,5 @@
 import { BuildPlanItem, BuildPlansData, EditorMode } from "../types";
-import type { TileInspection } from "../plan/validationCore.mjs";
+import type { TileInspection } from "../plan/validationCore";
 import { StructureSelector } from "./StructureSelector";
 import { Legend } from "./Legend";
 import { SelectedItemPanel } from "./SelectedItemPanel";

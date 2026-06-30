@@ -1,3 +1,4 @@
+import type { BuildPlanAction, BuildPlanPurpose } from "../shared/buildPlans";
 import type { CreepRole } from "./types";
 
 declare global {
@@ -55,8 +56,8 @@ declare global {
     y: number;
     structureType: BuildableStructureConstant;
     priority?: number;
-    purpose?: "controllerDelivery" | "primarySpawn";
-    action?: "destroy";
+    purpose?: BuildPlanPurpose;
+    action?: BuildPlanAction;
     minRcl?: number;
   }
 

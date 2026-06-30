@@ -1,23 +1,13 @@
-export interface BuildPlanItem {
-  x: number;
-  y: number;
-  structureType: string;
-  purpose?: string;
-  action?: "destroy";
-  minRcl?: number;
-}
+import { BUILD_SELECTION_CONTROLLER_CONTAINER } from "../../../shared/buildPlans";
 
-export interface RoomBuildPlan {
-  plan: BuildPlanItem[];
-}
-
-export interface BuildPlansData {
-  [roomName: string]: RoomBuildPlan;
-}
+export {
+  BUILD_SELECTION_CONTROLLER_CONTAINER,
+  type BuildPlanItemData as BuildPlanItem,
+  type BuildPlansData,
+  type RoomBuildPlanData as RoomBuildPlan,
+} from "../../../shared/buildPlans";
 
 export type EditorMode = "select" | "build" | "erase";
-
-export const BUILD_SELECTION_CONTROLLER_CONTAINER = "controllerDelivery";
 
 export type RoomLandmarkType = "controller" | "source" | "mineral" | "deposit";
 

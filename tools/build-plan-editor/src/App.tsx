@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
 import { endStepForRcl, planMaxRcl } from "./rcl";
-import { inspectTile, type TileInspection } from "./plan/validationCore.mjs";
+import { inspectTile, type TileInspection } from "./plan/validationCore";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
 import { useLandmarks } from "./terrain/useLandmarks";

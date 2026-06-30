@@ -1,32 +1,11 @@
 import {
-  BUILD_SELECTION_CONTROLLER_CONTAINER,
-  BuildPlanItem,
-} from "./types";
+  MAX_RCL,
+  limitForStructureRcl,
+  resolveLimitType,
+} from "../../../shared/buildPlans";
+import type { BuildPlanItem } from "./types";
 
-export const MAX_RCL = 8;
-
-// index = RCL level 0..8. Mirrors Screeps' CONTROLLER_STRUCTURES so the editor
-// can enforce per-level limits without access to the game globals.
-export const RCL_STRUCTURE_LIMITS: Record<string, number[]> = {
-  // Diverges from the game table (spawn[0] = 0): the editor treats the primary
-  // spawn as the RCL-0 room seed so it appears in the level-0 starting state.
-  STRUCTURE_SPAWN: [1, 1, 1, 1, 1, 1, 1, 2, 3],
-  STRUCTURE_EXTENSION: [0, 0, 5, 10, 20, 30, 40, 50, 60],
-  STRUCTURE_CONTAINER: [5, 5, 5, 5, 5, 5, 5, 5, 5],
-  STRUCTURE_ROAD: [2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
-  STRUCTURE_WALL: [0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
-  STRUCTURE_RAMPART: [0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
-  STRUCTURE_TOWER: [0, 0, 0, 1, 1, 2, 2, 3, 6],
-  STRUCTURE_STORAGE: [0, 0, 0, 0, 1, 1, 1, 1, 1],
-  STRUCTURE_LINK: [0, 0, 0, 0, 0, 2, 3, 4, 6],
-  STRUCTURE_EXTRACTOR: [0, 0, 0, 0, 0, 0, 1, 1, 1],
-  STRUCTURE_TERMINAL: [0, 0, 0, 0, 0, 0, 1, 1, 1],
-  STRUCTURE_LAB: [0, 0, 0, 0, 0, 0, 3, 6, 10],
-  STRUCTURE_FACTORY: [0, 0, 0, 0, 0, 0, 0, 1, 1],
-  STRUCTURE_OBSERVER: [0, 0, 0, 0, 0, 0, 0, 0, 1],
-  STRUCTURE_POWER_SPAWN: [0, 0, 0, 0, 0, 0, 0, 0, 1],
-  STRUCTURE_NUKER: [0, 0, 0, 0, 0, 0, 0, 0, 1],
-};
+export { MAX_RCL };
 
 // Structures bounded only by room tiles, not by an RCL count. They are offered
 // without a remaining counter whenever they are buildable at the current level.
@@ -40,16 +19,8 @@ export function isUnlimitedStructure(structureType: string): boolean {
   return UNLIMITED_STRUCTURE_TYPES.has(structureType);
 }
 
-// The controller-container pseudo-type is a real container for limit purposes.
-function resolveLimitType(structureType: string): string {
-  return structureType === BUILD_SELECTION_CONTROLLER_CONTAINER
-    ? "STRUCTURE_CONTAINER"
-    : structureType;
-}
-
 export function limitFor(structureType: string, rcl: number): number {
-  const limits = RCL_STRUCTURE_LIMITS[resolveLimitType(structureType)];
-  return limits?.[rcl] ?? 0;
+  return limitForStructureRcl(structureType, rcl);
 }
 
 // Smallest RCL whose limit can accommodate `count` of this type. Falls back to

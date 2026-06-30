@@ -1,6 +1,6 @@
 import { BuildPlanItem, RoomLandmark, STRUCTURE_COLORS } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
-import { getTerrainAt } from "../plan/validationCore.mjs";
+import { getTerrainAt } from "../plan/validationCore";
 
 interface ValidationError {
   step: number;
