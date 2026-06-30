@@ -291,14 +291,25 @@ export const buildPlanManager = {
       (a, b) => a.priority - b.priority,
     );
 
+    const currentRcl = room.controller?.level ?? 0;
+
+    // Any build plan superseded by an active destroy plan should be skipped —
+    // otherwise the bot rebuilds the structure immediately after destroying it.
+    const supersededByDestroy = new Set<string>();
+    for (const plan of buildPlan) {
+      if (plan.action === "destroy") {
+        const rclMet = plan.minRcl === undefined || currentRcl >= plan.minRcl;
+        if (rclMet) {
+          supersededByDestroy.add(`${plan.x},${plan.y},${plan.structureType}`);
+        }
+      }
+    }
+
     for (let i = 0; i < buildPlan.length; i++) {
       const plan = buildPlan[i];
 
       if (plan.action === "destroy") {
-        if (
-          plan.minRcl !== undefined &&
-          (room.controller?.level ?? 0) < plan.minRcl
-        ) {
+        if (plan.minRcl !== undefined && currentRcl < plan.minRcl) {
           return null;
         }
 
@@ -306,6 +317,12 @@ export const buildPlanManager = {
           .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
           .some((s) => s.structureType === plan.structureType);
         if (structureExists) return plan;
+        continue;
+      }
+
+      if (
+        supersededByDestroy.has(`${plan.x},${plan.y},${plan.structureType}`)
+      ) {
         continue;
       }
 
