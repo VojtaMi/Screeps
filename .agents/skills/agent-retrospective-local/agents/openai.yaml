@@ -1,0 +1,4 @@
+interface:
+  display_name: "Screeps Agent Retrospective"
+  short_description: "Diagnose Screeps agent misses"
+  default_prompt: "Use $agent-retrospective-local to analyze a Screeps agent failure or manual correction, then recommend whether to improve code, tests, AGENTS.md, skills, tooling, or OKF-style project knowledge."

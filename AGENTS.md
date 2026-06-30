@@ -32,7 +32,7 @@ Do not use generic MCP code-publishing tools such as `push_code` for this projec
 
 Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.
 
-Use the repo-local `agent-retrospective` skill when the user asks why an agent got stuck, made a wrong assumption, needed manual correction, lacked tools/context, or should suggest improvements for future runs.
+Use the repo-local `agent-retrospective-local` skill when the user asks why an agent got stuck, made a wrong assumption, needed manual correction, lacked tools/context, or should suggest Screeps-specific improvements for future runs.
 
 The `.knowledge/` directory stores OKF-style Markdown notes for durable project knowledge. Prefer `AGENTS.md` for mandatory repo-wide rules and skills for repeatable workflows; use `.knowledge/` for retrievable facts, decisions, incidents, and failure modes that are useful but not themselves commands.
 

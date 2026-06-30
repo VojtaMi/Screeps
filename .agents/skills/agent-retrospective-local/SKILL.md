@@ -1,9 +1,9 @@
 ---
-name: agent-retrospective
-description: Use when the user asks to analyze an agent mistake, bad assumption, manual correction, repeated investigation, missing context, missing tool, failed workflow, or "why did the agent get stuck?" Produce improvement recommendations across code, tests, AGENTS.md, skills, scripts/tooling, and OKF-style project knowledge notes.
+name: agent-retrospective-local
+description: Screeps project-specific agent retrospective. Use when the user asks to analyze an agent mistake, bad assumption, manual correction, repeated investigation, missing context, missing tool, failed workflow, Screeps live/history confusion, or "why did the agent get stuck?" Produce improvement recommendations across code, tests, AGENTS.md, Screeps skills, scripts/tooling, and OKF-style project knowledge notes.
 ---
 
-# Agent Retrospective
+# Screeps Agent Retrospective
 
 ## Purpose
 
