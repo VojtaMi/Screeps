@@ -6,6 +6,8 @@ export interface BuildPlanItem {
   y: number;
   structureType: string;
   purpose?: string;
+  action?: "destroy";
+  minRcl?: number;
 }
 
 export type BuildPlansData = Record<string, { plan: BuildPlanItem[] }>;
@@ -39,11 +41,14 @@ export function parseBuildPlans(source: string): BuildPlansData {
         continue;
       }
 
+      const minRclRaw = rawItem.match(/"?minRcl"?\s*:\s*(\d+)/)?.[1];
       items.push({
         x: Number(rawItem.match(/"?x"?\s*:\s*(\d+)/)?.[1]),
         y: Number(rawItem.match(/"?y"?\s*:\s*(\d+)/)?.[1]),
         structureType,
         purpose: rawItem.match(/"?purpose"?\s*:\s*"([^"]+)"/)?.[1],
+        action: rawItem.match(/"?action"?\s*:\s*"(destroy)"/)?.[1] as "destroy" | undefined,
+        minRcl: minRclRaw !== undefined ? Number(minRclRaw) : undefined,
       });
     }
 

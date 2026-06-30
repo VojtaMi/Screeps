@@ -40,11 +40,14 @@ function parseBuildPlans(source: string) {
         continue;
       }
 
+      const minRclRaw = rawItem.match(/"?minRcl"?\s*:\s*(\d+)/)?.[1];
       items.push({
         x: Number(rawItem.match(/"?x"?\s*:\s*(\d+)/)?.[1]),
         y: Number(rawItem.match(/"?y"?\s*:\s*(\d+)/)?.[1]),
         structureType,
         purpose: rawItem.match(/"?purpose"?\s*:\s*"([^"]+)"/)?.[1],
+        action: rawItem.match(/"?action"?\s*:\s*"(destroy)"/)?.[1] as "destroy" | undefined,
+        minRcl: minRclRaw !== undefined ? Number(minRclRaw) : undefined,
       });
     }
 
@@ -80,7 +83,30 @@ interface BuildPlanItem {
   y: number;
   structureType: string;
   purpose?: string;
+  action?: "destroy";
+  minRcl?: number;
 }
+
+// Minimum controller level at which each structure type first becomes placeable.
+// Must stay in sync with RCL_STRUCTURE_LIMITS in src/rcl.ts.
+const STRUCTURE_MIN_RCL: Record<string, number> = {
+  STRUCTURE_SPAWN: 0,
+  STRUCTURE_EXTENSION: 2,
+  STRUCTURE_CONTAINER: 0,
+  STRUCTURE_ROAD: 0,
+  STRUCTURE_WALL: 2,
+  STRUCTURE_RAMPART: 2,
+  STRUCTURE_TOWER: 3,
+  STRUCTURE_STORAGE: 4,
+  STRUCTURE_LINK: 5,
+  STRUCTURE_EXTRACTOR: 6,
+  STRUCTURE_TERMINAL: 6,
+  STRUCTURE_LAB: 6,
+  STRUCTURE_FACTORY: 7,
+  STRUCTURE_OBSERVER: 8,
+  STRUCTURE_POWER_SPAWN: 8,
+  STRUCTURE_NUKER: 8,
+};
 
 interface BuildPlansData {
   [roomName: string]: {
@@ -254,16 +280,31 @@ function serializeBuildPlans(plans: BuildPlansData): string {
 
   const rooms = Object.entries(plans).map(([roomName, roomPlan]) => {
     const items = roomPlan.plan
-      .map((item) => {
-        if (item.purpose) {
-          return [
+      .map((item, index) => {
+        // For destroy steps, derive minRcl from the next build step at the same tile.
+        // Preserve an existing minRcl when no replacement exists (allows manual override).
+        let minRcl = item.minRcl;
+        if (item.action === "destroy") {
+          const replacement = roomPlan.plan
+            .slice(index + 1)
+            .find((p) => !p.action && p.x === item.x && p.y === item.y);
+          if (replacement) {
+            minRcl = STRUCTURE_MIN_RCL[replacement.structureType];
+          }
+        }
+
+        if (item.purpose || item.action || minRcl !== undefined) {
+          const lines = [
             "      {",
             `        x: ${item.x},`,
             `        y: ${item.y},`,
             `        structureType: ${item.structureType},`,
-            `        purpose: ${JSON.stringify(item.purpose)},`,
-            "      },",
-          ].join("\n");
+          ];
+          if (item.purpose) lines.push(`        purpose: ${JSON.stringify(item.purpose)},`);
+          if (item.action) lines.push(`        action: ${JSON.stringify(item.action)},`);
+          if (minRcl !== undefined) lines.push(`        minRcl: ${minRcl},`);
+          lines.push("      },");
+          return lines.join("\n");
         }
 
         return `      { x: ${item.x}, y: ${item.y}, structureType: ${item.structureType} },`;

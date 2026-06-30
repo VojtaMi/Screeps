@@ -9,6 +9,7 @@ interface SelectedItemPanelProps {
   selectedItemIndex: number | null;
   onSelectItem: (index: number) => void;
   onRemove: (index: number) => void;
+  onScheduleDestroy: (index: number) => void;
 }
 
 function titleCase(value: string) {
@@ -28,6 +29,7 @@ export function SelectedItemPanel({
   selectedItemIndex,
   onSelectItem,
   onRemove,
+  onScheduleDestroy,
 }: SelectedItemPanelProps) {
   const selectedItem =
     selectedItemIndex !== null
@@ -58,26 +60,35 @@ export function SelectedItemPanel({
         <div className="tile-layer-list" aria-label="Planned structures on tile">
           {tile.planned.map((item) => {
             const isSelected = item.step === selectedItemIndex;
+            const isDestroy = item.action === "destroy";
 
             return (
               <button
                 key={item.step}
                 type="button"
-                className={`tile-layer-button ${isSelected ? "active" : ""}`}
+                className={`tile-layer-button ${isSelected ? "active" : ""} ${isDestroy ? "tile-layer-button--destroy" : ""}`}
                 onClick={() => onSelectItem(item.step)}
               >
                 <span
                   className="tile-picker-swatch"
                   style={{
-                    backgroundColor:
-                      STRUCTURE_COLORS[item.structureType] ?? "#ffffff",
+                    backgroundColor: isDestroy
+                      ? "transparent"
+                      : (STRUCTURE_COLORS[item.structureType] ?? "#ffffff"),
+                    borderColor: isDestroy
+                      ? (STRUCTURE_COLORS[item.structureType] ?? "#ffffff")
+                      : undefined,
                   }}
                 />
                 <span>
                   Step {item.step}:{" "}
+                  {isDestroy ? "Destroy " : ""}
                   {STRUCTURE_TYPE_LABELS[item.structureType] ??
                     item.structureType}
                   {item.purpose ? ` (${item.purpose})` : ""}
+                  {isDestroy && item.minRcl !== undefined
+                    ? ` (RCL ${item.minRcl})`
+                    : ""}
                 </span>
               </button>
             );
@@ -93,6 +104,15 @@ export function SelectedItemPanel({
         </div>
       )}
 
+      {selectedItem && !selectedItem.action && (
+        <button
+          type="button"
+          onClick={() => onScheduleDestroy(selectedItem.step)}
+          className="schedule-remove-btn"
+        >
+          Schedule Remove
+        </button>
+      )}
       {selectedItem && (
         <button
           type="button"

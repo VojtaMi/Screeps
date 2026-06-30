@@ -8,7 +8,7 @@ function getBuildPlanHash(plan: RoomBuildPlanItem[]): string {
   return plan
     .map(
       (item) =>
-        `${item.priority ?? ""}:${item.purpose ?? ""}:${item.structureType}:${item.x}:${item.y}`,
+        `${item.priority ?? ""}:${item.purpose ?? ""}:${item.action ?? ""}:${item.minRcl ?? ""}:${item.structureType}:${item.x}:${item.y}`,
     )
     .join("|");
 }
@@ -209,6 +209,25 @@ function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
   }
 }
 
+function executeDestroyPlan(room: Room, plan: RoomBuildPlanItem): void {
+  const structure = room
+    .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+    .find((s) => s.structureType === plan.structureType);
+
+  if (!structure) return;
+
+  const result = structure.destroy();
+  if (result === OK) {
+    console.log(
+      `Build plan destroyed ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}`,
+    );
+  } else {
+    console.log(
+      `Build plan failed to destroy ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
+    );
+  }
+}
+
 export const buildPlanManager = {
   manageBuildPlans(): void {
     for (const roomName in Game.rooms) {
@@ -235,7 +254,11 @@ export const buildPlanManager = {
       return;
     }
 
-    placeBuildPlanSite(room, nextPlan);
+    if (nextPlan.action === "destroy") {
+      executeDestroyPlan(room, nextPlan);
+    } else {
+      placeBuildPlanSite(room, nextPlan);
+    }
   },
 
   getNextBuildPlan(room: Room): RoomBuildPlanItem | null {
@@ -243,7 +266,24 @@ export const buildPlanManager = {
       (a, b) => a.priority - b.priority,
     );
 
-    for (const plan of buildPlan) {
+    for (let i = 0; i < buildPlan.length; i++) {
+      const plan = buildPlan[i];
+
+      if (plan.action === "destroy") {
+        if (
+          plan.minRcl !== undefined &&
+          (room.controller?.level ?? 0) < plan.minRcl
+        ) {
+          return null;
+        }
+
+        const structureExists = room
+          .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+          .some((s) => s.structureType === plan.structureType);
+        if (structureExists) return plan;
+        continue;
+      }
+
       if (isBuilt(room, plan) || hasConstructionSiteAt(room, plan)) {
         continue;
       }

@@ -32,6 +32,7 @@ interface SidebarProps {
   canUndo: boolean;
   canRedo: boolean;
   deletePlanItem: (index: number) => void;
+  scheduleDestroyItem: (index: number) => void;
 }
 
 export function Sidebar({
@@ -54,6 +55,7 @@ export function Sidebar({
   canUndo,
   canRedo,
   deletePlanItem,
+  scheduleDestroyItem,
 }: SidebarProps) {
   return (
     <aside className="build-plan-stack sidebar">
@@ -119,6 +121,7 @@ export function Sidebar({
           selectedItemIndex={selectedItemIndex}
           onSelectItem={onSelectItem}
           onRemove={deletePlanItem}
+          onScheduleDestroy={scheduleDestroyItem}
         />
       )}
 

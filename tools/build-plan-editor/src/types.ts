@@ -3,6 +3,8 @@ export interface BuildPlanItem {
   y: number;
   structureType: string;
   purpose?: string;
+  action?: "destroy";
+  minRcl?: number;
 }
 
 export interface RoomBuildPlan {

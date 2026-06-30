@@ -551,6 +551,28 @@ select {
   margin: 0;
 }
 
+.tile-layer-button--destroy {
+  color: var(--danger);
+  opacity: 0.85;
+}
+
+.tile-layer-button--destroy.active {
+  border-color: var(--danger);
+  background: #2a1515;
+}
+
+.schedule-remove-btn {
+  width: 100%;
+  background: #1f1a0f;
+  border-color: #c98943;
+  color: #c98943;
+  margin-bottom: 6px;
+}
+
+.schedule-remove-btn:hover:not(:disabled) {
+  background: #2a2210;
+}
+
 .danger-btn {
   width: 100%;
   background: #2a1515;

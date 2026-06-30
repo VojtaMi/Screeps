@@ -34,6 +34,7 @@ export default function App() {
     undoPlans,
     redoPlans,
     deletePlanItem,
+    scheduleDestroyItem,
   } = usePlan();
 
   const { terrain, terrainShard } = useTerrain(selectedRoom);
@@ -155,6 +156,7 @@ export default function App() {
           canUndo={pastPlans.length > 0}
           canRedo={futurePlans.length > 0}
           deletePlanItem={deletePlanItem}
+          scheduleDestroyItem={scheduleDestroyItem}
         />
       </div>
     </div>

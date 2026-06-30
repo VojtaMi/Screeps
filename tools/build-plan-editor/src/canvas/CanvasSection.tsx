@@ -159,8 +159,20 @@ export function CanvasSection({
   }
 
   function canPlaceStructure(plan: BuildPlanItem[], x: number, y: number) {
+    const destroyedTypes = new Set(
+      plan
+        .filter((item) => item.x === x && item.y === y && item.action === "destroy")
+        .map((item) => item.structureType),
+    );
+
     const existingTypes = plan
-      .filter((item) => item.x === x && item.y === y)
+      .filter(
+        (item) =>
+          item.x === x &&
+          item.y === y &&
+          !item.action &&
+          !destroyedTypes.has(item.structureType),
+      )
       .map((item) => item.structureType);
 
     if (existingTypes.length === 0) return true;

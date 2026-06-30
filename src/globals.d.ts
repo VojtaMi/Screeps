@@ -55,6 +55,8 @@ declare global {
     structureType: BuildableStructureConstant;
     priority?: number;
     purpose?: "controllerDelivery" | "primarySpawn";
+    action?: "destroy";
+    minRcl?: number;
   }
 
   interface RoomMemory {

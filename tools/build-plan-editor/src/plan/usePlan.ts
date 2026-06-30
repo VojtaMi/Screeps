@@ -99,6 +99,26 @@ export function usePlan() {
     }, Math.min(currentStep, newPlan.length));
   }
 
+  function scheduleDestroyItem(itemIndex: number) {
+    if (!selectedRoom) return;
+    const plan = plans[selectedRoom].plan;
+    const item = plan[itemIndex];
+    if (!item || item.action === "destroy") return;
+
+    const destroyStep = {
+      x: item.x,
+      y: item.y,
+      structureType: item.structureType,
+      action: "destroy" as const,
+    };
+    const newPlan = [...plan, destroyStep];
+
+    commitPlans({
+      ...plans,
+      [selectedRoom]: { plan: newPlan },
+    }, newPlan.length);
+  }
+
   return {
     plans,
     selectedRoom,
@@ -115,5 +135,6 @@ export function usePlan() {
     undoPlans,
     redoPlans,
     deletePlanItem,
+    scheduleDestroyItem,
   };
 }

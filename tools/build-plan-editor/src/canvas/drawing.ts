@@ -229,16 +229,31 @@ function drawTileStructures(
   const y = firstItem.y * CELL_SIZE;
   const centerX = x + CELL_SIZE / 2;
   const centerY = y + CELL_SIZE / 2;
-  const rampart = items.find(
-    ({ item }) => item.structureType === "STRUCTURE_RAMPART"
+
+  // Structure types whose destroy step has already passed at currentStep
+  const destroyedTypes = new Set(
+    items
+      .filter(({ item, index }) => item.action === "destroy" && index < currentStep)
+      .map(({ item }) => item.structureType),
   );
-  const road = items.find(
-    ({ item }) => item.structureType === "STRUCTURE_ROAD"
+
+  const buildItems = items.filter(({ item }) => !item.action);
+
+  const rampart = buildItems.find(
+    ({ item }) =>
+      item.structureType === "STRUCTURE_RAMPART" &&
+      !destroyedTypes.has("STRUCTURE_RAMPART"),
   );
-  const mainStructure = items.find(
+  const road = buildItems.find(
+    ({ item }) =>
+      item.structureType === "STRUCTURE_ROAD" &&
+      !destroyedTypes.has("STRUCTURE_ROAD"),
+  );
+  const mainStructure = buildItems.find(
     ({ item }) =>
       item.structureType !== "STRUCTURE_RAMPART" &&
-      item.structureType !== "STRUCTURE_ROAD"
+      item.structureType !== "STRUCTURE_ROAD" &&
+      !destroyedTypes.has(item.structureType),
   );
   const selected = items.find(({ index }) => index === selectedItemIndex);
   const hasError = items.some(({ index }) =>

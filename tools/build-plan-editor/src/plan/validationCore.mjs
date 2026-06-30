@@ -67,8 +67,21 @@ function structureLabel(structureType) {
 export function validateRoomPlan(plan, terrain = "") {
   const errors = [];
 
+  // Collect destroyed types per position so same-tile checks can ignore transient structures
+  const destroyedAtPos = new Map();
+  for (const item of plan) {
+    if (item.action === "destroy") {
+      const key = `${item.x},${item.y}`;
+      if (!destroyedAtPos.has(key)) destroyedAtPos.set(key, new Set());
+      destroyedAtPos.get(key).add(item.structureType);
+    }
+  }
+
   for (let i = 0; i < plan.length; i += 1) {
     const item = plan[i];
+
+    // Destroy steps don't need placement validation
+    if (item.action === "destroy") continue;
 
     if (!Number.isInteger(item.x) || item.x < 0 || item.x > GRID_SIZE - 1) {
       errors.push({
@@ -93,9 +106,11 @@ export function validateRoomPlan(plan, terrain = "") {
       });
     }
 
+    // Duplicate check: only compare against other build steps (not destroy steps)
     const duplicates = plan.filter(
       (other, j) =>
         j !== i &&
+        !other.action &&
         other.x === item.x &&
         other.y === item.y &&
         other.structureType === item.structureType,
@@ -108,17 +123,28 @@ export function validateRoomPlan(plan, terrain = "") {
       continue;
     }
 
-    const samePos = plan.filter(
-      (other, j) => j !== i && other.x === item.x && other.y === item.y,
-    );
-    if (samePos.length > 0) {
-      const types = [item.structureType, ...samePos.map((s) => s.structureType)];
-      const isValid = validateSameTile(types);
-      if (!isValid) {
-        errors.push({
-          step: i,
-          message: `Invalid same-tile combination at (${item.x}, ${item.y})`,
-        });
+    // Same-tile check: exclude types scheduled for destruction (they're transient)
+    const posKey = `${item.x},${item.y}`;
+    const destroyed = destroyedAtPos.get(posKey) ?? new Set();
+
+    if (!destroyed.has(item.structureType)) {
+      const samePos = plan.filter(
+        (other, j) =>
+          j !== i &&
+          !other.action &&
+          other.x === item.x &&
+          other.y === item.y &&
+          !destroyed.has(other.structureType),
+      );
+      if (samePos.length > 0) {
+        const types = [item.structureType, ...samePos.map((s) => s.structureType)];
+        const isValid = validateSameTile(types);
+        if (!isValid) {
+          errors.push({
+            step: i,
+            message: `Invalid same-tile combination at (${item.x}, ${item.y})`,
+          });
+        }
       }
     }
 
