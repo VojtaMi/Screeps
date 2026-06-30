@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { EditorMode, STRUCTURE_TYPES } from "./types";
-import { endStepForRcl, planMaxRcl } from "./rcl";
+import { endStepForRcl, planMaxRcl, rclForStep } from "./rcl";
 import { inspectTile, type TileInspection } from "./plan/validationCore";
 import "./App.css";
 import { usePlan } from "./plan/usePlan";
@@ -88,6 +88,13 @@ export default function App() {
     setCurrentStep(endStepForRcl(plan, rcl));
   }
 
+  // Stepping through the plan should keep the toolbar RCL (and thus the
+  // sidebar's "X left" counters) in sync with the step being viewed.
+  function navigateToStep(step: number) {
+    setCurrentStep(step);
+    setSelectedRcl(rclForStep(plan, step));
+  }
+
   return (
     <div className="editor">
       <header className="build-plan-header editor-header">
@@ -121,6 +128,7 @@ export default function App() {
           selectedRoom={selectedRoom}
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
+          onStepNavigate={navigateToStep}
           selectedItemIndex={selectedItemIndex}
           setSelectedItemIndex={setSelectedItemIndex}
           selectedTile={selectedTile}

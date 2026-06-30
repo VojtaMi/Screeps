@@ -27,6 +27,10 @@ interface CanvasSectionProps {
   selectedRoom: string;
   currentStep: number;
   setCurrentStep: (step: number) => void;
+  // Explicit step navigation from the step controls. Unlike setCurrentStep
+  // (also used for placement-driven advances), this syncs the toolbar RCL to
+  // the step being viewed.
+  onStepNavigate: (step: number) => void;
   selectedItemIndex: number | null;
   setSelectedItemIndex: (index: number | null) => void;
   selectedTile: SelectedTile | null;
@@ -46,6 +50,7 @@ export function CanvasSection({
   selectedRoom,
   currentStep,
   setCurrentStep,
+  onStepNavigate,
   selectedItemIndex,
   setSelectedItemIndex,
   selectedTile,
@@ -231,7 +236,7 @@ export function CanvasSection({
           currentStep={currentStep}
           totalSteps={plan.length}
           currentRcl={rclForStep(plan, currentStep)}
-          onStepChange={setCurrentStep}
+          onStepChange={onStepNavigate}
         />
       </div>
     </section>
