@@ -93,6 +93,14 @@ export default function App() {
   function navigateToStep(step: number) {
     setCurrentStep(step);
     setSelectedRcl(rclForStep(plan, step));
+    if (step > 0 && plan[step - 1]) {
+      const item = plan[step - 1];
+      setSelectedTile({ x: item.x, y: item.y });
+      setSelectedItemIndex(step - 1);
+    } else {
+      setSelectedTile(null);
+      setSelectedItemIndex(null);
+    }
   }
 
   return (
