@@ -3,6 +3,14 @@ import type { BuildPlanItem, BuildPlansData, RoomLandmark } from "../types";
 export const GRID_SIZE = 50;
 export const TERRAIN_MASK_WALL = 1;
 export const TERRAIN_MASK_SWAMP = 2;
+// Screeps rejects createConstructionSite (ERR_INVALID_TARGET) for anything but
+// roads/containers one tile in from a room edge (x/y === 1 or 48) if that
+// placement would seal off a passable exit tile on the border itself.
+export const EDGE_BUILD_MARGIN = 1;
+const EDGE_EXEMPT_STRUCTURE_TYPES = new Set([
+  "STRUCTURE_ROAD",
+  "STRUCTURE_CONTAINER",
+]);
 
 const STRUCTURE_TYPE_LABELS: Record<string, string> = {
   STRUCTURE_SPAWN: "Spawn",
@@ -61,6 +69,56 @@ export function isSwamp(terrain: string, x: number, y: number): boolean {
 
 export function isRoomEdge(x: number, y: number): boolean {
   return x === 0 || x === GRID_SIZE - 1 || y === 0 || y === GRID_SIZE - 1;
+}
+
+// True exactly one tile in from the room border, the only ring where a
+// placement can possibly seal off an exit tile on the border itself.
+export function isTileAfterEdge(x: number, y: number): boolean {
+  const farEdge = GRID_SIZE - 1 - EDGE_BUILD_MARGIN;
+  return (
+    x === EDGE_BUILD_MARGIN ||
+    x === farEdge ||
+    y === EDGE_BUILD_MARGIN ||
+    y === farEdge
+  );
+}
+
+export function canPlaceNearEdge(structureType: string): boolean {
+  return EDGE_EXEMPT_STRUCTURE_TYPES.has(structureType);
+}
+
+// For a tile one step in from the border, checks the up-to-3 border tiles
+// (straight + 2 diagonal) that lie between it and the true edge on each side
+// it borders. If any of those is passable (not natural wall), it's an exit
+// tile, and blocking this position would seal it off.
+export function wouldBlockExit(
+  terrain: string,
+  x: number,
+  y: number,
+): boolean {
+  if (!terrain) return false;
+
+  const lastIndex = GRID_SIZE - 1;
+  const farEdge = lastIndex - EDGE_BUILD_MARGIN;
+  const borderTiles: Array<[number, number]> = [];
+
+  if (x === EDGE_BUILD_MARGIN) {
+    borderTiles.push([0, y - 1], [0, y], [0, y + 1]);
+  }
+  if (x === farEdge) {
+    borderTiles.push([lastIndex, y - 1], [lastIndex, y], [lastIndex, y + 1]);
+  }
+  if (y === EDGE_BUILD_MARGIN) {
+    borderTiles.push([x - 1, 0], [x, 0], [x + 1, 0]);
+  }
+  if (y === farEdge) {
+    borderTiles.push([x - 1, lastIndex], [x, lastIndex], [x + 1, lastIndex]);
+  }
+
+  return borderTiles.some(([bx, by]) => {
+    if (bx < 0 || bx > lastIndex || by < 0 || by > lastIndex) return false;
+    return !isNaturalWall(terrain, bx, by);
+  });
 }
 
 export function validateSameTile(types: string[]): boolean {
@@ -127,10 +185,14 @@ export function validateRoomPlan(
       continue;
     }
 
-    if (isRoomEdge(item.x, item.y)) {
+    if (
+      !canPlaceNearEdge(item.structureType) &&
+      isTileAfterEdge(item.x, item.y) &&
+      wouldBlockExit(terrain, item.x, item.y)
+    ) {
       errors.push({
         step: i,
-        message: `Cannot place ${structureLabel(item.structureType)} on room edge`,
+        message: `Cannot place ${structureLabel(item.structureType)} here — it would block an exit`,
       });
     }
 

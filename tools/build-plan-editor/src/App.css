@@ -416,6 +416,22 @@ body,
   background: var(--bg);
 }
 
+.placement-error-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  background: #2a1414;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
 .tile-picker-swatch {
   width: 12px;
   height: 12px;

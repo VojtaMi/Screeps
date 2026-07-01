@@ -1,16 +1,24 @@
-import { useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BUILD_SELECTION_CONTROLLER_CONTAINER,
   BuildPlanItem,
   BuildPlansData,
   EditorMode,
   RoomLandmark,
+  STRUCTURE_TYPE_LABELS,
 } from "../types";
 import { CELL_SIZE, GRID_SIZE } from "../constants";
 import { rclForStep } from "../rcl";
 import { validateSameTile } from "../plan/validation";
+import {
+  canPlaceNearEdge,
+  isTileAfterEdge,
+  wouldBlockExit,
+} from "../plan/validationCore";
 import { drawTerrain, drawGrid, drawLandmarks, drawPlan } from "./drawing";
 import { StepControls } from "./StepControls";
+
+const PLACEMENT_ERROR_DURATION_MS = 2500;
 
 interface ValidationError {
   step: number;
@@ -65,6 +73,20 @@ export function CanvasSection({
   deletePlanItem,
 }: CanvasSectionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [placementError, setPlacementError] = useState<string | null>(null);
+  const placementErrorTimeoutRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    return () => window.clearTimeout(placementErrorTimeoutRef.current);
+  }, []);
+
+  function showPlacementError(message: string) {
+    window.clearTimeout(placementErrorTimeoutRef.current);
+    setPlacementError(message);
+    placementErrorTimeoutRef.current = window.setTimeout(() => {
+      setPlacementError(null);
+    }, PLACEMENT_ERROR_DURATION_MS);
+  }
 
   useEffect(() => {
     redraw();
@@ -137,9 +159,11 @@ export function CanvasSection({
         : null;
 
     if (editorMode === "build") {
-      if (canPlaceStructure(plan, x, y)) {
+      const blockReason = getPlacementBlockReason(plan, x, y);
+      if (!blockReason) {
         addPlanItem(plan, x, y);
       } else {
+        showPlacementError(blockReason);
         setSelectedTile({ x, y });
         setSelectedItemIndex(selectedIndex);
       }
@@ -163,7 +187,25 @@ export function CanvasSection({
     return;
   }
 
-  function canPlaceStructure(plan: BuildPlanItem[], x: number, y: number) {
+  // Returns a human-readable reason placement is blocked, or null if it's allowed.
+  function getPlacementBlockReason(
+    plan: BuildPlanItem[],
+    x: number,
+    y: number
+  ): string | null {
+    const selectedItem = getSelectedBuildPlanItem(x, y);
+    const structureLabel =
+      STRUCTURE_TYPE_LABELS[selectedItem.structureType] ??
+      selectedItem.structureType;
+
+    if (
+      !canPlaceNearEdge(selectedItem.structureType) &&
+      isTileAfterEdge(x, y) &&
+      wouldBlockExit(terrain, x, y)
+    ) {
+      return `Cannot place ${structureLabel} here — it would block an exit`;
+    }
+
     const destroyedTypes = new Set(
       plan
         .filter((item) => item.x === x && item.y === y && item.action === "destroy")
@@ -180,13 +222,17 @@ export function CanvasSection({
       )
       .map((item) => item.structureType);
 
-    if (existingTypes.length === 0) return true;
+    if (existingTypes.length === 0) return null;
 
-    const selectedItem = getSelectedBuildPlanItem(x, y);
+    if (existingTypes.includes(selectedItem.structureType)) {
+      return `A ${structureLabel} is already planned on this tile`;
+    }
 
-    if (existingTypes.includes(selectedItem.structureType)) return false;
+    if (!validateSameTile([...existingTypes, selectedItem.structureType])) {
+      return `${structureLabel} cannot share a tile with the existing structure(s) here`;
+    }
 
-    return validateSameTile([...existingTypes, selectedItem.structureType]);
+    return null;
   }
 
   function addPlanItem(plan: BuildPlanItem[], x: number, y: number) {
@@ -231,6 +277,11 @@ export function CanvasSection({
             onClick={handleCanvasClick}
             className={`room-canvas ${editorMode === "erase" ? "erase-mode" : ""}`}
           />
+          {placementError && (
+            <div className="placement-error-toast" role="alert">
+              {placementError}
+            </div>
+          )}
         </div>
         <StepControls
           currentStep={currentStep}
