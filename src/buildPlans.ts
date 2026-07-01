@@ -509,7 +509,6 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       },
       { x: 27, y: 3, structureType: STRUCTURE_WALL },
       { x: 28, y: 3, structureType: STRUCTURE_RAMPART },
-      { x: 44, y: 23, structureType: STRUCTURE_LINK },
       {
         x: 13,
         y: 9,
@@ -517,7 +516,6 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
         action: "destroy",
         minRcl: 5,
       },
-      { x: 13, y: 9, structureType: STRUCTURE_LINK },
       { x: 38, y: 4, structureType: STRUCTURE_EXTENSION },
       { x: 36, y: 4, structureType: STRUCTURE_ROAD },
       { x: 35, y: 4, structureType: STRUCTURE_ROAD },
@@ -531,6 +529,8 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       { x: 29, y: 12, structureType: STRUCTURE_EXTENSION },
       { x: 28, y: 13, structureType: STRUCTURE_EXTENSION },
       { x: 27, y: 12, structureType: STRUCTURE_TOWER },
+      { x: 44, y: 22, structureType: STRUCTURE_LINK },
+      { x: 14, y: 9, structureType: STRUCTURE_LINK },
     ],
   },
 };
