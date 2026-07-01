@@ -59,15 +59,26 @@ export function isControllerDeliveryContainer(
 
 export function getControllerDeliveryLink(room: Room): StructureLink | null {
   const plan = getControllerDeliveryBuildPlan(room);
-  if (!plan) {
+  if (plan) {
+    const plannedLink = room
+      .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+      .find((s): s is StructureLink => s.structureType === STRUCTURE_LINK);
+    if (plannedLink) {
+      return plannedLink;
+    }
+  }
+
+  const controller = room.controller;
+  if (!controller) {
     return null;
   }
 
+  // Range 4 covers any link a creep can reach while still upgrading: range 3
+  // to the controller plus range 1 to withdraw from the link.
   return (
-    room
-      .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
-      .find((s): s is StructureLink => s.structureType === STRUCTURE_LINK) ??
-    null
+    controller.pos.findInRange(FIND_MY_STRUCTURES, 4, {
+      filter: (s): s is StructureLink => s.structureType === STRUCTURE_LINK,
+    })[0] ?? null
   );
 }
 
