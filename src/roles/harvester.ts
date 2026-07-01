@@ -40,8 +40,8 @@ export const harvester: Role = {
       return;
     }
 
-    const target = link ?? container ?? source;
-    if (isPositionInHostileWeaponRange(target.pos)) {
+    const moveTarget = container ?? source;
+    if (isPositionInHostileWeaponRange(moveTarget.pos)) {
       const spawn = findSameRoomSpawn(creep);
       if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
         creep.moveToAvoidingRoomEdges(spawn, {
@@ -55,7 +55,7 @@ export const harvester: Role = {
     }
 
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-      creep.moveToAvoidingRoomEdges(target, {
+      creep.moveToAvoidingRoomEdges(moveTarget, {
         visualizePathStyle: { stroke: "#ffaa00" },
       });
     }
