@@ -1,3 +1,4 @@
+import { isPositionInHostileWeaponRange } from "../hostileTargeting";
 import {
   getPrimarySpawnSite,
   isPrimarySpawnMissing,
@@ -12,6 +13,11 @@ function buildPrimarySpawn(creep: Creep): boolean {
   const spawnSite = getPrimarySpawnSite(creep.room);
   if (!spawnSite) {
     return false;
+  }
+
+  if (isPositionInHostileWeaponRange(spawnSite.pos)) {
+    creep.moveOffRoad();
+    return true;
   }
 
   if (creep.build(spawnSite) === ERR_NOT_IN_RANGE) {

@@ -26,18 +26,22 @@ export function isStandableRampart(rampart: StructureRampart): boolean {
 
 /**
  * Pick the best rampart for this defender to hold, closest to `anchor`.
- * Ramparts occupied by another creep are skipped unless none are free, so two
+ * If `maxAnchorRange` is set, only use ramparts where this defender can affect
+ * that anchor. Occupied ramparts are skipped unless none are free, so two
  * defenders spread across breach points instead of stacking on one tile.
  */
 export function findGuardRampart(
   room: Room,
   anchor: RoomPosition,
   self: Creep,
+  maxAnchorRange?: number,
 ): StructureRampart | null {
   const ramparts = room.find(FIND_MY_STRUCTURES, {
     filter: (structure): structure is StructureRampart =>
       structure.structureType === STRUCTURE_RAMPART &&
-      isStandableRampart(structure),
+      isStandableRampart(structure) &&
+      (maxAnchorRange === undefined ||
+        structure.pos.inRangeTo(anchor, maxAnchorRange)),
   });
   if (ramparts.length === 0) {
     return null;

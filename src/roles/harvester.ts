@@ -1,4 +1,6 @@
+import { isPositionInHostileWeaponRange } from "../hostileTargeting";
 import type { Role } from "../types";
+import { findSameRoomSpawn } from "./support/spawns";
 import { moveToTargetRoom } from "./support/targetRoom";
 
 export const harvester: Role = {
@@ -39,6 +41,19 @@ export const harvester: Role = {
     }
 
     const target = link ?? container ?? source;
+    if (isPositionInHostileWeaponRange(target.pos)) {
+      const spawn = findSameRoomSpawn(creep);
+      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
+        creep.moveToAvoidingRoomEdges(spawn, {
+          visualizePathStyle: { stroke: "#ffaa00" },
+        });
+        return;
+      }
+
+      creep.moveOffRoad();
+      return;
+    }
+
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
       creep.moveToAvoidingRoomEdges(target, {
         visualizePathStyle: { stroke: "#ffaa00" },

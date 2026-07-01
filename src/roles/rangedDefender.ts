@@ -30,7 +30,12 @@ export const rangedDefender: Role = {
     const anchor = target?.pos ?? spawn?.pos ?? creep.pos;
 
     // Hold the rampart nearest the threat and focus fire alongside the towers.
-    const rampart = findGuardRampart(creep.room, anchor, creep);
+    const rampart = findGuardRampart(
+      creep.room,
+      anchor,
+      creep,
+      target ? RANGED_RANGE : undefined,
+    );
     if (rampart) {
       if (!creep.pos.isEqualTo(rampart.pos)) {
         creep.moveToAvoidingRoomEdges(rampart, {

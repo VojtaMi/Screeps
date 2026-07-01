@@ -1,3 +1,4 @@
+import { isPositionInHostileWeaponRange } from "./hostileTargeting";
 import {
   getRepairPriority,
   isRepairTarget,
@@ -491,6 +492,7 @@ export function extendCreep(): void {
         if (
           savedTarget &&
           hasRefillEnergy(savedTarget) &&
+          !isPositionInHostileWeaponRange(savedTarget.pos) &&
           !isEnergyTargetReservedByOtherCreep(this, savedTarget)
         ) {
           return savedTarget;
@@ -544,6 +546,7 @@ export function extendCreep(): void {
 
   Creep.prototype.findBuildTarget = function (): ConstructionSite | null {
     return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES, {
+      filter: (site) => !isPositionInHostileWeaponRange(site.pos),
       ignoreCreeps: true,
     });
   };
@@ -580,6 +583,7 @@ export function extendCreep(): void {
         filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
           resource.resourceType === RESOURCE_ENERGY &&
           resource.amount > 0 &&
+          !isPositionInHostileWeaponRange(resource.pos) &&
           !isEnergyTargetReservedByOtherCreep(
             this,
             resource as Resource<RESOURCE_ENERGY>,
@@ -593,6 +597,7 @@ export function extendCreep(): void {
         filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
           resource.resourceType === RESOURCE_ENERGY &&
           resource.amount > 0 &&
+          !isPositionInHostileWeaponRange(resource.pos) &&
           !isEnergyTargetReservedByOtherCreep(
             this,
             resource as Resource<RESOURCE_ENERGY>,
@@ -601,11 +606,13 @@ export function extendCreep(): void {
       const ruins = this.room.find(FIND_RUINS, {
         filter: (target) =>
           target.store[RESOURCE_ENERGY] > 0 &&
+          !isPositionInHostileWeaponRange(target.pos) &&
           !isEnergyTargetReservedByOtherCreep(this, target),
       });
       const tombstones = this.room.find(FIND_TOMBSTONES, {
         filter: (target) =>
           target.store[RESOURCE_ENERGY] > 0 &&
+          !isPositionInHostileWeaponRange(target.pos) &&
           !isEnergyTargetReservedByOtherCreep(this, target),
       });
 
@@ -623,6 +630,7 @@ export function extendCreep(): void {
       filter: (structure): structure is StructureContainer =>
         structure.structureType === STRUCTURE_CONTAINER &&
         structure.store[RESOURCE_ENERGY] > 0 &&
+        !isPositionInHostileWeaponRange(structure.pos) &&
         !isEnergyTargetReservedByOtherCreep(this, structure),
     });
   };
@@ -633,11 +641,13 @@ export function extendCreep(): void {
       const ruin = this.pos.findClosestByPath(FIND_RUINS, {
         filter: (target) =>
           target.store[RESOURCE_ENERGY] > 0 &&
+          !isPositionInHostileWeaponRange(target.pos) &&
           !isEnergyTargetReservedByOtherCreep(this, target),
       });
       const tombstone = this.pos.findClosestByPath(FIND_TOMBSTONES, {
         filter: (target) =>
           target.store[RESOURCE_ENERGY] > 0 &&
+          !isPositionInHostileWeaponRange(target.pos) &&
           !isEnergyTargetReservedByOtherCreep(this, target),
       });
 

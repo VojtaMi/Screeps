@@ -1,4 +1,6 @@
 const HOSTILE_CORE_THREAT_RANGE = 3;
+const HOSTILE_MELEE_DANGER_RANGE = 1;
+const HOSTILE_RANGED_DANGER_RANGE = 3;
 const CORE_STRUCTURE_TYPES = new Set<StructureConstant>([
   STRUCTURE_SPAWN,
   STRUCTURE_STORAGE,
@@ -19,6 +21,19 @@ export function hasHostileCombatCreeps(
   hostiles = room.find(FIND_HOSTILE_CREEPS),
 ): boolean {
   return hostiles.some(isHostileCombatCreep);
+}
+
+export function isPositionInHostileWeaponRange(
+  position: RoomPosition,
+  hostiles = Game.rooms[position.roomName]?.find(FIND_HOSTILE_CREEPS) ?? [],
+): boolean {
+  return hostiles.some(
+    (hostile) =>
+      (hostile.getActiveBodyparts(ATTACK) > 0 &&
+        hostile.pos.inRangeTo(position, HOSTILE_MELEE_DANGER_RANGE)) ||
+      (hostile.getActiveBodyparts(RANGED_ATTACK) > 0 &&
+        hostile.pos.inRangeTo(position, HOSTILE_RANGED_DANGER_RANGE)),
+  );
 }
 
 export function getHostilePriority(hostile: Creep): number {

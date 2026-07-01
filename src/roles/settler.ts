@@ -1,3 +1,4 @@
+import { isPositionInHostileWeaponRange } from "../hostileTargeting";
 import { getPrimarySpawnBuildPlan } from "../managers/buildPlanManager";
 import type { Role } from "../types";
 import { moveToTargetRoom } from "./support/targetRoom";
@@ -23,6 +24,11 @@ function buildPlannedSpawn(creep: Creep): boolean {
   const spawnSite = getPlannedSpawnSite(creep);
   if (!spawnSite) {
     return false;
+  }
+
+  if (isPositionInHostileWeaponRange(spawnSite.pos)) {
+    creep.moveOffRoad();
+    return true;
   }
 
   if (creep.build(spawnSite) === ERR_NOT_IN_RANGE) {

@@ -1,3 +1,5 @@
+import { isPositionInHostileWeaponRange } from "../../hostileTargeting";
+
 type ResourceLootTarget = Resource<ResourceConstant> | Ruin | Tombstone;
 type ResourceLootDeliveryTarget = StructureStorage | StructureTerminal;
 
@@ -16,7 +18,11 @@ function getNonEnergyResourceInStore(
 function isDroppedNonEnergyResource(
   target: Resource<ResourceConstant>,
 ): boolean {
-  return target.resourceType !== RESOURCE_ENERGY && target.amount > 0;
+  return (
+    target.resourceType !== RESOURCE_ENERGY &&
+    target.amount > 0 &&
+    !isPositionInHostileWeaponRange(target.pos)
+  );
 }
 
 function findResourceLootDeliveryTarget(
@@ -38,10 +44,14 @@ function findResourceLootTarget(creep: Creep): ResourceLootTarget | null {
     filter: isDroppedNonEnergyResource,
   });
   const ruins = creep.room.find(FIND_RUINS, {
-    filter: (target) => getNonEnergyResourceInStore(target.store) !== null,
+    filter: (target) =>
+      getNonEnergyResourceInStore(target.store) !== null &&
+      !isPositionInHostileWeaponRange(target.pos),
   });
   const tombstones = creep.room.find(FIND_TOMBSTONES, {
-    filter: (target) => getNonEnergyResourceInStore(target.store) !== null,
+    filter: (target) =>
+      getNonEnergyResourceInStore(target.store) !== null &&
+      !isPositionInHostileWeaponRange(target.pos),
   });
 
   return creep.pos.findClosestByPath([

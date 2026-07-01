@@ -1,4 +1,7 @@
-import { isHostileThreateningCore } from "../hostileTargeting";
+import {
+  findPriorityHostile,
+  isHostileThreateningCore,
+} from "../hostileTargeting";
 import type { Role } from "../types";
 import { findGuardRampart, pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
@@ -24,9 +27,15 @@ export const defender: Role = {
     // Engage hostiles that have committed into the defended area; ignore
     // edge-drainers and let towers handle them instead of chasing into the open.
     const threat = hostiles.find(isHostileThreateningCore) ?? null;
-    const anchor = threat?.pos ?? spawn?.pos ?? creep.pos;
+    const target = threat ?? findPriorityHostile(creep.room, creep.pos);
+    const anchor = target?.pos ?? spawn?.pos ?? creep.pos;
 
-    const rampart = findGuardRampart(creep.room, anchor, creep);
+    const rampart = findGuardRampart(
+      creep.room,
+      anchor,
+      creep,
+      target ? 1 : undefined,
+    );
     if (rampart) {
       if (!creep.pos.isEqualTo(rampart.pos)) {
         creep.moveToAvoidingRoomEdges(rampart, {

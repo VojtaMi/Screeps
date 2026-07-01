@@ -1,4 +1,7 @@
-import { hasHostileCombatCreeps } from "../../hostileTargeting";
+import {
+  hasHostileCombatCreeps,
+  isPositionInHostileWeaponRange,
+} from "../../hostileTargeting";
 import {
   getControllerDeliveryBuildPlan,
   getControllerDeliveryContainer,
@@ -240,6 +243,7 @@ function isCarrierRefillTarget(
   return (
     hasRefillEnergy(target) &&
     !isStorageTarget(target) &&
+    !isPositionInHostileWeaponRange(target.pos) &&
     isWorthCarrierDroppedEnergyTrip(creep, target) &&
     !isDroppedEnergyReservedForWorker(target) &&
     !isRefillTargetReservedByOtherCreep(creep, target) &&
@@ -572,6 +576,7 @@ function findWorkerDeliveryTarget(creep: Creep): Creep | null {
       WORKER_REFUEL_ROLES.has(target.memory.role) &&
       canRefuelWorkerRole(creep.room, target.memory.role) &&
       !target.hasEnergy() &&
+      !isPositionInHostileWeaponRange(target.pos) &&
       isDeliveryTargetAvailable(creep, target),
   });
 
