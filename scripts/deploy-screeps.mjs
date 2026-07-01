@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises";
 
-const token = process.env.SCREEPS_TOKEN;
+await loadDotEnv();
+
+const token = process.env.SCREEPS_TOKEN || process.env.SCREEPS_MMO_TOKEN;
 const branch = process.env.SCREEPS_BRANCH || "default";
 
 if (!token) {
-  throw new Error("SCREEPS_TOKEN is required. Add it as a GitHub Actions secret.");
+  throw new Error("SCREEPS_TOKEN or SCREEPS_MMO_TOKEN is required.");
 }
 
 const main = await readFile("dist/main.js", "utf8");
@@ -34,3 +36,29 @@ if (result.ok !== 1) {
 }
 
 console.log(`Deployed dist/main.js to Screeps branch "${branch}".`);
+
+async function loadDotEnv() {
+  let text;
+  try {
+    text = await readFile(".env", "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)\s*$/);
+    if (!match) {
+      continue;
+    }
+
+    const [, key, rawValue] = match;
+    if (process.env[key] !== undefined) {
+      continue;
+    }
+
+    process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
+  }
+}

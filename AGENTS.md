@@ -20,7 +20,7 @@ Use these npm scripts:
 - `npm run ci`: typecheck plus Biome CI check. Run this before handing off code changes.
 - `npm run check:write`: apply Biome safe fixes and formatting.
 - `npm run build`: typecheck then bundle to `dist/main.js`.
-- `npm run deploy:screeps`: deploys `dist/main.js`; requires `SCREEPS_TOKEN`, optional `SCREEPS_BRANCH`.
+- `npm run deploy:screeps`: deploys `dist/main.js`; requires `SCREEPS_TOKEN` (falls back to `SCREEPS_MMO_TOKEN` if unset), optional `SCREEPS_BRANCH`. Reads `.env` directly, so it works without exporting the token first.
 
 ## Game Access And MCP
 
