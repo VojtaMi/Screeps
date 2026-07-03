@@ -558,13 +558,6 @@ export const DEFAULT_BUILD_PLANS: Record<string, DefaultBuildPlan> = {
       },
       { x: 27, y: 3, structureType: STRUCTURE_WALL },
       { x: 28, y: 3, structureType: STRUCTURE_RAMPART },
-      {
-        x: 13,
-        y: 9,
-        structureType: STRUCTURE_CONTAINER,
-        action: "destroy",
-        minRcl: 5,
-      },
       { x: 33, y: 41, structureType: STRUCTURE_WALL },
       { x: 36, y: 41, structureType: STRUCTURE_WALL },
       { x: 37, y: 41, structureType: STRUCTURE_WALL },
