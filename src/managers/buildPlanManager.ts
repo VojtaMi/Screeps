@@ -417,7 +417,7 @@ export const buildPlanManager = {
       }
 
       if (!canBuildAtCurrentControllerLevel(room, plan)) {
-        return null;
+        continue;
       }
 
       return plan;
