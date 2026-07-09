@@ -18,6 +18,14 @@ export type RepairTarget =
   | StructureRampart
   | StructureWall;
 
+interface RoomRepairCache {
+  tick: number;
+  combatHostiles: Creep[];
+  targets: RepairTarget[];
+}
+
+const repairCacheByRoom = new Map<string, RoomRepairCache>();
+
 export function isRepairTarget(
   structure: Structure,
 ): structure is RepairTarget {
@@ -150,7 +158,7 @@ function isBetterRepairTargetForCreep(
 }
 
 function getCombatHostiles(room: Room): Creep[] {
-  return room.find(FIND_HOSTILE_CREEPS, { filter: isHostileCombatCreep });
+  return getRoomRepairCache(room).combatHostiles;
 }
 
 function isContestedBy(target: RepairTarget, combatHostiles: Creep[]): boolean {
@@ -169,42 +177,53 @@ export function isRepairTargetContested(
   return isContestedBy(target, getCombatHostiles(room));
 }
 
-export function findBestRepairTarget(room: Room): RepairTarget | null {
-  const combatHostiles = getCombatHostiles(room);
-  const repairTargets = room.find(FIND_STRUCTURES, {
+function getRoomRepairCache(room: Room): RoomRepairCache {
+  const cached = repairCacheByRoom.get(room.name);
+  if (cached?.tick === Game.time) {
+    return cached;
+  }
+
+  const combatHostiles = room.find(FIND_HOSTILE_CREEPS, {
+    filter: isHostileCombatCreep,
+  });
+  const targets = room.find(FIND_STRUCTURES, {
     filter: (structure): structure is RepairTarget =>
       isRepairTarget(structure) &&
       getRepairPriority(structure) !== Infinity &&
       !isContestedBy(structure, combatHostiles),
   });
 
-  return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
-    if (isBetterRepairTarget(target, bestTarget)) {
-      return target;
-    }
+  const cache = { tick: Game.time, combatHostiles, targets };
+  repairCacheByRoom.set(room.name, cache);
+  return cache;
+}
 
-    return bestTarget;
-  }, null);
+export function findBestRepairTarget(room: Room): RepairTarget | null {
+  return getRoomRepairCache(room).targets.reduce<RepairTarget | null>(
+    (bestTarget, target) => {
+      if (isBetterRepairTarget(target, bestTarget)) {
+        return target;
+      }
+
+      return bestTarget;
+    },
+    null,
+  );
 }
 
 export function findBestRepairTargetForCreep(
   creep: Creep,
 ): RepairTarget | null {
-  const combatHostiles = getCombatHostiles(creep.room);
-  const repairTargets = creep.room.find(FIND_STRUCTURES, {
-    filter: (structure): structure is RepairTarget =>
-      isRepairTarget(structure) &&
-      getRepairPriority(structure) !== Infinity &&
-      !isContestedBy(structure, combatHostiles),
-  });
+  return getRoomRepairCache(creep.room).targets.reduce<RepairTarget | null>(
+    (bestTarget, target) => {
+      if (isBetterRepairTargetForCreep(creep, target, bestTarget)) {
+        return target;
+      }
 
-  return repairTargets.reduce<RepairTarget | null>((bestTarget, target) => {
-    if (isBetterRepairTargetForCreep(creep, target, bestTarget)) {
-      return target;
-    }
-
-    return bestTarget;
-  }, null);
+      return bestTarget;
+    },
+    null,
+  );
 }
 
 export function hasRepairWork(room: Room): boolean {

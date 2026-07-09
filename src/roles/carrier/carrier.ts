@@ -52,6 +52,56 @@ const WORKER_REFUEL_ROLE_PENALTY: Partial<Record<CreepRole, number>> = {
   [CREEP_ROLE.UPGRADER]: 8,
 };
 
+interface CarrierReservationState {
+  tick: number;
+  refillCapacityByTargetId: Record<string, number>;
+  deliveryEnergyByTargetId: Record<string, number>;
+}
+
+let reservationState: CarrierReservationState | null = null;
+
+function addReservation(
+  reservations: Record<string, number>,
+  targetId: string | undefined,
+  amount: number,
+): void {
+  if (!targetId || amount <= 0) {
+    return;
+  }
+
+  reservations[targetId] = (reservations[targetId] ?? 0) + amount;
+}
+
+function getCarrierReservationState(): CarrierReservationState {
+  if (reservationState?.tick === Game.time) {
+    return reservationState;
+  }
+
+  const refillCapacityByTargetId: Record<string, number> = {};
+  const deliveryEnergyByTargetId: Record<string, number> = {};
+
+  for (const otherCreep of Object.values(Game.creeps)) {
+    addReservation(
+      refillCapacityByTargetId,
+      otherCreep.memory.energyTargetId,
+      otherCreep.store.getFreeCapacity(RESOURCE_ENERGY),
+    );
+    addReservation(
+      deliveryEnergyByTargetId,
+      otherCreep.memory.deliveryTargetId,
+      otherCreep.store[RESOURCE_ENERGY],
+    );
+  }
+
+  reservationState = {
+    tick: Game.time,
+    refillCapacityByTargetId,
+    deliveryEnergyByTargetId,
+  };
+
+  return reservationState;
+}
+
 function getEnergyRatio(creep: Creep): number {
   return (
     creep.store[RESOURCE_ENERGY] / creep.store.getCapacity(RESOURCE_ENERGY)
@@ -223,17 +273,14 @@ function getReservedRefillCapacity(
   creep: Creep,
   target: EnergyRefillTarget,
 ): number {
-  return Object.values(Game.creeps)
-    .filter(
-      (otherCreep) =>
-        otherCreep.name !== creep.name &&
-        otherCreep.memory.energyTargetId === target.id,
-    )
-    .reduce(
-      (total, otherCreep) =>
-        total + otherCreep.store.getFreeCapacity(RESOURCE_ENERGY),
-      0,
-    );
+  const reserved =
+    getCarrierReservationState().refillCapacityByTargetId[target.id] ?? 0;
+
+  if (creep.memory.energyTargetId !== target.id) {
+    return reserved;
+  }
+
+  return Math.max(0, reserved - creep.store.getFreeCapacity(RESOURCE_ENERGY));
 }
 
 function isRefillTargetReservedByOtherCreep(
@@ -406,16 +453,14 @@ function getReservedDeliveryEnergy(
   creep: Creep,
   target: EnergyDeliveryTarget,
 ): number {
-  return Object.values(Game.creeps)
-    .filter(
-      (otherCreep) =>
-        otherCreep.name !== creep.name &&
-        otherCreep.memory.deliveryTargetId === target.id,
-    )
-    .reduce(
-      (total, otherCreep) => total + otherCreep.store[RESOURCE_ENERGY],
-      0,
-    );
+  const reserved =
+    getCarrierReservationState().deliveryEnergyByTargetId[target.id] ?? 0;
+
+  if (creep.memory.deliveryTargetId !== target.id) {
+    return reserved;
+  }
+
+  return Math.max(0, reserved - creep.store[RESOURCE_ENERGY]);
 }
 
 function isDeliveryTargetAvailable(
