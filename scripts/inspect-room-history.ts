@@ -554,7 +554,10 @@ async function main() {
       if (tick > readThrough) break;
 
       const previous = clone(state) as RoomState;
-      applyTickPatch(state, patch);
+      const tickPatch = patch ?? {};
+      if (patch !== null) {
+        applyTickPatch(state, tickPatch);
+      }
 
       if (tick < from) {
         continue;
@@ -578,7 +581,7 @@ async function main() {
         timeline.push({ type: "summary", ...summarizeState(tick, objects, owner) });
       }
 
-      for (const text of eventLines(tick, state, previous, patch, events, emitted, from, to)) {
+      for (const text of eventLines(tick, state, previous, tickPatch, events, emitted, from, to)) {
         timeline.push({ type: "event", tick, text });
       }
 
