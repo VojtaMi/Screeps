@@ -3,7 +3,7 @@ import {
   isHostileThreateningCore,
 } from "../hostileTargeting";
 import type { Role } from "../types";
-import { findGuardRampart, pickAttackTarget } from "./support/defense";
+import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff0000" };
@@ -28,27 +28,18 @@ export const defender: Role = {
     // edge-drainers and let towers handle them instead of chasing into the open.
     const threat = hostiles.find(isHostileThreateningCore) ?? null;
     const target = threat ?? findPriorityHostile(creep.room, creep.pos);
-    const anchor = target?.pos ?? spawn?.pos ?? creep.pos;
 
-    const rampart = findGuardRampart(
-      creep.room,
-      anchor,
-      creep,
-      target ? 1 : undefined,
-    );
+    const rampart = target
+      ? findDefensiveRampart({
+          origin: spawn?.pos ?? creep.pos,
+          target: target.pos,
+          self: creep,
+          attackRange: 1,
+        })
+      : null;
     if (rampart) {
       if (!creep.pos.isEqualTo(rampart.pos)) {
         creep.moveToAvoidingRoomEdges(rampart, {
-          visualizePathStyle: PATH_STYLE,
-        });
-      }
-      return;
-    }
-
-    const fallbackRampart = findGuardRampart(creep.room, anchor, creep);
-    if (fallbackRampart) {
-      if (!creep.pos.isEqualTo(fallbackRampart.pos)) {
-        creep.moveToAvoidingRoomEdges(fallbackRampart, {
           visualizePathStyle: PATH_STYLE,
         });
       }

@@ -38,6 +38,10 @@ declare global {
     moveLastRoomName?: string;
     moveLastTick?: number;
     moveStuckCount?: number;
+    guardRampartX?: number;
+    guardRampartY?: number;
+    guardRampartRoomName?: string;
+    guardRampartUntil?: number;
     swapRequest?: {
       requesterName: string;
       requesterX: number;

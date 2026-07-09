@@ -7,6 +7,7 @@ import {
 import {
   canTowersOverpowerHostile,
   isHostileCombatCreep,
+  isHostileThreateningCore,
 } from "../hostileTargeting";
 import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
@@ -286,14 +287,21 @@ function getDefenderRequest(
   const rangedDefenders = creepsByRole(CREEP_ROLE.RANGED_DEFENDER);
   const meleeDefenders = creepsByRole(CREEP_ROLE.DEFENDER);
   const hostileCombatCount = hostiles.filter(isHostileCombatCreep).length;
-  const desiredRanged = hostileCombatCount > 2 ? 2 : 1;
+  const defenderCount = rangedDefenders.length + meleeDefenders.length;
+  const maxDefenders = 2;
+  if (defenderCount >= maxDefenders) {
+    return null;
+  }
+
+  const wantsMeleeBlocker = hostiles.some(isHostileThreateningCore);
+  const desiredRanged = wantsMeleeBlocker ? 1 : hostileCombatCount > 1 ? 2 : 1;
 
   let role: CreepRole;
   let maxBody: BodyPartConstant[];
   if (rangedDefenders.length < desiredRanged) {
     role = CREEP_ROLE.RANGED_DEFENDER;
     maxBody = CREEP_BODY.RANGED_DEFENDER;
-  } else if (meleeDefenders.length < 1) {
+  } else if (wantsMeleeBlocker && meleeDefenders.length < 1) {
     role = CREEP_ROLE.DEFENDER;
     maxBody = CREEP_BODY.DEFENDER;
   } else {
