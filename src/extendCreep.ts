@@ -138,12 +138,14 @@ function rememberSwap(creep: Creep, otherCreep: Creep): void {
 
 function requestSwapWithBlockingCreep(
   creep: Creep,
-  nextStep: RoomPosition | null,
+  target: Parameters<Creep["moveTo"]>[0],
+  opts?: MoveToAvoidingRoomEdgesOpts,
 ): void {
   if (creep.fatigue > 0 || updateMoveStuckCount(creep) < SWAP_STUCK_THRESHOLD) {
     return;
   }
 
+  const nextStep = findNextStep(creep, target, opts);
   if (!nextStep || !creep.pos.isNearTo(nextStep)) {
     return;
   }
@@ -341,9 +343,8 @@ export function extendCreep(): void {
     target: Parameters<Creep["moveTo"]>[0],
     opts?: MoveToAvoidingRoomEdgesOpts,
   ): ReturnType<Creep["moveTo"]> {
-    const nextStep = findNextStep(this, target, opts);
     if (opts?.requestSwap !== false) {
-      requestSwapWithBlockingCreep(this, nextStep);
+      requestSwapWithBlockingCreep(this, target, opts);
     }
     return this.moveTo(target, withRoomEdgeAvoidance(this, target, opts));
   };
