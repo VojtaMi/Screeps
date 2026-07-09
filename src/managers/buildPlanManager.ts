@@ -396,7 +396,7 @@ export const buildPlanManager = {
 
       if (plan.action === "destroy") {
         if (plan.minRcl !== undefined && currentRcl < plan.minRcl) {
-          return null;
+          continue;
         }
 
         const structureExists = room
