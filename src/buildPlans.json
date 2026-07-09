@@ -529,9 +529,14 @@
         "structureType": "STRUCTURE_EXTENSION"
       },
       {
+        "x": 39,
+        "y": 36,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
         "x": 46,
         "y": 45,
-        "structureType": "STRUCTURE_EXTENSION"
+        "structureType": "STRUCTURE_TERMINAL"
       },
       {
         "x": 46,
@@ -1826,11 +1831,6 @@
       },
       {
         "x": 36,
-        "y": 26,
-        "structureType": "STRUCTURE_EXTENSION"
-      },
-      {
-        "x": 36,
         "y": 27,
         "structureType": "STRUCTURE_EXTENSION"
       },
@@ -1840,6 +1840,11 @@
         "structureType": "STRUCTURE_EXTENSION"
       },
       {
+        "x": 34,
+        "y": 33,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
         "x": 32,
         "y": 29,
         "structureType": "STRUCTURE_ROAD"
@@ -1896,13 +1901,18 @@
       },
       {
         "x": 35,
+        "y": 31,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 36,
         "y": 32,
         "structureType": "STRUCTURE_EXTENSION"
       },
       {
         "x": 35,
-        "y": 31,
-        "structureType": "STRUCTURE_EXTENSION"
+        "y": 32,
+        "structureType": "STRUCTURE_ROAD"
       },
       {
         "x": 36,
@@ -1943,6 +1953,81 @@
         "x": 2,
         "y": 26,
         "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 36,
+        "y": 26,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 37,
+        "y": 27,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 37,
+        "y": 28,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 38,
+        "y": 28,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 38,
+        "y": 30,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 37,
+        "y": 30,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 37,
+        "y": 29,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 36,
+        "y": 29,
+        "structureType": "STRUCTURE_TERMINAL"
+      },
+      {
+        "x": 39,
+        "y": 28,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 39,
+        "y": 29,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 39,
+        "y": 30,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 38,
+        "y": 27,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 38,
+        "y": 31,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 38,
+        "y": 29,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 39,
+        "y": 27,
+        "structureType": "STRUCTURE_LAB"
       }
     ]
   },
@@ -2627,11 +2712,6 @@
         "structureType": "STRUCTURE_WALL"
       },
       {
-        "x": 38,
-        "y": 4,
-        "structureType": "STRUCTURE_EXTENSION"
-      },
-      {
         "x": 36,
         "y": 4,
         "structureType": "STRUCTURE_ROAD"
@@ -2710,6 +2790,16 @@
         "x": 14,
         "y": 9,
         "structureType": "STRUCTURE_LINK"
+      },
+      {
+        "x": 27,
+        "y": 9,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 38,
+        "y": 4,
+        "structureType": "STRUCTURE_TERMINAL"
       }
     ]
   }

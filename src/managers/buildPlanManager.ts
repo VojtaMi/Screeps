@@ -228,6 +228,73 @@ function shouldPlaceBuildPlanSite(
   );
 }
 
+function isForeignOwnedStructure(room: Room, structure: Structure): boolean {
+  if (!("owner" in structure)) {
+    return false;
+  }
+
+  const ownedStructure = structure as Structure & { owner: Owner };
+  return ownedStructure.owner.username !== room.controller?.owner?.username;
+}
+
+function canCoexistWithPlannedStructure(
+  structure: Structure,
+  plan: RoomBuildPlanItem,
+): boolean {
+  if (structure.structureType === plan.structureType) {
+    return true;
+  }
+
+  if (structure.structureType === STRUCTURE_RAMPART) {
+    return true;
+  }
+
+  if (plan.structureType === STRUCTURE_RAMPART) {
+    return structure.structureType !== STRUCTURE_WALL;
+  }
+
+  return false;
+}
+
+function findBuildPlanBlocker(
+  room: Room,
+  plan: RoomBuildPlanItem,
+): Structure | null {
+  if (!room.controller?.my) {
+    return null;
+  }
+
+  return (
+    room
+      .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+      .find(
+        (structure) =>
+          !isForeignOwnedStructure(room, structure) &&
+          !canCoexistWithPlannedStructure(structure, plan),
+      ) ?? null
+  );
+}
+
+function destroyBuildPlanBlocker(room: Room, plan: RoomBuildPlanItem): boolean {
+  const blocker = findBuildPlanBlocker(room, plan);
+  if (!blocker) {
+    return false;
+  }
+
+  const result = blocker.destroy();
+  if (result === OK) {
+    console.log(
+      `Build plan destroyed blocking ${blocker.structureType} in ${room.name} at ${plan.x},${plan.y} for planned ${plan.structureType}`,
+    );
+  } else {
+    console.log(
+      `Build plan failed to destroy blocking ${blocker.structureType} in ${room.name} at ${plan.x},${plan.y} for planned ${plan.structureType}: ${result}`,
+    );
+  }
+
+  return true;
+}
+
 function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
   const result = room.createConstructionSite(
     plan.x,
@@ -243,6 +310,14 @@ function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
       `Build plan failed for ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
     );
   }
+}
+
+function prepareBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
+  if (destroyBuildPlanBlocker(room, plan)) {
+    return;
+  }
+
+  placeBuildPlanSite(room, plan);
 }
 
 function executeDestroyPlan(room: Room, plan: RoomBuildPlanItem): void {
@@ -277,7 +352,7 @@ export const buildPlanManager = {
 
     const primarySpawnPlan = getPrimarySpawnBuildPlan(room);
     if (primarySpawnPlan && shouldPlaceBuildPlanSite(room, primarySpawnPlan)) {
-      placeBuildPlanSite(room, primarySpawnPlan);
+      prepareBuildPlanSite(room, primarySpawnPlan);
       return;
     }
 
@@ -293,7 +368,7 @@ export const buildPlanManager = {
     if (nextPlan.action === "destroy") {
       executeDestroyPlan(room, nextPlan);
     } else {
-      placeBuildPlanSite(room, nextPlan);
+      prepareBuildPlanSite(room, nextPlan);
     }
   },
 
