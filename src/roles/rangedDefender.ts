@@ -1,5 +1,6 @@
 import { findPriorityHostile } from "../hostileTargeting";
 import type { Role } from "../types";
+import { seekBoost } from "./support/boost";
 import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
@@ -8,6 +9,11 @@ const RANGED_RANGE = 3;
 
 export const rangedDefender: Role = {
   run(creep: Creep): void {
+    // Grab a defensive boost first if one is ready; never stall waiting for it.
+    if (seekBoost(creep)) {
+      return;
+    }
+
     const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
 
     // Self-heal alongside ranged fire; keeps us alive when towers can't.

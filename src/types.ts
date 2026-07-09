@@ -9,6 +9,8 @@ export const CREEP_ROLE = {
   UPGRADER: "upgrader",
   BUILDER: "builder",
   REPAIRER: "repairer",
+  LAB_TECH: "labTech",
+  SAFE_MODE_GENERATOR: "safeModeGenerator",
 } as const;
 
 export type CreepRole = (typeof CREEP_ROLE)[keyof typeof CREEP_ROLE];

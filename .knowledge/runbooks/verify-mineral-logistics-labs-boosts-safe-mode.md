@@ -18,6 +18,57 @@ Use this after the implementation has been deployed and allowed to run for a
 while. Prefer live inspection and logs. Do not mutate live game state unless the
 user explicitly asks.
 
+## Implementation Reference (as built)
+
+Config lives in `src/empire/`:
+
+- `resourcePolicy.ts` — shared minerals `[G, GO, O, H]`; per-room reserves;
+  safe-mode reserves; `SAFE_MODE_GHODIUM_COST = 1000`.
+- `labPlans.ts` — production + boost lab coordinates and boost targets.
+
+Managers/roles added:
+
+- `mineralLogisticsManager` (loop) — at most one terminal `send` per tick.
+- `labManager` (loop) — runs `reverseReaction` in production hubs; also owns the
+  `labTech` spawn request (1 per room with lab work).
+- `safeModeReplenishManager` — spawns the `safeModeGenerator` role.
+- Roles: `labTech`, `safeModeGenerator`. Boost logic: `roles/support/boost.ts`
+  (`seekBoost`), consumed by `defender`/`rangedDefender`.
+
+Resource reserves (storage + terminal), by room:
+
+- Default owned room: `G = 1000`.
+- `E59S28` (production hub): `G = 1000`, `GO = 3000`.
+- `E58S28` (frontline): `G = 2000`, `GO = 2000`.
+
+Safe-mode reserves: default `1`; `E58S28 = 2`.
+
+Lab configuration:
+
+- Production hub `E59S28`, reverse `GO -> G + O`: source lab `38,29` holds GO;
+  output labs `37,29` (G) and `39,29` (O). Reaction skipped unless the source
+  holds GO; wrong minerals are drained by `labTech`.
+- Boost labs `E58S28` (`42,47`, `42,48`, `41,48`), boost `GO` for `TOUGH`.
+  Targets: `900` mineral, `600` energy; usable at `MIN_BOOST_PARTS = 3`.
+
+Log strings to grep:
+
+- `Mineral logistics: sent ...` / `... failed to send ...`
+- `Lab hub <room> reverseReaction ... failed` (throttled, every 50 ticks)
+- `Safe-mode generator added a safe mode ...`
+- `Boost success: ... boosted with ...` / `Boost fallback: ...`
+
+Terminal feeding: carriers route newly collected shared minerals to the terminal
+(loot) and also stage surplus shared minerals out of storage into the terminal
+(up to `10000` per resource, only the amount above the room's reserve) so an
+existing storage stockpile becomes sendable. Carriers also top the terminal up
+to `20000` energy once storage holds `>= 50000`.
+
+Tomorrow, specifically confirm an existing `GO` stockpile in `E59S28.storage`
+(or wherever it sits) actually stages into that room's terminal and then moves to
+requesters. If a provider's surplus stays stuck in storage, staging is the slice
+to check first.
+
 ## Scope
 
 Verify the staged systems from

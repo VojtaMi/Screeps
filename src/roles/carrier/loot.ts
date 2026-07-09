@@ -1,7 +1,19 @@
+import {
+  getRoomReserve,
+  isSharedMineral,
+  SHARED_MINERALS,
+} from "../../empire/resourcePolicy";
 import { isPositionInHostileWeaponRange } from "../../hostileTargeting";
 
 type ResourceLootTarget = Resource<ResourceConstant> | Ruin | Tombstone;
 type ResourceLootDeliveryTarget = StructureStorage | StructureTerminal;
+// Keep some terminal room free for incoming logistics transfers rather than
+// packing it to the brim with collected minerals.
+const TERMINAL_LOOT_RESERVE = 50_000;
+// How much of a shared mineral to stage into the terminal so the logistics
+// manager can send it. Kept well below TERMINAL_LOOT_RESERVE.
+const STAGING_TERMINAL_CAP = 10_000;
+const MIN_STAGING_AMOUNT = 200;
 
 function getNonEnergyResourceInStore(
   store: StoreDefinition,
@@ -27,13 +39,28 @@ function isDroppedNonEnergyResource(
 
 function findResourceLootDeliveryTarget(
   creep: Creep,
+  resource: ResourceConstant | null = null,
 ): ResourceLootDeliveryTarget | null {
-  if (creep.room.storage && creep.room.storage.store.getFreeCapacity() > 0) {
-    return creep.room.storage;
+  const { storage, terminal } = creep.room;
+
+  // Shared minerals are routed into the terminal (up to a reserve) so the
+  // logistics manager can send them to rooms that need them.
+  if (
+    resource &&
+    isSharedMineral(resource) &&
+    terminal &&
+    terminal.store.getUsedCapacity(resource) < TERMINAL_LOOT_RESERVE &&
+    terminal.store.getFreeCapacity() > 0
+  ) {
+    return terminal;
   }
 
-  if (creep.room.terminal && creep.room.terminal.store.getFreeCapacity() > 0) {
-    return creep.room.terminal;
+  if (storage && storage.store.getFreeCapacity() > 0) {
+    return storage;
+  }
+
+  if (terminal && terminal.store.getFreeCapacity() > 0) {
+    return terminal;
   }
 
   return null;
@@ -109,7 +136,7 @@ export function deliverResourceLoot(creep: Creep): boolean {
     return false;
   }
 
-  const deliveryTarget = findResourceLootDeliveryTarget(creep);
+  const deliveryTarget = findResourceLootDeliveryTarget(creep, resourceType);
   if (!deliveryTarget) {
     return false;
   }
@@ -128,4 +155,61 @@ export function deliverResourceLoot(creep: Creep): boolean {
   }
 
   return result === OK;
+}
+
+// Stage surplus shared minerals sitting in storage into the terminal so the
+// logistics manager can send them. Terminal sends only draw from the terminal,
+// so without this an existing storage stockpile would never be shared. Only the
+// surplus above the room's reserve is moved, and only up to a cap that leaves
+// terminal room free. deliverResourceLoot then routes the carried mineral into
+// the terminal. Requester rooms have no surplus, so this is a no-op for them.
+export function collectStorageStagingMineral(creep: Creep): boolean {
+  const { storage, terminal } = creep.room;
+  if (
+    !storage ||
+    !terminal ||
+    creep.store.getFreeCapacity() === 0 ||
+    terminal.store.getFreeCapacity() === 0 ||
+    // Don't mix loads: only stage when not already carrying a mineral.
+    getNonEnergyResourceInStore(creep.store) !== null
+  ) {
+    return false;
+  }
+
+  for (const resource of SHARED_MINERALS) {
+    const inStorage = storage.store[resource];
+    if (inStorage === 0) {
+      continue;
+    }
+
+    const total = inStorage + terminal.store[resource];
+    const surplus = total - getRoomReserve(creep.room.name, resource);
+    const desiredInTerminal = Math.min(
+      Math.max(surplus, 0),
+      STAGING_TERMINAL_CAP,
+    );
+    const needToStage = desiredInTerminal - terminal.store[resource];
+    if (needToStage < MIN_STAGING_AMOUNT) {
+      continue;
+    }
+
+    const amount = Math.min(
+      needToStage,
+      inStorage,
+      creep.store.getFreeCapacity(),
+    );
+    if (amount < MIN_STAGING_AMOUNT) {
+      continue;
+    }
+
+    const result = creep.withdraw(storage, resource, amount);
+    if (result === ERR_NOT_IN_RANGE) {
+      creep.moveToAvoidingRoomEdges(storage, {
+        visualizePathStyle: { stroke: "#ffaa00" },
+      });
+    }
+    return true;
+  }
+
+  return false;
 }

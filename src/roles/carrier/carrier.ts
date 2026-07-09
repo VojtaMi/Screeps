@@ -10,10 +10,17 @@ import {
 import { hasRepairWork } from "../../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type Role } from "../../types";
 import { LOCAL_ENERGY_RANGE } from "../support/localEnergy";
-import { collectResourceLoot, deliverResourceLoot } from "./loot";
+import {
+  collectResourceLoot,
+  collectStorageStagingMineral,
+  deliverResourceLoot,
+} from "./loot";
 
 const MIN_DELIVERY_ENERGY_RATIO = 0.1;
 const STORAGE_ENERGY_RESERVE = 50_000;
+// Once storage is healthy, keep a small energy buffer in the terminal so the
+// mineral logistics manager can pay for outbound transfers.
+const TERMINAL_ENERGY_TARGET = 20_000;
 // During an attack, keep towers topped up to this reserve rather than merely
 // above empty, and treat any tower below it as an emergency delivery target.
 const TOWER_WARTIME_RESERVE = 700;
@@ -512,6 +519,25 @@ function findStorageDeliveryTarget(creep: Creep): StructureStorage | null {
   return storage;
 }
 
+// Top up the terminal with a small energy buffer for outbound transfers, but
+// only once storage is healthy so the local economy is never robbed for it.
+function findTerminalEnergyDeliveryTarget(
+  creep: Creep,
+): StructureTerminal | null {
+  const { storage, terminal } = creep.room;
+  if (
+    !terminal ||
+    !storage ||
+    storage.store[RESOURCE_ENERGY] < STORAGE_ENERGY_RESERVE ||
+    terminal.store[RESOURCE_ENERGY] >= TERMINAL_ENERGY_TARGET ||
+    !isDeliveryTargetAvailable(creep, terminal)
+  ) {
+    return null;
+  }
+
+  return terminal;
+}
+
 function findControllerDeliveryContainer(
   creep: Creep,
 ): StructureContainer | null {
@@ -623,6 +649,11 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
     return rememberDeliveryTarget(creep, storage);
   }
 
+  const terminalEnergy = findTerminalEnergyDeliveryTarget(creep);
+  if (terminalEnergy) {
+    return rememberDeliveryTarget(creep, terminalEnergy);
+  }
+
   const tower = findTowerDeliveryTarget(creep);
   if (tower) {
     return rememberDeliveryTarget(creep, tower);
@@ -724,7 +755,10 @@ function collectAdjacentDecayingEnergy(creep: Creep): void {
 
 export const carrier: Role = {
   run(creep: Creep): void {
-    if (creep.store[RESOURCE_ENERGY] === 0 && collectResourceLoot(creep)) {
+    if (
+      creep.store[RESOURCE_ENERGY] === 0 &&
+      (collectResourceLoot(creep) || collectStorageStagingMineral(creep))
+    ) {
       return;
     }
 

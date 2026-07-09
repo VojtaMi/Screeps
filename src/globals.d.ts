@@ -19,6 +19,7 @@ declare global {
     | StructureTower
     | StructureContainer
     | StructureStorage
+    | StructureTerminal
     | AnyCreep;
   interface MoveToAvoidingRoomEdgesOpts extends MoveToOpts {
     requestSwap?: boolean;
@@ -53,6 +54,9 @@ declare global {
     lastSwapTick?: number;
     working?: boolean;
     remoteOperate?: number;
+    wantsBoost?: boolean;
+    boosted?: boolean;
+    boostDeadline?: number;
   }
 
   interface RoomBuildPlanItem {

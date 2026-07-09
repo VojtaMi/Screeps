@@ -1,7 +1,9 @@
 import { extendCreep } from "./extendCreep";
 import { buildPlanManager } from "./managers/buildPlanManager";
+import { labManager } from "./managers/labManager";
 import { linkTransferManager } from "./managers/linkTransferManager";
 import { memoryManager } from "./managers/memoryManager";
+import { mineralLogisticsManager } from "./managers/mineralLogisticsManager";
 import { safeModeManager } from "./managers/safeModeManager";
 import { spawnManager } from "./managers/spawnManager";
 import { spawnRecoveryManager } from "./managers/spawnRecoveryManager";
@@ -11,9 +13,11 @@ import { carrier } from "./roles/carrier/carrier";
 import { claimer } from "./roles/claimer";
 import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
+import { labTech } from "./roles/labTech";
 import { pioneer } from "./roles/pioneer";
 import { rangedDefender } from "./roles/rangedDefender";
 import { repairer } from "./roles/repairer";
+import { safeModeGenerator } from "./roles/safeModeGenerator";
 import { settler } from "./roles/settler";
 import { upgrader } from "./roles/upgrader";
 import { CREEP_ROLE, type CreepRole, type Role } from "./types";
@@ -31,6 +35,8 @@ const roles: Record<CreepRole, Role> = {
   [CREEP_ROLE.UPGRADER]: upgrader,
   [CREEP_ROLE.BUILDER]: builder,
   [CREEP_ROLE.REPAIRER]: repairer,
+  [CREEP_ROLE.LAB_TECH]: labTech,
+  [CREEP_ROLE.SAFE_MODE_GENERATOR]: safeModeGenerator,
 };
 
 export function loop(): void {
@@ -40,6 +46,8 @@ export function loop(): void {
   linkTransferManager.manageLinkTransfers();
   towerManager.manageTowers();
   safeModeManager.manageSafeMode();
+  mineralLogisticsManager.manageMineralLogistics();
+  labManager.manageLabs();
   spawnManager.manageSpawning();
 
   for (const name in Game.creeps) {

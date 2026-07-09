@@ -4,6 +4,7 @@ import {
   CREEP_BODY,
   minimumBodyCost,
 } from "../creepBodies";
+import { findReadyBoostLab } from "../empire/labPlans";
 import {
   canTowersOverpowerHostile,
   isHostileCombatCreep,
@@ -13,7 +14,9 @@ import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
+import { labManager } from "./labManager";
 import { getRoomNeighbors } from "./roomLinkManager";
+import { safeModeReplenishManager } from "./safeModeReplenishManager";
 
 const FULL_HARVESTER_COST = bodyCost(CREEP_BODY.HARVESTER);
 
@@ -23,6 +26,8 @@ const MAX_BASE_CARRIERS = 4;
 const MAX_CARRIERS_PER_ROOM = 5;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
 const MIN_COMBAT_BODY_SIZE = 8;
+// How long a freshly spawned defender will detour for a boost before giving up.
+const BOOST_DEADLINE_TICKS = 60;
 
 // Controller-container energy that marks the economy as having spare throughput.
 // The upgrader holds this near the threshold in equilibrium, so we treat it as a
@@ -199,6 +204,21 @@ export const spawnManager = {
       return expansionRequest;
     }
 
+    // Empire lab/safe-mode logistics: gated on real work and their own reserves,
+    // so they never fire in recovery rooms and sit below core economy needs.
+    const labTechRequest = labManager.getSpawnRequest(room, creepsByRole);
+    if (labTechRequest) {
+      return labTechRequest;
+    }
+
+    const safeModeRequest = safeModeReplenishManager.getSpawnRequest(
+      room,
+      creepsByRole,
+    );
+    if (safeModeRequest) {
+      return safeModeRequest;
+    }
+
     const { desiredBuilders, desiredUpgraders } = getDiscretionaryPlan(
       room,
       builders,
@@ -312,15 +332,32 @@ function getDefenderRequest(
     return null;
   }
 
+  const body = buildBodyFromMaxPattern({
+    maxBody,
+    energyBudget,
+    minimumSize: MIN_COMBAT_BODY_SIZE,
+    sortBody: sortCombatBody,
+  });
+
   return {
     role,
-    body: buildBodyFromMaxPattern({
-      maxBody,
-      energyBudget,
-      minimumSize: MIN_COMBAT_BODY_SIZE,
-      sortBody: sortCombatBody,
-    }),
+    body,
+    memory: getDefenderBoostMemory(context.room, body),
   };
+}
+
+// Request a defensive boost only when a boost lab is already stocked for this
+// creep's TOUGH parts, with a deadline so a defender is never stranded waiting.
+function getDefenderBoostMemory(
+  room: Room,
+  body: BodyPartConstant[],
+): Partial<CreepMemory> | undefined {
+  const toughParts = body.filter((part) => part === TOUGH).length;
+  if (toughParts === 0 || !findReadyBoostLab(room, toughParts)) {
+    return undefined;
+  }
+
+  return { wantsBoost: true, boostDeadline: Game.time + BOOST_DEADLINE_TICKS };
 }
 
 function sortCombatBody(body: BodyPartConstant[]): BodyPartConstant[] {

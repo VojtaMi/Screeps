@@ -3,6 +3,7 @@ import {
   isHostileThreateningCore,
 } from "../hostileTargeting";
 import type { Role } from "../types";
+import { seekBoost } from "./support/boost";
 import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
@@ -10,6 +11,11 @@ const PATH_STYLE: PolyStyle = { stroke: "#ff0000" };
 
 export const defender: Role = {
   run(creep: Creep): void {
+    // Grab a defensive boost first if one is ready; never stall waiting for it.
+    if (seekBoost(creep)) {
+      return;
+    }
+
     const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
 
     // Self-heal alongside any other action; keeps us alive when towers can't.

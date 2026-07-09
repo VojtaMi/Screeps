@@ -41,6 +41,7 @@ export const CREEP_BODY = {
     ...repeatBody(4, [WORK, WORK, WORK, WORK, MOVE, CARRY]),
   ],
   CARRIER: [...repeatBody(4, [MOVE, CARRY, CARRY])],
+  LAB_TECH: [...repeatBody(6, [CARRY, CARRY, MOVE])],
   DEFENDER: defenderBody(ATTACK),
   RANGED_DEFENDER: defenderBody(RANGED_ATTACK),
   WORKER: [
