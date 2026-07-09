@@ -525,6 +525,10 @@ function findUnclaimedHarvesterSource(room: Room): Source | null {
 }
 
 function hasAvailableNeighborSpawn(room: Room): boolean {
+  if (!canReceiveCrossRoomHarvester(room)) {
+    return false;
+  }
+
   const neighbors = getRoomNeighbors(room.name);
 
   for (const neighborName of neighbors) {
@@ -545,6 +549,14 @@ function hasAvailableNeighborSpawn(room: Room): boolean {
   return false;
 }
 
+function canReceiveCrossRoomHarvester(room: Room): boolean {
+  return (
+    room.controller?.my === true &&
+    room.find(FIND_HOSTILE_CREEPS).length === 0 &&
+    room.find(FIND_MY_SPAWNS).length > 0
+  );
+}
+
 function getCrossRoomHarvesterRequest(
   spawn: StructureSpawn,
 ): SpawnRequest | null {
@@ -557,6 +569,8 @@ function getCrossRoomHarvesterRequest(
   for (const neighborName of neighbors) {
     const neighborRoom = Game.rooms[neighborName];
     if (!neighborRoom) continue;
+
+    if (!canReceiveCrossRoomHarvester(neighborRoom)) continue;
 
     if (neighborRoom.energyCapacityAvailable >= FULL_HARVESTER_COST) continue;
 
