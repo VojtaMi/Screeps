@@ -1,17 +1,6 @@
 import { CREEP_ROLE } from "../types";
 import { getPrimarySpawnBuildPlan } from "./buildPlanManager";
 
-const PRIMARY_SPAWN_NAME = "Spawn1";
-const PRIMARY_SPAWN_ROOM = "E59S28";
-
-function getPrimarySpawnRoom(): Room | null {
-  return (
-    Game.spawns[PRIMARY_SPAWN_NAME]?.room ??
-    Game.rooms[PRIMARY_SPAWN_ROOM] ??
-    null
-  );
-}
-
 export function getPrimarySpawnSite(
   room: Room,
 ): ConstructionSite<STRUCTURE_SPAWN> | null {
@@ -25,14 +14,25 @@ export function getPrimarySpawnSite(
   return (
     sites.find(
       (site): site is ConstructionSite<STRUCTURE_SPAWN> =>
-        site.structureType === STRUCTURE_SPAWN,
+        site.my && site.structureType === STRUCTURE_SPAWN,
     ) ?? null
   );
 }
 
 export function isPrimarySpawnMissing(room: Room): boolean {
-  const spawn = Game.spawns[PRIMARY_SPAWN_NAME];
-  return !spawn && room.name === PRIMARY_SPAWN_ROOM;
+  const plan = getPrimarySpawnBuildPlan(room);
+  if (!room.controller?.my || !plan) {
+    return false;
+  }
+
+  const plannedSpawn = room
+    .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
+    .find(
+      (structure): structure is StructureSpawn =>
+        structure.structureType === STRUCTURE_SPAWN && structure.my,
+    );
+
+  return !plannedSpawn;
 }
 
 function canRebuildSpawn(creep: Creep): boolean {
@@ -89,12 +89,14 @@ function convertRebuildersToPioneers(room: Room): void {
 
 export const spawnRecoveryManager = {
   manageSpawnRecovery(): void {
-    const room = getPrimarySpawnRoom();
-    if (!room || !isPrimarySpawnMissing(room)) {
-      return;
-    }
+    for (const roomName in Game.rooms) {
+      const room = Game.rooms[roomName];
+      if (!isPrimarySpawnMissing(room)) {
+        continue;
+      }
 
-    createPrimarySpawnSite(room);
-    convertRebuildersToPioneers(room);
+      createPrimarySpawnSite(room);
+      convertRebuildersToPioneers(room);
+    }
   },
 };
