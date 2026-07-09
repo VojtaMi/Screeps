@@ -45,6 +45,16 @@ export const rangedDefender: Role = {
       return;
     }
 
+    const fallbackRampart = findGuardRampart(creep.room, anchor, creep);
+    if (fallbackRampart) {
+      if (!creep.pos.isEqualTo(fallbackRampart.pos)) {
+        creep.moveToAvoidingRoomEdges(fallbackRampart, {
+          visualizePathStyle: PATH_STYLE,
+        });
+      }
+      return;
+    }
+
     // No ramparts available: kite at range instead of diving into melee.
     if (target) {
       const range = creep.pos.getRangeTo(target);

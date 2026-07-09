@@ -45,6 +45,16 @@ export const defender: Role = {
       return;
     }
 
+    const fallbackRampart = findGuardRampart(creep.room, anchor, creep);
+    if (fallbackRampart) {
+      if (!creep.pos.isEqualTo(fallbackRampart.pos)) {
+        creep.moveToAvoidingRoomEdges(fallbackRampart, {
+          visualizePathStyle: PATH_STYLE,
+        });
+      }
+      return;
+    }
+
     // No ramparts to hold. Block a committed threat directly, but still refuse
     // to chase edge-drainers across open ground.
     if (threat) {

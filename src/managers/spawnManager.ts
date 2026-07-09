@@ -21,6 +21,7 @@ const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
 const MAX_BASE_CARRIERS = 4;
 const MAX_CARRIERS_PER_ROOM = 5;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
+const MIN_COMBAT_BODY_SIZE = 8;
 
 // Controller-container energy that marks the economy as having spare throughput.
 // The upgrader holds this near the threshold in equilibrium, so we treat it as a
@@ -299,7 +300,7 @@ function getDefenderRequest(
     return null;
   }
 
-  if (energyBudget < minimumBodyCost(maxBody)) {
+  if (energyBudget < bodyCost(maxBody.slice(0, MIN_COMBAT_BODY_SIZE))) {
     return null;
   }
 
@@ -308,6 +309,7 @@ function getDefenderRequest(
     body: buildBodyFromMaxPattern({
       maxBody,
       energyBudget,
+      minimumSize: MIN_COMBAT_BODY_SIZE,
       sortBody: sortCombatBody,
     }),
   };

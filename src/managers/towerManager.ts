@@ -26,6 +26,7 @@ export const towerManager = {
     }
 
     const hostiles = room.find(FIND_HOSTILE_CREEPS);
+    const underAttack = hasHostileCombatCreeps(room, hostiles);
     // Pick one shared target so towers focus fire instead of splitting damage.
     const target =
       hostiles.length > 0 ? findPriorityHostile(room, towers[0].pos) : null;
@@ -37,13 +38,21 @@ export const towerManager = {
     // far more safely and quickly than a creep repairer, buying time before a
     // safe mode is spent. Outside an attack, repair stays with creeps.
     const repairTarget =
-      !shouldFire && hasHostileCombatCreeps(room, hostiles)
-        ? findThreatenedRampart(room, hostiles)
-        : null;
+      !shouldFire && underAttack ? findThreatenedRampart(room, hostiles) : null;
+    const woundedDefender = underAttack
+      ? findMostWoundedCombatCreep(room)
+      : null;
     const woundedFriendly =
-      shouldFire || repairTarget ? null : findMostWoundedFriendly(room);
+      woundedDefender || shouldFire || repairTarget
+        ? null
+        : findMostWoundedFriendly(room);
 
     for (const tower of towers) {
+      if (woundedDefender) {
+        tower.heal(woundedDefender);
+        continue;
+      }
+
       if (shouldFire && target) {
         tower.attack(target);
         continue;
@@ -85,10 +94,19 @@ function findThreatenedRampart(
   }, null);
 }
 
-function findMostWoundedFriendly(room: Room): Creep | null {
+function findMostWoundedCombatCreep(room: Room): Creep | null {
+  return findMostWoundedFriendly(room, (creep) =>
+    hasActiveCombatBodyparts(creep),
+  );
+}
+
+function findMostWoundedFriendly(
+  room: Room,
+  filter: (creep: Creep) => boolean = () => true,
+): Creep | null {
   return room
     .find(FIND_MY_CREEPS, {
-      filter: (creep) => creep.hits < creep.hitsMax,
+      filter: (creep) => creep.hits < creep.hitsMax && filter(creep),
     })
     .reduce<Creep | null>((mostWounded, creep) => {
       if (
@@ -100,4 +118,12 @@ function findMostWoundedFriendly(room: Room): Creep | null {
 
       return mostWounded;
     }, null);
+}
+
+function hasActiveCombatBodyparts(creep: Creep): boolean {
+  return (
+    creep.getActiveBodyparts(ATTACK) > 0 ||
+    creep.getActiveBodyparts(RANGED_ATTACK) > 0 ||
+    creep.getActiveBodyparts(HEAL) > 0
+  );
 }
