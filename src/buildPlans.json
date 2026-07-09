@@ -582,6 +582,26 @@
         "x": 32,
         "y": 34,
         "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 41,
+        "y": 47,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 42,
+        "y": 47,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 42,
+        "y": 48,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 41,
+        "y": 48,
+        "structureType": "STRUCTURE_LAB"
       }
     ]
   },
@@ -1252,6 +1272,46 @@
         "x": 5,
         "y": 36,
         "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 7,
+        "y": 45,
+        "structureType": "STRUCTURE_TERMINAL"
+      },
+      {
+        "x": 7,
+        "y": 41,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 6,
+        "y": 40,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 5,
+        "y": 40,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 4,
+        "y": 40,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 4,
+        "y": 39,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 5,
+        "y": 39,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 6,
+        "y": 39,
+        "structureType": "STRUCTURE_LAB"
       }
     ]
   },
@@ -2800,6 +2860,21 @@
         "x": 38,
         "y": 4,
         "structureType": "STRUCTURE_TERMINAL"
+      },
+      {
+        "x": 25,
+        "y": 14,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 25,
+        "y": 13,
+        "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 26,
+        "y": 13,
+        "structureType": "STRUCTURE_LAB"
       }
     ]
   }
