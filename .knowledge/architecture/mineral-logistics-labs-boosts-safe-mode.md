@@ -24,8 +24,11 @@ boosts and safe-mode replenishment.
   `37,29` and `39,29`, with the other labs usable as outputs.
 - Additional rooms have planned terminals so they can participate in mineral
   sharing.
-- `E58S28` is the exposed/frontline room and may need imported defensive
-  minerals because NPC resource drops are less available there.
+- Target/frontline rooms now have planned local boost labs. These rooms do not
+  need full production clusters; they need enough local labs to consume imported
+  boost minerals.
+- `E58S28` is the exposed/frontline room and needs imported defensive minerals
+  because NPC resource drops are less available there.
 
 ## Needed Systems
 
@@ -46,6 +49,8 @@ Later:
 
 - Support additional reactions and boost minerals.
 - Handle lab cleanup/reconfiguration when changing products.
+- Keep production chemistry centralized unless a target room has a strong reason
+  to produce locally.
 
 ### Between-Room Resource Sharing
 
@@ -75,6 +80,8 @@ system.
 Initial focus:
 
 - Use imported/stored `GO` for defensive boosts once labs are available.
+- Use target-room boost labs for frontline boosting; production rooms can make
+  or hold minerals, but boost labs should be local to the creeps being boosted.
 - Keep boost labs accessible to creeps.
 - Avoid blocking normal spawning/role behavior until the boost is actually
   ready.
@@ -107,7 +114,16 @@ Later:
 1. Terminal/resource sharing policy and manager.
 2. Safe-mode replenishment from local plain `G`.
 3. Lab reverse reaction for `GO -> G + O` in `E59S28`.
-4. Boost preparation and boosted defender flow.
+4. Local boost lab preparation using imported `GO`.
+5. Boosted defender flow.
 
 Keep these systems separate: logistics moves resources, labs produce resources,
 boosting consumes boost minerals, and safe-mode recovery consumes `G`.
+
+## Verification Direction
+
+These systems will need live verification after they have had time to run in
+game. Check that terminals exist and receive minerals, lab hubs are loaded
+correctly, `GO` is converted to `G` only when policy wants it, target rooms get
+their requested `GO`/`G`, safe mode generation does not starve boosts, and
+boosting does not strand defenders.
