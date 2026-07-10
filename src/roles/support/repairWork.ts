@@ -1,5 +1,6 @@
 import {
   findBestRepairTargetForCreep,
+  findFreshDefenseForCreep,
   isRepairTargetContested,
   type RepairTarget,
 } from "../../repairPolicy";
@@ -48,6 +49,19 @@ export function moveToBestRepairTargetForCreep(creep: Creep): boolean {
 
   creep.memory.repairTargetId = target.id;
   creep.moveToWorkTarget(target, ERR_NOT_IN_RANGE, 3, {
+    visualizePathStyle: { stroke: "#ffaa00" },
+  });
+
+  return true;
+}
+
+export function repairFreshDefense(creep: Creep): boolean {
+  const target = findFreshDefenseForCreep(creep);
+  if (!target) {
+    return false;
+  }
+
+  creep.moveToWorkTarget(target, creep.repair(target), 3, {
     visualizePathStyle: { stroke: "#ffaa00" },
   });
 

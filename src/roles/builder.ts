@@ -1,8 +1,11 @@
 import type { Role } from "../types";
-import { repairBestTarget } from "./support/repairWork";
+import { repairBestTarget, repairFreshDefense } from "./support/repairWork";
 import { runWorkRefuelLoop } from "./support/workRefuelLoop";
 
 function build(creep: Creep): void {
+  if (repairFreshDefense(creep)) {
+    return;
+  }
   if (creep.findAndBuild()) {
     return;
   }

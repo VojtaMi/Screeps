@@ -236,6 +236,29 @@ export function findBestRepairTargetForCreep(
   );
 }
 
+// A rampart or wall exists with 1 hit the tick its construction site completes.
+// Builders top the nearest one up to the emergency floor before starting
+// another site, so a fresh rampart never sits at decay range.
+export function findFreshDefenseForCreep(creep: Creep): RepairTarget | null {
+  return getRoomRepairCache(creep.room).targets.reduce<RepairTarget | null>(
+    (bestTarget, target) => {
+      if (!isDefenseTarget(target) || target.hits >= DEFENSE_TARGET_HITS) {
+        return bestTarget;
+      }
+
+      if (
+        !bestTarget ||
+        creep.pos.getRangeTo(target) < creep.pos.getRangeTo(bestTarget)
+      ) {
+        return target;
+      }
+
+      return bestTarget;
+    },
+    null,
+  );
+}
+
 export function hasRepairWork(room: Room): boolean {
   return findBestRepairTarget(room) !== null;
 }
