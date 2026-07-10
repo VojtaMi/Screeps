@@ -41,6 +41,7 @@ const MIN_DROPPED_ENERGY_PER_RANGE = 10;
 const DECAYING_REFILL_SCORE_BONUS = 8;
 const FULL_REFILL_SCORE_BONUS = 3;
 const MAX_PARTIAL_REFILL_SCORE_PENALTY = 6;
+const DECAYING_REFILL_PROBE_INTERVAL = 10;
 const WORKER_REFUEL_ROLES = new Set<CreepRole>([
   CREEP_ROLE.PIONEER,
   CREEP_ROLE.BUILDER,
@@ -325,7 +326,8 @@ function rememberRefillTarget(
   creep: Creep,
   target: EnergyRefillTarget | null,
 ): EnergyRefillTarget | null {
-  if (target) {
+  if (target && creep.memory.energyTargetId !== target.id) {
+    reservationState = null;
     creep.memory.energyTargetId = target.id;
   }
 
@@ -336,6 +338,15 @@ function isDecayingRefillTarget(
   target: EnergyRefillTarget,
 ): target is DecayingEnergyTarget {
   return !("structureType" in target);
+}
+
+function isFullDecayingRefillTarget(
+  creep: Creep,
+  target: EnergyRefillTarget,
+): boolean {
+  return (
+    isDecayingRefillTarget(target) && canFullyRefillFromTarget(creep, target)
+  );
 }
 
 function getRefillTargetScore(
@@ -364,6 +375,12 @@ function findBestCarrierRefillTarget<T extends EnergyRefillTarget>(
   return targets.reduce<T | null>((bestTarget, target) => {
     if (!bestTarget) {
       return target;
+    }
+
+    const isPriorityTarget = isFullDecayingRefillTarget(creep, target);
+    const isBestPriorityTarget = isFullDecayingRefillTarget(creep, bestTarget);
+    if (isPriorityTarget !== isBestPriorityTarget) {
+      return isPriorityTarget ? target : bestTarget;
     }
 
     const score = getRefillTargetScore(creep, target);
@@ -426,29 +443,50 @@ function findCarrierLocalRefillTarget(creep: Creep): EnergyRefillTarget | null {
   ]);
 }
 
+function findPriorityDecayingRefillTarget(
+  creep: Creep,
+): Resource<RESOURCE_ENERGY> | null {
+  const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
+    filter: (resource): resource is Resource<RESOURCE_ENERGY> =>
+      resource.resourceType === RESOURCE_ENERGY &&
+      isCarrierRefillTarget(creep, resource as Resource<RESOURCE_ENERGY>) &&
+      isFullDecayingRefillTarget(creep, resource as Resource<RESOURCE_ENERGY>),
+  });
+
+  return findBestCarrierRefillTarget(creep, droppedEnergy);
+}
+
 function findCarrierEnergyRefillTarget(
   creep: Creep,
   deliveryTarget: EnergyDeliveryTarget | null = null,
 ): EnergyRefillTarget | null {
+  const attackStorageTarget = findAttackStorageRefillTarget(
+    creep,
+    deliveryTarget,
+  );
+  if (attackStorageTarget) {
+    return rememberRefillTarget(creep, attackStorageTarget);
+  }
+
+  if (Game.time % DECAYING_REFILL_PROBE_INTERVAL === 0) {
+    const priorityTarget = findPriorityDecayingRefillTarget(creep);
+    if (priorityTarget) {
+      return rememberRefillTarget(creep, priorityTarget);
+    }
+  }
+
   if (creep.memory.energyTargetId) {
     const savedTarget = Game.getObjectById(creep.memory.energyTargetId);
-    if (
-      savedTarget &&
-      isTargetInCreepRoom(creep, savedTarget) &&
-      (isAttackStorageRefillTarget(creep, savedTarget, deliveryTarget) ||
-        isCarrierRefillTarget(creep, savedTarget))
-    ) {
-      return savedTarget;
+    if (savedTarget && isTargetInCreepRoom(creep, savedTarget)) {
+      if (isCarrierRefillTarget(creep, savedTarget)) {
+        return savedTarget;
+      }
     }
 
     creep.clearEnergyTarget();
   }
 
-  return rememberRefillTarget(
-    creep,
-    findAttackStorageRefillTarget(creep, deliveryTarget) ??
-      findCarrierLocalRefillTarget(creep),
-  );
+  return rememberRefillTarget(creep, findCarrierLocalRefillTarget(creep));
 }
 
 function getReservedDeliveryEnergy(
