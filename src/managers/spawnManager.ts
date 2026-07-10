@@ -21,7 +21,11 @@ const MAX_BASE_CARRIERS = 4;
 const MAX_CARRIERS_PER_ROOM = 5;
 const ATTACK_CARRIER_TARGET = 3;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
-const MIN_COMBAT_BODY_SIZE = 8;
+// A low-RCL recovery room must be able to field the same ranged-defense role.
+// The first TOUGH/RANGED_ATTACK/MOVE trio costs 210, fitting a 300-capacity
+// RCL1 room; the existing pattern adds combat and healing parts as capacity
+// grows.
+const MIN_COMBAT_BODY_SIZE = 3;
 // How long a freshly spawned defender will detour for a boost before giving up.
 const BOOST_DEADLINE_TICKS = 60;
 
