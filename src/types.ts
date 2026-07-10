@@ -4,7 +4,6 @@ export const CREEP_ROLE = {
   SETTLER: "settler",
   HARVESTER: "harvester",
   CARRIER: "carrier",
-  DEFENDER: "defender",
   RANGED_DEFENDER: "rangedDefender",
   UPGRADER: "upgrader",
   BUILDER: "builder",

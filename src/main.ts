@@ -12,7 +12,6 @@ import { towerManager } from "./managers/towerManager";
 import { builder } from "./roles/builder";
 import { carrier } from "./roles/carrier/carrier";
 import { claimer } from "./roles/claimer";
-import { defender } from "./roles/defender";
 import { harvester } from "./roles/harvester";
 import { labTech } from "./roles/labTech";
 import { pioneer } from "./roles/pioneer";
@@ -31,7 +30,6 @@ const roles: Record<CreepRole, Role> = {
   [CREEP_ROLE.SETTLER]: settler,
   [CREEP_ROLE.HARVESTER]: harvester,
   [CREEP_ROLE.CARRIER]: carrier,
-  [CREEP_ROLE.DEFENDER]: defender,
   [CREEP_ROLE.RANGED_DEFENDER]: rangedDefender,
   [CREEP_ROLE.UPGRADER]: upgrader,
   [CREEP_ROLE.BUILDER]: builder,

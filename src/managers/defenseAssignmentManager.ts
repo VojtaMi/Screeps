@@ -12,11 +12,6 @@ const PLAN_REFRESH_INTERVAL = 7;
 // is close enough to exploit an exposed flank.
 const SAFETY_FRONTIER_RANGE = 4;
 
-const DEFENDER_ROLES = new Set<string>([
-  CREEP_ROLE.DEFENDER,
-  CREEP_ROLE.RANGED_DEFENDER,
-]);
-
 /**
  * Room-level defender positioning. Once per room we choose the priority hostile,
  * path from the spawn to it, and hand each defender a distinct rampart to hold.
@@ -39,7 +34,7 @@ export const defenseAssignmentManager = {
     const hostile = origin ? findPriorityHostile(room, origin) : null;
     const defenders = origin
       ? room.find(FIND_MY_CREEPS, {
-          filter: (creep) => DEFENDER_ROLES.has(creep.memory.role),
+          filter: (creep) => creep.memory.role === CREEP_ROLE.RANGED_DEFENDER,
         })
       : [];
 
