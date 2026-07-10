@@ -72,7 +72,11 @@ function createPrimarySpawnSite(room: Room): void {
 
 function convertRebuildersToPioneers(room: Room): void {
   for (const creep of room.find(FIND_MY_CREEPS)) {
-    if (creep.memory.role === CREEP_ROLE.PIONEER || !canRebuildSpawn(creep)) {
+    if (
+      creep.memory.role === CREEP_ROLE.PIONEER ||
+      creep.memory.role === CREEP_ROLE.SETTLER ||
+      !canRebuildSpawn(creep)
+    ) {
       continue;
     }
 
