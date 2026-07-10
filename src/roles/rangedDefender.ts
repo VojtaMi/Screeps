@@ -2,7 +2,12 @@ import { getDesiredDefenseSquadSize } from "../defenseSquad";
 import { findPriorityHostile } from "../hostileTargeting";
 import { CREEP_ROLE, type Role } from "../types";
 import { seekBoost } from "./support/boost";
-import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
+import {
+  findDefensiveRampart,
+  findSafeGuardRampart,
+  findSafeRampartOnPath,
+  pickAttackTarget,
+} from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff8800" };
@@ -39,11 +44,26 @@ export const rangedDefender: Role = {
       filter: (other) => other.memory.role === CREEP_ROLE.RANGED_DEFENDER,
     });
     if (squadSize > 0 && squadMembers.length < squadSize) {
-      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
+      const stagingRampart = target
+        ? (findSafeRampartOnPath(spawn?.pos ?? creep.pos, target.pos, creep) ??
+          findSafeGuardRampart(
+            creep.room,
+            spawn?.pos ?? creep.pos,
+            spawn?.pos ?? creep.pos,
+            creep,
+          ))
+        : null;
+      if (stagingRampart && !creep.pos.isEqualTo(stagingRampart.pos)) {
+        creep.moveToAvoidingRoomEdges(stagingRampart, {
+          visualizePathStyle: PATH_STYLE,
+        });
+      } else if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
         creep.moveToAvoidingRoomEdges(spawn, {
           visualizePathStyle: PATH_STYLE,
           range: 3,
         });
+      } else {
+        creep.moveOffRoad();
       }
       return;
     }

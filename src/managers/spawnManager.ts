@@ -19,7 +19,7 @@ const BASE_CARRIER_CAPACITY_PER_SOURCE = 400;
 const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
 const MAX_BASE_CARRIERS = 4;
 const MAX_CARRIERS_PER_ROOM = 5;
-const ATTACK_CARRIER_BONUS = 1;
+const ATTACK_CARRIER_TARGET = 3;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
 const MIN_COMBAT_BODY_SIZE = 8;
 // How long a freshly spawned defender will detour for a boost before giving up.
@@ -126,13 +126,7 @@ export const spawnManager = {
       (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
     );
     if (hasUnsafeHostiles) {
-      const haulableEnergy = getHaulableEnergy(room);
-      const attackCarrierTarget = Math.min(
-        MAX_CARRIERS_PER_ROOM,
-        getDesiredCarrierCount(room, sources, carriers, haulableEnergy) +
-          ATTACK_CARRIER_BONUS,
-      );
-      if (carriers.length < attackCarrierTarget) {
+      if (carriers.length < ATTACK_CARRIER_TARGET) {
         return {
           role: CREEP_ROLE.CARRIER,
           body: buildBodyFromMaxPattern({

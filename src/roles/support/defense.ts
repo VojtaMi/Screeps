@@ -1,4 +1,7 @@
-import { getHostilePriority } from "../../hostileTargeting";
+import {
+  getHostilePriority,
+  isPositionInHostileWeaponRange,
+} from "../../hostileTargeting";
 
 // Structures that occupy their tile so a creep cannot share it. A rampart over
 // any of these is not a valid place for a defender to stand.
@@ -16,6 +19,7 @@ const BLOCKING_STRUCTURE_TYPES = new Set<StructureConstant>([
   STRUCTURE_FACTORY,
   STRUCTURE_WALL,
 ]);
+const CORE_STAGING_MIN_RANGE = 8;
 
 interface DefensiveRampartOptions {
   origin: RoomPosition;
@@ -62,7 +66,9 @@ export function findDefensiveRampart({
     return pathRampart;
   }
 
-  const fallbackRampart = findGuardRampart(self.room, origin, self);
+  const fallbackRampart =
+    findSafeRampartOnPath(origin, target, self) ??
+    findSafeGuardRampart(self.room, origin, origin, self);
   if (fallbackRampart) {
     rememberGuardRampart(self, fallbackRampart);
   }
@@ -75,18 +81,19 @@ export function findDefensiveRampart({
  * that anchor. Occupied ramparts are skipped unless none are free, so two
  * defenders spread across breach points instead of stacking on one tile.
  */
-function findGuardRampart(
+export function findSafeGuardRampart(
   room: Room,
   anchor: RoomPosition,
+  origin: RoomPosition,
   self: Creep,
-  maxAnchorRange?: number,
 ): StructureRampart | null {
+  const hostiles = room.find(FIND_HOSTILE_CREEPS);
   const ramparts = room.find(FIND_MY_STRUCTURES, {
     filter: (structure): structure is StructureRampart =>
       structure.structureType === STRUCTURE_RAMPART &&
       isStandableRampart(structure) &&
-      (maxAnchorRange === undefined ||
-        structure.pos.inRangeTo(anchor, maxAnchorRange)),
+      structure.pos.getRangeTo(origin) >= CORE_STAGING_MIN_RANGE &&
+      !isPositionInHostileWeaponRange(structure.pos, hostiles),
   });
   if (ramparts.length === 0) {
     return null;
@@ -95,7 +102,46 @@ function findGuardRampart(
   const free = ramparts.filter((rampart) => {
     return isRampartFreeForCreep(rampart, self);
   });
-  return anchor.findClosestByRange(free);
+  return (
+    [...free].sort((left, right) => {
+      const originDifference =
+        origin.getRangeTo(left) - origin.getRangeTo(right);
+      if (originDifference !== 0) {
+        return originDifference;
+      }
+
+      return anchor.getRangeTo(left) - anchor.getRangeTo(right);
+    })[0] ?? null
+  );
+}
+
+export function findSafeRampartOnPath(
+  origin: RoomPosition,
+  target: RoomPosition,
+  self: Creep,
+): StructureRampart | null {
+  if (
+    origin.roomName !== self.room.name ||
+    target.roomName !== self.room.name
+  ) {
+    return null;
+  }
+
+  const hostiles = self.room.find(FIND_HOSTILE_CREEPS);
+  const path = origin.findPathTo(target, { ignoreCreeps: true, maxRooms: 1 });
+  for (let index = path.length - 1; index >= 0; index -= 1) {
+    const position = new RoomPosition(
+      path[index].x,
+      path[index].y,
+      self.room.name,
+    );
+    const rampart = findStandableRampart(position, self, true);
+    if (rampart && !isPositionInHostileWeaponRange(rampart.pos, hostiles)) {
+      return rampart;
+    }
+  }
+
+  return null;
 }
 
 function findDoubleRampartOnPath(
