@@ -144,6 +144,30 @@ export function findSafeRampartOnPath(
   return null;
 }
 
+/**
+ * Reserve a safe staging rampart for an incomplete squad. The reservation is
+ * stored on the creep rather than in RoomMemory so it naturally disappears
+ * when the creep dies and is visible to defenders later in the same tick.
+ */
+export function findStagingRampart(
+  origin: RoomPosition,
+  target: RoomPosition,
+  self: Creep,
+): StructureRampart | null {
+  const cached = getCachedStagingRampart(self);
+  if (cached) {
+    return cached;
+  }
+
+  const rampart =
+    findSafeRampartOnPath(origin, target, self) ??
+    findSafeGuardRampart(self.room, origin, origin, self);
+  if (rampart) {
+    rememberStagingRampart(self, rampart);
+  }
+  return rampart;
+}
+
 function findDoubleRampartOnPath(
   origin: RoomPosition,
   target: RoomPosition,
@@ -208,11 +232,43 @@ function getCachedGuardRampart(self: Creep): StructureRampart | null {
     true,
   );
 
-  if (!rampart) {
+  if (!rampart || !isRampartFreeForCreep(rampart, self)) {
     clearGuardRampart(self);
     return null;
   }
 
+  return rampart;
+}
+
+function getCachedStagingRampart(self: Creep): StructureRampart | null {
+  if (
+    self.memory.stagingRampartX === undefined ||
+    self.memory.stagingRampartY === undefined ||
+    self.memory.stagingRampartRoomName !== self.room.name
+  ) {
+    clearStagingRampart(self);
+    return null;
+  }
+
+  const rampart = findStandableRampart(
+    new RoomPosition(
+      self.memory.stagingRampartX,
+      self.memory.stagingRampartY,
+      self.memory.stagingRampartRoomName,
+    ),
+    self,
+    true,
+  );
+  if (
+    !rampart ||
+    isPositionInHostileWeaponRange(
+      rampart.pos,
+      self.room.find(FIND_HOSTILE_CREEPS),
+    )
+  ) {
+    clearStagingRampart(self);
+    return null;
+  }
   return rampart;
 }
 
@@ -226,6 +282,18 @@ function clearGuardRampart(self: Creep): void {
   delete self.memory.guardRampartX;
   delete self.memory.guardRampartY;
   delete self.memory.guardRampartRoomName;
+}
+
+function rememberStagingRampart(self: Creep, rampart: StructureRampart): void {
+  self.memory.stagingRampartX = rampart.pos.x;
+  self.memory.stagingRampartY = rampart.pos.y;
+  self.memory.stagingRampartRoomName = rampart.pos.roomName;
+}
+
+export function clearStagingRampart(self: Creep): void {
+  delete self.memory.stagingRampartX;
+  delete self.memory.stagingRampartY;
+  delete self.memory.stagingRampartRoomName;
 }
 
 function findAdjacentFreeRampart(
@@ -265,7 +333,44 @@ function isRampartFreeForCreep(
   self: Creep,
 ): boolean {
   const occupant = rampart.pos.lookFor(LOOK_CREEPS)[0];
-  return !occupant || occupant.name === self.name;
+  return (
+    (!occupant || occupant.name === self.name) &&
+    !isRampartReservedByOtherDefender(rampart.pos, self)
+  );
+}
+
+function isRampartReservedByOtherDefender(
+  position: RoomPosition,
+  self: Creep,
+): boolean {
+  return (
+    self.room.find(FIND_MY_CREEPS, {
+      filter: (other) =>
+        other.name !== self.name &&
+        other.memory.role === "rangedDefender" &&
+        (positionMatchesMemory(
+          position,
+          other.memory.guardRampartX,
+          other.memory.guardRampartY,
+          other.memory.guardRampartRoomName,
+        ) ||
+          positionMatchesMemory(
+            position,
+            other.memory.stagingRampartX,
+            other.memory.stagingRampartY,
+            other.memory.stagingRampartRoomName,
+          )),
+    }).length > 0
+  );
+}
+
+function positionMatchesMemory(
+  position: RoomPosition,
+  x: number | undefined,
+  y: number | undefined,
+  roomName: string | undefined,
+): boolean {
+  return position.x === x && position.y === y && position.roomName === roomName;
 }
 
 /** Choose which hostile to swing at: healers first, then the weakest. */

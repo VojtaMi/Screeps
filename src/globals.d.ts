@@ -43,6 +43,9 @@ declare global {
     guardRampartY?: number;
     guardRampartRoomName?: string;
     guardRampartUntil?: number;
+    stagingRampartX?: number;
+    stagingRampartY?: number;
+    stagingRampartRoomName?: string;
     swapRequest?: {
       requesterName: string;
       requesterX: number;

@@ -3,9 +3,9 @@ import { findPriorityHostile } from "../hostileTargeting";
 import { CREEP_ROLE, type Role } from "../types";
 import { seekBoost } from "./support/boost";
 import {
+  clearStagingRampart,
   findDefensiveRampart,
-  findSafeGuardRampart,
-  findSafeRampartOnPath,
+  findStagingRampart,
   pickAttackTarget,
 } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
@@ -45,13 +45,7 @@ export const rangedDefender: Role = {
     });
     if (squadSize > 0 && squadMembers.length < squadSize) {
       const stagingRampart = target
-        ? (findSafeRampartOnPath(spawn?.pos ?? creep.pos, target.pos, creep) ??
-          findSafeGuardRampart(
-            creep.room,
-            spawn?.pos ?? creep.pos,
-            spawn?.pos ?? creep.pos,
-            creep,
-          ))
+        ? findStagingRampart(spawn?.pos ?? creep.pos, target.pos, creep)
         : null;
       if (stagingRampart && !creep.pos.isEqualTo(stagingRampart.pos)) {
         creep.moveToAvoidingRoomEdges(stagingRampart, {
@@ -67,6 +61,8 @@ export const rangedDefender: Role = {
       }
       return;
     }
+
+    clearStagingRampart(creep);
 
     // Hold the defensive rampart and focus fire alongside the towers.
     const rampart = target

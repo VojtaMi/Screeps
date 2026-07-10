@@ -94,7 +94,10 @@ const {
   getRepairPriority,
 } = await import("../src/repairPolicy.ts");
 const { getIncomingHostileHealing } = await import("../src/hostileTargeting.ts");
-const { findDefensiveRampart } = await import("../src/roles/support/defense.ts");
+const {
+  findDefensiveRampart,
+  findStagingRampart,
+} = await import("../src/roles/support/defense.ts");
 const { findLockedTowerTarget, towerManager } = await import(
   "../src/managers/towerManager.ts"
 );
@@ -368,6 +371,43 @@ test("defender chooses and holds a double-rampart attack position", () => {
     findDefensiveRampart({ origin, target, self, attackRange: 3 }),
     outerRampart,
   );
+});
+
+test("defenders reserve distinct staging ramparts before either one moves", () => {
+  positionContents.clear();
+  const firstPosition = new MockRoomPosition(29, 11, "E59S28");
+  const secondPosition = new MockRoomPosition(29, 10, "E59S28");
+  const firstRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: firstPosition,
+  };
+  const secondRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: secondPosition,
+  };
+  positionContents.set("E59S28:29:11", { structures: [firstRampart], creeps: [] });
+  positionContents.set("E59S28:29:10", { structures: [secondRampart], creeps: [] });
+
+  const origin = new MockRoomPosition(28, 21, "E59S28");
+  origin.path = [
+    { x: 29, y: 10 },
+    { x: 29, y: 11 },
+  ];
+  const target = new MockRoomPosition(16, 12, "E59S28");
+  const first = { name: "first", memory: { role: "rangedDefender" } };
+  const second = { name: "second", memory: { role: "rangedDefender" } };
+  const room = makeRoom({
+    name: "E59S28",
+    structures: [firstRampart, secondRampart],
+    friendlies: [first, second],
+  });
+  first.room = room;
+  second.room = room;
+
+  assert.equal(findStagingRampart(origin, target, first), firstRampart);
+  assert.equal(findStagingRampart(origin, target, second), secondRampart);
 });
 
 test("committed breaches override saved economy delivery targets", () => {
