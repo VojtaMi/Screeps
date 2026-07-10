@@ -96,6 +96,7 @@ const {
 const { getIncomingHostileHealing } = await import("../src/hostileTargeting.ts");
 const {
   findDefensiveRampart,
+  findSafeRampartOnPath,
   findStagingRampart,
 } = await import("../src/roles/support/defense.ts");
 const { findLockedTowerTarget, towerManager } = await import(
@@ -408,6 +409,87 @@ test("defenders reserve distinct staging ramparts before either one moves", () =
 
   assert.equal(findStagingRampart(origin, target, first), firstRampart);
   assert.equal(findStagingRampart(origin, target, second), secondRampart);
+});
+
+test("staging skips a path rampart inside the core in favor of the outer pocket", () => {
+  positionContents.clear();
+  const innerPosition = new MockRoomPosition(30, 21, "E59S28");
+  const outerPosition = new MockRoomPosition(38, 16, "E59S28");
+  const innerRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: innerPosition,
+  };
+  const outerRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: outerPosition,
+  };
+  positionContents.set("E59S28:30:21", { structures: [innerRampart], creeps: [] });
+  positionContents.set("E59S28:38:16", { structures: [outerRampart], creeps: [] });
+
+  const origin = new MockRoomPosition(28, 21, "E59S28");
+  origin.path = [
+    { x: 38, y: 16 },
+    { x: 30, y: 21 },
+  ];
+  const self = { name: "defender", memory: { role: "rangedDefender" } };
+  const room = makeRoom({
+    name: "E59S28",
+    structures: [innerRampart, outerRampart],
+    friendlies: [self],
+  });
+  self.room = room;
+
+  assert.equal(
+    findSafeRampartOnPath(
+      origin,
+      new MockRoomPosition(16, 13, "E59S28"),
+      self,
+    ),
+    outerRampart,
+  );
+});
+
+test("staging formation stays in the path rampart's local pocket", () => {
+  positionContents.clear();
+  const localPosition = new MockRoomPosition(38, 16, "E59S28");
+  const distantPosition = new MockRoomPosition(2, 26, "E59S28");
+  const localRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: localPosition,
+  };
+  const distantRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: distantPosition,
+  };
+  positionContents.set("E59S28:38:16", { structures: [localRampart], creeps: [] });
+  positionContents.set("E59S28:2:26", { structures: [distantRampart], creeps: [] });
+
+  const origin = new MockRoomPosition(28, 21, "E59S28");
+  origin.path = [{ x: 29, y: 11 }];
+  const anchorRampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: new MockRoomPosition(29, 11, "E59S28"),
+  };
+  positionContents.set("E59S28:29:11", { structures: [anchorRampart], creeps: [] });
+  const first = { name: "a", memory: { role: "rangedDefender" } };
+  const second = { name: "b", memory: { role: "rangedDefender" } };
+  const room = makeRoom({
+    name: "E59S28",
+    structures: [anchorRampart, localRampart, distantRampart],
+    friendlies: [first, second],
+  });
+  first.room = room;
+  second.room = room;
+
+  assert.equal(
+    findStagingRampart(origin, new MockRoomPosition(16, 13, "E59S28"), second),
+    localRampart,
+  );
 });
 
 test("committed breaches override saved economy delivery targets", () => {

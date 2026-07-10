@@ -19,7 +19,8 @@ const BLOCKING_STRUCTURE_TYPES = new Set<StructureConstant>([
   STRUCTURE_FACTORY,
   STRUCTURE_WALL,
 ]);
-const CORE_STAGING_MIN_RANGE = 8;
+const CORE_STAGING_MIN_RANGE = 9;
+const STAGING_POCKET_RANGE = 10;
 
 interface DefensiveRampartOptions {
   origin: RoomPosition;
@@ -136,7 +137,11 @@ export function findSafeRampartOnPath(
       self.room.name,
     );
     const rampart = findStandableRampart(position, self, true);
-    if (rampart && !isPositionInHostileWeaponRange(rampart.pos, hostiles)) {
+    if (
+      rampart &&
+      position.getRangeTo(origin) >= CORE_STAGING_MIN_RANGE &&
+      !isPositionInHostileWeaponRange(rampart.pos, hostiles)
+    ) {
       return rampart;
     }
   }
@@ -154,18 +159,90 @@ export function findStagingRampart(
   target: RoomPosition,
   self: Creep,
 ): StructureRampart | null {
-  const cached = getCachedStagingRampart(self);
-  if (cached) {
-    return cached;
+  const defenders = self.room
+    .find(FIND_MY_CREEPS, {
+      filter: (creep) => creep.memory.role === "rangedDefender",
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const slot = defenders.findIndex((defender) => defender.name === self.name);
+  if (slot === -1) {
+    return null;
   }
 
   const rampart =
-    findSafeRampartOnPath(origin, target, self) ??
-    findSafeGuardRampart(self.room, origin, origin, self);
+    findSafeStagingRamparts(origin, target, self.room)[slot] ?? null;
   if (rampart) {
     rememberStagingRampart(self, rampart);
+  } else {
+    clearStagingRampart(self);
   }
   return rampart;
+}
+
+function findSafeStagingRamparts(
+  origin: RoomPosition,
+  target: RoomPosition,
+  room: Room,
+): StructureRampart[] {
+  const hostiles = room.find(FIND_HOSTILE_CREEPS);
+  const anchors = findStagingPocketAnchors(origin, target, room, hostiles);
+  return room
+    .find(FIND_MY_STRUCTURES, {
+      filter: (structure): structure is StructureRampart =>
+        structure.structureType === STRUCTURE_RAMPART &&
+        isStandableRampart(structure) &&
+        structure.pos.getRangeTo(origin) >= CORE_STAGING_MIN_RANGE &&
+        !isPositionInHostileWeaponRange(structure.pos, hostiles) &&
+        (anchors.length === 0 ||
+          anchors.some((anchor) =>
+            structure.pos.inRangeTo(anchor, STAGING_POCKET_RANGE),
+          )) &&
+        isAvailableStagingRampart(structure),
+    })
+    .sort((left, right) => {
+      const targetDifference =
+        left.pos.getRangeTo(target) - right.pos.getRangeTo(target);
+      if (targetDifference !== 0) {
+        return targetDifference;
+      }
+
+      const xDifference = left.pos.x - right.pos.x;
+      if (xDifference !== 0) {
+        return xDifference;
+      }
+
+      return right.pos.y - left.pos.y;
+    });
+}
+
+function findStagingPocketAnchors(
+  origin: RoomPosition,
+  target: RoomPosition,
+  room: Room,
+  hostiles: Creep[],
+): RoomPosition[] {
+  if (origin.roomName !== room.name || target.roomName !== room.name) {
+    return [];
+  }
+
+  return origin
+    .findPathTo(target, { ignoreCreeps: true, maxRooms: 1 })
+    .map((step) => new RoomPosition(step.x, step.y, room.name))
+    .filter((position) => {
+      const rampart = position
+        .lookFor(LOOK_STRUCTURES)
+        .find(
+          (structure): structure is StructureRampart =>
+            structure.structureType === STRUCTURE_RAMPART &&
+            structure.my &&
+            isStandableRampart(structure),
+        );
+      return (
+        rampart !== undefined &&
+        position.getRangeTo(origin) >= CORE_STAGING_MIN_RANGE &&
+        !isPositionInHostileWeaponRange(position, hostiles)
+      );
+    });
 }
 
 function findDoubleRampartOnPath(
@@ -240,38 +317,6 @@ function getCachedGuardRampart(self: Creep): StructureRampart | null {
   return rampart;
 }
 
-function getCachedStagingRampart(self: Creep): StructureRampart | null {
-  if (
-    self.memory.stagingRampartX === undefined ||
-    self.memory.stagingRampartY === undefined ||
-    self.memory.stagingRampartRoomName !== self.room.name
-  ) {
-    clearStagingRampart(self);
-    return null;
-  }
-
-  const rampart = findStandableRampart(
-    new RoomPosition(
-      self.memory.stagingRampartX,
-      self.memory.stagingRampartY,
-      self.memory.stagingRampartRoomName,
-    ),
-    self,
-    true,
-  );
-  if (
-    !rampart ||
-    isPositionInHostileWeaponRange(
-      rampart.pos,
-      self.room.find(FIND_HOSTILE_CREEPS),
-    )
-  ) {
-    clearStagingRampart(self);
-    return null;
-  }
-  return rampart;
-}
-
 function rememberGuardRampart(self: Creep, rampart: StructureRampart): void {
   self.memory.guardRampartX = rampart.pos.x;
   self.memory.guardRampartY = rampart.pos.y;
@@ -294,6 +339,12 @@ export function clearStagingRampart(self: Creep): void {
   delete self.memory.stagingRampartX;
   delete self.memory.stagingRampartY;
   delete self.memory.stagingRampartRoomName;
+}
+
+function isAvailableStagingRampart(rampart: StructureRampart): boolean {
+  return rampart.pos
+    .lookFor(LOOK_CREEPS)
+    .every((creep) => creep.my && creep.memory.role === "rangedDefender");
 }
 
 function findAdjacentFreeRampart(
