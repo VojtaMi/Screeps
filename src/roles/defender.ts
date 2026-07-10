@@ -1,10 +1,8 @@
-import {
-  findPriorityHostile,
-  isHostileThreateningCore,
-} from "../hostileTargeting";
+import { isHostileThreateningCore } from "../hostileTargeting";
+import { getDefenseAssignment } from "../managers/defenseAssignmentManager";
 import type { Role } from "../types";
 import { seekBoost } from "./support/boost";
-import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
+import { pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff0000" };
@@ -33,19 +31,13 @@ export const defender: Role = {
     // Engage hostiles that have committed into the defended area; ignore
     // edge-drainers and let towers handle them instead of chasing into the open.
     const threat = hostiles.find(isHostileThreateningCore) ?? null;
-    const target = threat ?? findPriorityHostile(creep.room, creep.pos);
 
-    const rampart = target
-      ? findDefensiveRampart({
-          origin: spawn?.pos ?? creep.pos,
-          target: target.pos,
-          self: creep,
-          attackRange: 1,
-        })
-      : null;
-    if (rampart) {
-      if (!creep.pos.isEqualTo(rampart.pos)) {
-        creep.moveToAvoidingRoomEdges(rampart, {
+    // Hold the rampart the room-level plan assigned us. Positioning is decided
+    // once per room, never per creep here.
+    const assignment = getDefenseAssignment(creep);
+    if (assignment) {
+      if (!creep.pos.isEqualTo(assignment)) {
+        creep.moveToAvoidingRoomEdges(assignment, {
           visualizePathStyle: PATH_STYLE,
         });
       }

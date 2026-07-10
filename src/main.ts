@@ -1,5 +1,6 @@
 import { extendCreep } from "./extendCreep";
 import { buildPlanManager } from "./managers/buildPlanManager";
+import { defenseAssignmentManager } from "./managers/defenseAssignmentManager";
 import { labManager } from "./managers/labManager";
 import { linkTransferManager } from "./managers/linkTransferManager";
 import { memoryManager } from "./managers/memoryManager";
@@ -45,6 +46,7 @@ export function loop(): void {
   buildPlanManager.manageBuildPlans();
   linkTransferManager.manageLinkTransfers();
   towerManager.manageTowers();
+  defenseAssignmentManager.manage();
   safeModeManager.manageSafeMode();
   mineralLogisticsManager.manageMineralLogistics();
   labManager.manageLabs();

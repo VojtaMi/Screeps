@@ -1,13 +1,8 @@
-import { getDesiredDefenseSquadSize } from "../defenseSquad";
 import { findPriorityHostile } from "../hostileTargeting";
-import { CREEP_ROLE, type Role } from "../types";
+import { getDefenseAssignment } from "../managers/defenseAssignmentManager";
+import type { Role } from "../types";
 import { seekBoost } from "./support/boost";
-import {
-  clearStagingRampart,
-  findDefensiveRampart,
-  findStagingRampart,
-  pickAttackTarget,
-} from "./support/defense";
+import { pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff8800" };
@@ -35,59 +30,22 @@ export const rangedDefender: Role = {
       creep.rangedAttack(attackTarget);
     }
 
+    // Hold the rampart the room-level plan assigned us and focus fire alongside
+    // the towers. Positioning is decided once per room, never per creep here.
+    const assignment = getDefenseAssignment(creep);
+    if (assignment) {
+      if (!creep.pos.isEqualTo(assignment)) {
+        creep.moveToAvoidingRoomEdges(assignment, {
+          visualizePathStyle: PATH_STYLE,
+        });
+      }
+      return;
+    }
+
+    // No rampart available: kite at range instead of diving into melee.
     const target =
       pickAttackTarget(hostiles) ?? findPriorityHostile(creep.room, creep.pos);
     const spawn = findSameRoomSpawn(creep);
-
-    const squadSize = getDesiredDefenseSquadSize(hostiles);
-    const squadMembers = creep.room.find(FIND_MY_CREEPS, {
-      filter: (other) => other.memory.role === CREEP_ROLE.RANGED_DEFENDER,
-    });
-    if (squadSize > 0 && squadMembers.length < squadSize) {
-      const stagingRampart = target
-        ? findStagingRampart(spawn?.pos ?? creep.pos, target.pos, creep)
-        : null;
-      if (stagingRampart) {
-        if (!creep.pos.isEqualTo(stagingRampart.pos)) {
-          creep.moveToAvoidingRoomEdges(stagingRampart, {
-            visualizePathStyle: PATH_STYLE,
-          });
-        }
-        return;
-      }
-
-      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
-        creep.moveToAvoidingRoomEdges(spawn, {
-          visualizePathStyle: PATH_STYLE,
-          range: 3,
-        });
-      } else {
-        creep.moveOffRoad();
-      }
-      return;
-    }
-
-    clearStagingRampart(creep);
-
-    // Hold the defensive rampart and focus fire alongside the towers.
-    const rampart = target
-      ? findDefensiveRampart({
-          origin: spawn?.pos ?? creep.pos,
-          target: target.pos,
-          self: creep,
-          attackRange: RANGED_RANGE,
-        })
-      : null;
-    if (rampart) {
-      if (!creep.pos.isEqualTo(rampart.pos)) {
-        creep.moveToAvoidingRoomEdges(rampart, {
-          visualizePathStyle: PATH_STYLE,
-        });
-      }
-      return;
-    }
-
-    // No ramparts available: kite at range instead of diving into melee.
     if (target) {
       const range = creep.pos.getRangeTo(target);
       if (range < RANGED_RANGE && spawn) {

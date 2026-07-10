@@ -39,13 +39,6 @@ declare global {
     moveLastRoomName?: string;
     moveLastTick?: number;
     moveStuckCount?: number;
-    guardRampartX?: number;
-    guardRampartY?: number;
-    guardRampartRoomName?: string;
-    guardRampartUntil?: number;
-    stagingRampartX?: number;
-    stagingRampartY?: number;
-    stagingRampartRoomName?: string;
     swapRequest?: {
       requesterName: string;
       requesterX: number;
@@ -60,6 +53,20 @@ declare global {
     wantsBoost?: boolean;
     boosted?: boolean;
     boostDeadline?: number;
+  }
+
+  interface DefenseAssignment {
+    x: number;
+    y: number;
+  }
+
+  interface RoomDefensePlan {
+    targetId: Id<Creep>;
+    targetX: number;
+    targetY: number;
+    updatedAt: number;
+    roster: string[];
+    assignments: Record<string, DefenseAssignment>;
   }
 
   interface RoomBuildPlanItem {
@@ -79,6 +86,7 @@ declare global {
     desiredCarriers?: number;
     desiredUpgraders?: number;
     towerTargetId?: Id<Creep>;
+    defensePlan?: RoomDefensePlan;
   }
 
   interface Memory {

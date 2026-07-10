@@ -94,11 +94,8 @@ const {
   getRepairPriority,
 } = await import("../src/repairPolicy.ts");
 const { getIncomingHostileHealing } = await import("../src/hostileTargeting.ts");
-const {
-  findDefensiveRampart,
-  findSafeRampartOnPath,
-  findStagingRampart,
-} = await import("../src/roles/support/defense.ts");
+const { buildDefensePlan, isDefensePlanValid, getDefenseAssignment } =
+  await import("../src/managers/defenseAssignmentManager.ts");
 const { findLockedTowerTarget, towerManager } = await import(
   "../src/managers/towerManager.ts"
 );
@@ -323,173 +320,221 @@ test("towers hold without a repair target and fire a finishable target", () => {
   assert.deepEqual(actions, ["attack", "attack"]);
 });
 
-test("defender chooses and holds a double-rampart attack position", () => {
+function placeRampart(x, y, roomName = "E58S28") {
+  const rampart = {
+    structureType: STRUCTURE_RAMPART,
+    my: true,
+    pos: new MockRoomPosition(x, y, roomName),
+  };
+  const key = `${roomName}:${x}:${y}`;
+  const existing = positionContents.get(key) ?? { structures: [], creeps: [] };
+  positionContents.set(key, {
+    structures: [...existing.structures, rampart],
+    creeps: existing.creeps ?? [],
+  });
+  return rampart;
+}
+
+function occupyTile(x, y, name, roomName = "E58S28") {
+  const key = `${roomName}:${x}:${y}`;
+  const existing = positionContents.get(key) ?? { structures: [], creeps: [] };
+  positionContents.set(key, {
+    structures: existing.structures ?? [],
+    creeps: [...(existing.creeps ?? []), { name }],
+  });
+}
+
+function makeHostile(x, y, id = "h1", roomName = "E58S28") {
+  return { id, pos: new MockRoomPosition(x, y, roomName) };
+}
+
+function makeDefender(name) {
+  return { name, memory: { role: "rangedDefender" } };
+}
+
+function verticalPath(x, fromY, toY, roomName = "E58S28") {
+  const step = fromY > toY ? -1 : 1;
+  const path = [];
+  for (let y = fromY + step; y !== toY; y += step) {
+    path.push({ x, y });
+  }
+  const origin = new MockRoomPosition(x, fromY, roomName);
+  origin.path = path;
+  return origin;
+}
+
+test("plan assigns the enemy-most path rampart backed by a double-width tile", () => {
   positionContents.clear();
   Game.time = 1_000;
-  const outerPosition = new MockRoomPosition(31, 30, "E58S28");
-  const innerPosition = new MockRoomPosition(31, 31, "E58S28");
-  const outerRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: outerPosition,
-  };
-  const innerRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: innerPosition,
-  };
-  positionContents.set("E58S28:31:30", {
-    structures: [outerRampart],
-    creeps: [],
-  });
-  positionContents.set("E58S28:31:31", {
-    structures: [innerRampart],
-    creeps: [],
-  });
+  const front = placeRampart(31, 30);
+  const backing = placeRampart(31, 31);
+  const origin = verticalPath(31, 33, 27);
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({ name: "E58S28", structures: [front, backing] });
 
-  const origin = new MockRoomPosition(47, 48, "E58S28");
-  origin.path = [
-    { x: 31, y: 31 },
-    { x: 31, y: 30 },
-  ];
-  const target = new MockRoomPosition(31, 28, "E58S28");
+  const plan = buildDefensePlan(room, origin, hostile, [makeDefender("d1")]);
+
+  assert.deepEqual(plan.assignments.d1, { x: 31, y: 30 });
+  assert.equal(plan.targetId, "h1");
+  assert.deepEqual(plan.roster, ["d1"]);
+  assert.equal(plan.updatedAt, 1_000);
+});
+
+test("plan rejects an exposed path rampart with no backing tile", () => {
+  positionContents.clear();
+  Game.time = 1_000;
+  const exposedFront = placeRampart(31, 29); // no rampart at 31,30 behind it
+  const backedFront = placeRampart(31, 32);
+  const backing = placeRampart(31, 33);
+  const origin = verticalPath(31, 35, 27);
+  const hostile = makeHostile(31, 28);
   const room = makeRoom({
     name: "E58S28",
-    structures: [outerRampart, innerRampart],
+    structures: [exposedFront, backedFront, backing],
   });
-  const self = {
-    name: "defender",
-    room,
-    memory: {},
-  };
 
-  assert.equal(
-    findDefensiveRampart({ origin, target, self, attackRange: 3 }),
-    outerRampart,
-  );
-  Game.time += 1;
-  assert.equal(
-    findDefensiveRampart({ origin, target, self, attackRange: 3 }),
-    outerRampart,
-  );
+  const plan = buildDefensePlan(room, origin, hostile, [makeDefender("d1")]);
+
+  // The enemy-most (31,29) is exposed, so the defender falls back to the
+  // properly backed front rather than diving onto it.
+  assert.deepEqual(plan.assignments.d1, { x: 31, y: 32 });
 });
 
-test("defenders reserve distinct staging ramparts before either one moves", () => {
+test("plan slots a second defender onto a backed adjacent rampart", () => {
   positionContents.clear();
-  const firstPosition = new MockRoomPosition(29, 11, "E59S28");
-  const secondPosition = new MockRoomPosition(29, 10, "E59S28");
-  const firstRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: firstPosition,
-  };
-  const secondRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: secondPosition,
-  };
-  positionContents.set("E59S28:29:11", { structures: [firstRampart], creeps: [] });
-  positionContents.set("E59S28:29:10", { structures: [secondRampart], creeps: [] });
+  Game.time = 1_000;
+  const front = placeRampart(31, 30);
+  const frontBacking = placeRampart(31, 31);
+  const adjacent = placeRampart(30, 30);
+  const adjacentBacking = placeRampart(30, 31);
+  const origin = verticalPath(31, 33, 27);
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({
+    name: "E58S28",
+    structures: [front, frontBacking, adjacent, adjacentBacking],
+  });
 
-  const origin = new MockRoomPosition(28, 21, "E59S28");
-  origin.path = [
-    { x: 29, y: 10 },
-    { x: 29, y: 11 },
+  const plan = buildDefensePlan(room, origin, hostile, [
+    makeDefender("b"),
+    makeDefender("a"),
+  ]);
+
+  assert.deepEqual(plan.assignments.a, { x: 31, y: 30 });
+  assert.deepEqual(plan.assignments.b, { x: 30, y: 30 });
+});
+
+test("plan hands multiple defenders distinct deterministic ramparts", () => {
+  positionContents.clear();
+  Game.time = 1_000;
+  const structures = [
+    placeRampart(31, 30),
+    placeRampart(31, 31),
+    placeRampart(31, 32),
+    placeRampart(31, 33),
   ];
-  const target = new MockRoomPosition(16, 12, "E59S28");
-  const first = { name: "first", memory: { role: "rangedDefender" } };
-  const second = { name: "second", memory: { role: "rangedDefender" } };
-  const room = makeRoom({
-    name: "E59S28",
-    structures: [firstRampart, secondRampart],
-    friendlies: [first, second],
-  });
-  first.room = room;
-  second.room = room;
+  const origin = verticalPath(31, 34, 27);
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({ name: "E58S28", structures });
+  const defenders = [makeDefender("a"), makeDefender("b")];
 
-  assert.equal(findStagingRampart(origin, target, first), firstRampart);
-  assert.equal(findStagingRampart(origin, target, second), secondRampart);
+  const plan = buildDefensePlan(room, origin, hostile, defenders);
+  const again = buildDefensePlan(room, origin, hostile, defenders);
+
+  assert.deepEqual(plan.assignments.a, { x: 31, y: 30 });
+  assert.deepEqual(plan.assignments.b, { x: 31, y: 31 });
+  assert.notDeepEqual(plan.assignments.a, plan.assignments.b);
+  assert.deepEqual(again.assignments, plan.assignments);
 });
 
-test("staging skips a path rampart inside the core in favor of the outer pocket", () => {
+test("plan falls back to a free core rampart when no path rampart fits", () => {
   positionContents.clear();
-  const innerPosition = new MockRoomPosition(30, 21, "E59S28");
-  const outerPosition = new MockRoomPosition(38, 16, "E59S28");
-  const innerRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: innerPosition,
-  };
-  const outerRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: outerPosition,
-  };
-  positionContents.set("E59S28:30:21", { structures: [innerRampart], creeps: [] });
-  positionContents.set("E59S28:38:16", { structures: [outerRampart], creeps: [] });
+  Game.time = 1_000;
+  const nearSpawn = placeRampart(32, 33);
+  const farCore = placeRampart(35, 33);
+  const origin = verticalPath(31, 33, 27); // path tiles carry no ramparts
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({ name: "E58S28", structures: [nearSpawn, farCore] });
 
-  const origin = new MockRoomPosition(28, 21, "E59S28");
-  origin.path = [
-    { x: 38, y: 16 },
-    { x: 30, y: 21 },
-  ];
-  const self = { name: "defender", memory: { role: "rangedDefender" } };
-  const room = makeRoom({
-    name: "E59S28",
-    structures: [innerRampart, outerRampart],
-    friendlies: [self],
-  });
-  self.room = room;
+  const plan = buildDefensePlan(room, origin, hostile, [makeDefender("d1")]);
 
-  assert.equal(
-    findSafeRampartOnPath(
-      origin,
-      new MockRoomPosition(16, 13, "E59S28"),
-      self,
-    ),
-    outerRampart,
-  );
+  assert.deepEqual(plan.assignments.d1, { x: 32, y: 33 });
 });
 
-test("staging formation stays in the path rampart's local pocket", () => {
+test("plan invalidates when a held rampart is destroyed or occupied", () => {
   positionContents.clear();
-  const localPosition = new MockRoomPosition(38, 16, "E59S28");
-  const distantPosition = new MockRoomPosition(2, 26, "E59S28");
-  const localRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: localPosition,
-  };
-  const distantRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: distantPosition,
-  };
-  positionContents.set("E59S28:38:16", { structures: [localRampart], creeps: [] });
-  positionContents.set("E59S28:2:26", { structures: [distantRampart], creeps: [] });
+  Game.time = 1_000;
+  const front = placeRampart(31, 30);
+  const backing = placeRampart(31, 31);
+  const origin = verticalPath(31, 33, 27);
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({ name: "E58S28", structures: [front, backing] });
+  const defenders = [makeDefender("d1")];
 
-  const origin = new MockRoomPosition(28, 21, "E59S28");
-  origin.path = [{ x: 29, y: 11 }];
-  const anchorRampart = {
-    structureType: STRUCTURE_RAMPART,
-    my: true,
-    pos: new MockRoomPosition(29, 11, "E59S28"),
-  };
-  positionContents.set("E59S28:29:11", { structures: [anchorRampart], creeps: [] });
-  const first = { name: "a", memory: { role: "rangedDefender" } };
-  const second = { name: "b", memory: { role: "rangedDefender" } };
-  const room = makeRoom({
-    name: "E59S28",
-    structures: [anchorRampart, localRampart, distantRampart],
-    friendlies: [first, second],
-  });
-  first.room = room;
-  second.room = room;
+  const plan = buildDefensePlan(room, origin, hostile, defenders);
+  assert.equal(isDefensePlanValid(room, plan, hostile, defenders), true);
 
+  // Destroyed: the held tile no longer carries a standable rampart.
+  positionContents.set("E58S28:31:30", { structures: [], creeps: [] });
+  assert.equal(isDefensePlanValid(room, plan, hostile, defenders), false);
+
+  // Occupied by a non-assigned creep.
+  positionContents.set("E58S28:31:30", { structures: [front], creeps: [] });
+  occupyTile(31, 30, "intruder");
+  assert.equal(isDefensePlanValid(room, plan, hostile, defenders), false);
+});
+
+test("plan validity reflects target, roster, and periodic refresh", () => {
+  positionContents.clear();
+  Game.time = 1_000;
+  const front = placeRampart(31, 30);
+  const backing = placeRampart(31, 31);
+  const origin = verticalPath(31, 33, 27);
+  const hostile = makeHostile(31, 28);
+  const room = makeRoom({ name: "E58S28", structures: [front, backing] });
+  const defenders = [makeDefender("d1")];
+
+  const plan = buildDefensePlan(room, origin, hostile, defenders);
+  assert.equal(isDefensePlanValid(room, plan, hostile, defenders), true);
+
+  // Priority hostile changed.
   assert.equal(
-    findStagingRampart(origin, new MockRoomPosition(16, 13, "E59S28"), second),
-    localRampart,
+    isDefensePlanValid(room, plan, makeHostile(31, 28, "h2"), defenders),
+    false,
   );
+
+  // Target moved materially.
+  assert.equal(
+    isDefensePlanValid(room, plan, makeHostile(31, 23), defenders),
+    false,
+  );
+
+  // Roster changed.
+  assert.equal(
+    isDefensePlanValid(room, plan, hostile, [...defenders, makeDefender("d2")]),
+    false,
+  );
+
+  // Periodic refresh window elapsed.
+  Game.time = 1_010;
+  assert.equal(isDefensePlanValid(room, plan, hostile, defenders), false);
+});
+
+test("defenders consume only their assigned plan position", () => {
+  const room = makeRoom({ name: "E58S28" });
+  room.memory.defensePlan = {
+    targetId: "h1",
+    targetX: 31,
+    targetY: 28,
+    updatedAt: 1_000,
+    roster: ["d1"],
+    assignments: { d1: { x: 31, y: 30 } },
+  };
+
+  const assigned = getDefenseAssignment({ name: "d1", room });
+  assert.equal(assigned.x, 31);
+  assert.equal(assigned.y, 30);
+  assert.equal(assigned.roomName, "E58S28");
+  assert.equal(getDefenseAssignment({ name: "d2", room }), null);
 });
 
 test("committed breaches override saved economy delivery targets", () => {
