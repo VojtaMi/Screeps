@@ -319,62 +319,55 @@ test("towers hold without a repair target and fire a finishable target", () => {
   assert.deepEqual(actions, ["attack", "attack"]);
 });
 
-test("defender replaces a distant cache with an attack-capable rampart", () => {
+test("defender chooses and holds a double-rampart attack position", () => {
   positionContents.clear();
   Game.time = 1_000;
-  const distantPosition = new MockRoomPosition(44, 28, "E58S28");
-  const breachPosition = new MockRoomPosition(31, 30, "E58S28");
-  const distantRampart = {
+  const outerPosition = new MockRoomPosition(31, 30, "E58S28");
+  const innerPosition = new MockRoomPosition(31, 31, "E58S28");
+  const outerRampart = {
     structureType: STRUCTURE_RAMPART,
     my: true,
-    pos: distantPosition,
+    pos: outerPosition,
   };
-  const breachRampart = {
+  const innerRampart = {
     structureType: STRUCTURE_RAMPART,
     my: true,
-    pos: breachPosition,
+    pos: innerPosition,
   };
-  positionContents.set("E58S28:44:28", {
-    structures: [distantRampart],
+  positionContents.set("E58S28:31:30", {
+    structures: [outerRampart],
     creeps: [],
   });
-  positionContents.set("E58S28:31:30", {
-    structures: [breachRampart],
+  positionContents.set("E58S28:31:31", {
+    structures: [innerRampart],
     creeps: [],
   });
 
   const origin = new MockRoomPosition(47, 48, "E58S28");
   origin.path = [
-    { x: 44, y: 28 },
+    { x: 31, y: 31 },
     { x: 31, y: 30 },
   ];
   const target = new MockRoomPosition(31, 28, "E58S28");
   const room = makeRoom({
     name: "E58S28",
-    structures: [distantRampart, breachRampart],
+    structures: [outerRampart, innerRampart],
   });
   const self = {
     name: "defender",
     room,
-    memory: {
-      guardRampartX: 44,
-      guardRampartY: 28,
-      guardRampartRoomName: "E58S28",
-      guardRampartUntil: Game.time + 50,
-    },
+    memory: {},
   };
 
   assert.equal(
     findDefensiveRampart({ origin, target, self, attackRange: 3 }),
-    breachRampart,
+    outerRampart,
   );
-  const fixedExpiry = self.memory.guardRampartUntil;
   Game.time += 1;
   assert.equal(
     findDefensiveRampart({ origin, target, self, attackRange: 3 }),
-    breachRampart,
+    outerRampart,
   );
-  assert.equal(self.memory.guardRampartUntil, fixedExpiry);
 });
 
 test("committed breaches override saved economy delivery targets", () => {

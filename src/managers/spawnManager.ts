@@ -1,14 +1,9 @@
-import {
-  bodyCost,
-  buildBodyFromMaxPattern,
-  CREEP_BODY,
-  minimumBodyCost,
-} from "../creepBodies";
+import { bodyCost, buildBodyFromMaxPattern, CREEP_BODY } from "../creepBodies";
+import { getDesiredDefenseSquadSize } from "../defenseSquad";
 import { findReadyBoostLab } from "../empire/labPlans";
 import {
   canTowersOverpowerHostile,
   isHostileCombatCreep,
-  isHostileThreateningCore,
 } from "../hostileTargeting";
 import { getDesiredRepairerCount } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
@@ -24,6 +19,7 @@ const BASE_CARRIER_CAPACITY_PER_SOURCE = 400;
 const EXTRA_CARRIER_HAULABLE_ENERGY_PER_SOURCE = 1400;
 const MAX_BASE_CARRIERS = 4;
 const MAX_CARRIERS_PER_ROOM = 5;
+const ATTACK_CARRIER_BONUS = 1;
 const EXTRA_CARRIER_PROBE_INTERVAL = 100;
 const MIN_COMBAT_BODY_SIZE = 8;
 // How long a freshly spawned defender will detour for a boost before giving up.
@@ -130,12 +126,24 @@ export const spawnManager = {
       (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
     );
     if (hasUnsafeHostiles) {
-      const defenderEnergyBudget =
-        harvesters.length > 0 && carriers.length === 0
-          ? availableEnergy - minimumBodyCost(CREEP_BODY.CARRIER)
-          : availableEnergy;
+      const haulableEnergy = getHaulableEnergy(room);
+      const attackCarrierTarget = Math.min(
+        MAX_CARRIERS_PER_ROOM,
+        getDesiredCarrierCount(room, sources, carriers, haulableEnergy) +
+          ATTACK_CARRIER_BONUS,
+      );
+      if (carriers.length < attackCarrierTarget) {
+        return {
+          role: CREEP_ROLE.CARRIER,
+          body: buildBodyFromMaxPattern({
+            maxBody: CREEP_BODY.CARRIER,
+            energyBudget: capacityEnergy,
+          }),
+          memory: { working: false },
+        };
+      }
 
-      const defenderRequest = getDefenderRequest(context, defenderEnergyBudget);
+      const defenderRequest = getDefenderRequest(context);
       if (defenderRequest) {
         return defenderRequest;
       }
@@ -296,51 +304,29 @@ function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
 }
 
-// During an attack, field ranged defenders first (they hold ramparts and focus
-// fire with towers) then a melee blocker. Ranged count scales up slightly for
-// larger hostile groups. Both stay independently useful before any squad logic.
-function getDefenderRequest(
-  context: SpawnContext,
-  energyBudget: number,
-): SpawnRequest | null {
-  const { creepsByRole, hostiles } = context;
+// During an unsafe attack, assemble a full ranged-defense squad. Members stage
+// behind the perimeter until the squad is complete, so the spawn does not feed
+// partial defenders into a ranged kill zone.
+function getDefenderRequest(context: SpawnContext): SpawnRequest | null {
+  const { creepsByRole, hostiles, room } = context;
   const rangedDefenders = creepsByRole(CREEP_ROLE.RANGED_DEFENDER);
-  const meleeDefenders = creepsByRole(CREEP_ROLE.DEFENDER);
-  const hostileCombatCount = hostiles.filter(isHostileCombatCreep).length;
-  const defenderCount = rangedDefenders.length + meleeDefenders.length;
-  const maxDefenders = 2;
-  if (defenderCount >= maxDefenders) {
-    return null;
-  }
-
-  const wantsMeleeBlocker = hostiles.some(isHostileThreateningCore);
-  const desiredRanged = wantsMeleeBlocker ? 1 : hostileCombatCount > 1 ? 2 : 1;
-
-  let role: CreepRole;
-  let maxBody: BodyPartConstant[];
-  if (rangedDefenders.length < desiredRanged) {
-    role = CREEP_ROLE.RANGED_DEFENDER;
-    maxBody = CREEP_BODY.RANGED_DEFENDER;
-  } else if (wantsMeleeBlocker && meleeDefenders.length < 1) {
-    role = CREEP_ROLE.DEFENDER;
-    maxBody = CREEP_BODY.DEFENDER;
-  } else {
-    return null;
-  }
-
-  if (energyBudget < bodyCost(maxBody.slice(0, MIN_COMBAT_BODY_SIZE))) {
+  const squadSize = getDesiredDefenseSquadSize(hostiles);
+  if (rangedDefenders.length >= squadSize) {
     return null;
   }
 
   const body = buildBodyFromMaxPattern({
-    maxBody,
-    energyBudget,
+    maxBody: CREEP_BODY.RANGED_DEFENDER,
+    energyBudget: room.energyCapacityAvailable,
     minimumSize: MIN_COMBAT_BODY_SIZE,
     sortBody: sortCombatBody,
   });
+  if (room.energyAvailable < bodyCost(body)) {
+    return null;
+  }
 
   return {
-    role,
+    role: CREEP_ROLE.RANGED_DEFENDER,
     body,
     memory: getDefenderBoostMemory(context.room, body),
   };

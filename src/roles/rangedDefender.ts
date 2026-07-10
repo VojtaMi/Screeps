@@ -1,5 +1,6 @@
+import { getDesiredDefenseSquadSize } from "../defenseSquad";
 import { findPriorityHostile } from "../hostileTargeting";
-import type { Role } from "../types";
+import { CREEP_ROLE, type Role } from "../types";
 import { seekBoost } from "./support/boost";
 import { findDefensiveRampart, pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
@@ -21,18 +22,31 @@ export const rangedDefender: Role = {
       creep.heal(creep);
     }
 
-    // Fire every tick: mass attack when several are clustered in range,
-    // otherwise focus the highest-priority hostile we can reach.
+    // Focus one target so defenders and towers can remove a healer instead of
+    // spreading damage that the hostile squad immediately restores.
     const inRange = creep.pos.findInRange(hostiles, RANGED_RANGE);
-    if (inRange.length >= 2) {
-      creep.rangedMassAttack();
-    } else if (inRange.length === 1) {
-      creep.rangedAttack(inRange[0]);
+    const attackTarget = pickAttackTarget(inRange);
+    if (attackTarget) {
+      creep.rangedAttack(attackTarget);
     }
 
     const target =
       pickAttackTarget(hostiles) ?? findPriorityHostile(creep.room, creep.pos);
     const spawn = findSameRoomSpawn(creep);
+
+    const squadSize = getDesiredDefenseSquadSize(hostiles);
+    const squadMembers = creep.room.find(FIND_MY_CREEPS, {
+      filter: (other) => other.memory.role === CREEP_ROLE.RANGED_DEFENDER,
+    });
+    if (squadSize > 0 && squadMembers.length < squadSize) {
+      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
+        creep.moveToAvoidingRoomEdges(spawn, {
+          visualizePathStyle: PATH_STYLE,
+          range: 3,
+        });
+      }
+      return;
+    }
 
     // Hold the defensive rampart and focus fire alongside the towers.
     const rampart = target

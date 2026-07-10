@@ -1,7 +1,5 @@
 import { getHostilePriority } from "../../hostileTargeting";
 
-const GUARD_RAMPART_MEMORY_TTL = 75;
-
 // Structures that occupy their tile so a creep cannot share it. A rampart over
 // any of these is not a valid place for a defender to stand.
 const BLOCKING_STRUCTURE_TYPES = new Set<StructureConstant>([
@@ -39,12 +37,21 @@ export function findDefensiveRampart({
   self,
   attackRange,
 }: DefensiveRampartOptions): StructureRampart | null {
-  const cached = getCachedGuardRampart(self, target, attackRange);
+  const hadGuardRampart = self.memory.guardRampartX !== undefined;
+  const cached = getCachedGuardRampart(self);
   if (cached) {
     return cached;
   }
 
-  const pathRampart = findLastFreeRampartOnPath(
+  if (hadGuardRampart) {
+    const adjacentRampart = findAdjacentFreeRampart(origin, self);
+    if (adjacentRampart) {
+      rememberGuardRampart(self, adjacentRampart);
+      return adjacentRampart;
+    }
+  }
+
+  const pathRampart = findDoubleRampartOnPath(
     origin,
     target,
     self,
@@ -55,19 +62,7 @@ export function findDefensiveRampart({
     return pathRampart;
   }
 
-  const attackRampart = findGuardRampart(self.room, target, self, attackRange);
-  if (attackRampart) {
-    rememberGuardRampart(self, attackRampart);
-    return attackRampart;
-  }
-
-  const fallbackPathRampart = findLastFreeRampartOnPath(origin, target, self);
-  if (fallbackPathRampart) {
-    rememberGuardRampart(self, fallbackPathRampart);
-    return fallbackPathRampart;
-  }
-
-  const fallbackRampart = findGuardRampart(self.room, target, self);
+  const fallbackRampart = findGuardRampart(self.room, origin, self);
   if (fallbackRampart) {
     rememberGuardRampart(self, fallbackRampart);
   }
@@ -100,12 +95,10 @@ function findGuardRampart(
   const free = ramparts.filter((rampart) => {
     return isRampartFreeForCreep(rampart, self);
   });
-  const candidates = free.length > 0 ? free : ramparts;
-
-  return anchor.findClosestByRange(candidates);
+  return anchor.findClosestByRange(free);
 }
 
-function findLastFreeRampartOnPath(
+function findDoubleRampartOnPath(
   origin: RoomPosition,
   target: RoomPosition,
   self: Creep,
@@ -123,7 +116,7 @@ function findLastFreeRampartOnPath(
     maxRooms: 1,
   });
 
-  for (let index = path.length - 1; index >= 0; index -= 1) {
+  for (let index = path.length - 1; index > 0; index -= 1) {
     const step = path[index];
     const position = new RoomPosition(step.x, step.y, self.room.name);
     if (
@@ -133,17 +126,15 @@ function findLastFreeRampartOnPath(
       continue;
     }
 
-    const rampart = position
-      .lookFor(LOOK_STRUCTURES)
-      .find(
-        (structure): structure is StructureRampart =>
-          structure.structureType === STRUCTURE_RAMPART &&
-          structure.my &&
-          isStandableRampart(structure) &&
-          isRampartFreeForCreep(structure, self),
-      );
+    const rampart = findStandableRampart(position, self, true);
+    const backingPosition = new RoomPosition(
+      path[index - 1].x,
+      path[index - 1].y,
+      self.room.name,
+    );
+    const backingRampart = findStandableRampart(backingPosition, self, false);
 
-    if (rampart) {
+    if (rampart && backingRampart) {
       return rampart;
     }
   }
@@ -151,14 +142,8 @@ function findLastFreeRampartOnPath(
   return null;
 }
 
-function getCachedGuardRampart(
-  self: Creep,
-  target: RoomPosition,
-  attackRange: number,
-): StructureRampart | null {
+function getCachedGuardRampart(self: Creep): StructureRampart | null {
   if (
-    self.memory.guardRampartUntil === undefined ||
-    self.memory.guardRampartUntil <= Game.time ||
     self.memory.guardRampartX === undefined ||
     self.memory.guardRampartY === undefined ||
     self.memory.guardRampartRoomName !== self.room.name
@@ -167,20 +152,15 @@ function getCachedGuardRampart(
     return null;
   }
 
-  const rampart = new RoomPosition(
-    self.memory.guardRampartX,
-    self.memory.guardRampartY,
-    self.memory.guardRampartRoomName,
-  )
-    .lookFor(LOOK_STRUCTURES)
-    .find(
-      (structure): structure is StructureRampart =>
-        structure.structureType === STRUCTURE_RAMPART &&
-        structure.my &&
-        isStandableRampart(structure) &&
-        isRampartFreeForCreep(structure, self) &&
-        structure.pos.inRangeTo(target, attackRange),
-    );
+  const rampart = findStandableRampart(
+    new RoomPosition(
+      self.memory.guardRampartX,
+      self.memory.guardRampartY,
+      self.memory.guardRampartRoomName,
+    ),
+    self,
+    true,
+  );
 
   if (!rampart) {
     clearGuardRampart(self);
@@ -194,14 +174,44 @@ function rememberGuardRampart(self: Creep, rampart: StructureRampart): void {
   self.memory.guardRampartX = rampart.pos.x;
   self.memory.guardRampartY = rampart.pos.y;
   self.memory.guardRampartRoomName = rampart.pos.roomName;
-  self.memory.guardRampartUntil = Game.time + GUARD_RAMPART_MEMORY_TTL;
 }
 
 function clearGuardRampart(self: Creep): void {
   delete self.memory.guardRampartX;
   delete self.memory.guardRampartY;
   delete self.memory.guardRampartRoomName;
-  delete self.memory.guardRampartUntil;
+}
+
+function findAdjacentFreeRampart(
+  origin: RoomPosition,
+  self: Creep,
+): StructureRampart | null {
+  const ramparts = self.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+    filter: (structure): structure is StructureRampart =>
+      structure.structureType === STRUCTURE_RAMPART &&
+      isStandableRampart(structure) &&
+      isRampartFreeForCreep(structure, self),
+  });
+
+  return origin.findClosestByRange(ramparts);
+}
+
+function findStandableRampart(
+  position: RoomPosition,
+  self: Creep,
+  requireFree: boolean,
+): StructureRampart | null {
+  return (
+    position
+      .lookFor(LOOK_STRUCTURES)
+      .find(
+        (structure): structure is StructureRampart =>
+          structure.structureType === STRUCTURE_RAMPART &&
+          structure.my &&
+          isStandableRampart(structure) &&
+          (!requireFree || isRampartFreeForCreep(structure, self)),
+      ) ?? null
+  );
 }
 
 function isRampartFreeForCreep(
