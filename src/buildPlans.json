@@ -1860,36 +1860,6 @@
         "structureType": "STRUCTURE_WALL"
       },
       {
-        "x": 17,
-        "y": 12,
-        "structureType": "STRUCTURE_WALL"
-      },
-      {
-        "x": 17,
-        "y": 13,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 18,
-        "y": 13,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 18,
-        "y": 14,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 17,
-        "y": 14,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 16,
-        "y": 14,
-        "structureType": "STRUCTURE_WALL"
-      },
-      {
         "x": 36,
         "y": 17,
         "structureType": "STRUCTURE_WALL"
@@ -1962,6 +1932,41 @@
       {
         "x": 41,
         "y": 36,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 17,
+        "y": 12,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 18,
+        "y": 12,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 18,
+        "y": 13,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 17,
+        "y": 13,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 16,
+        "y": 14,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 17,
+        "y": 14,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 18,
+        "y": 14,
         "structureType": "STRUCTURE_WALL"
       },
       {
