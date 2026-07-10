@@ -10,7 +10,7 @@ import {
   isHostileCombatCreep,
   isHostileThreateningCore,
 } from "../hostileTargeting";
-import { findBestRepairTarget, getRepairPriority } from "../repairPolicy";
+import { getDesiredRepairerCount } from "../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
@@ -473,16 +473,6 @@ function getDesiredCarrierCount(
   }
 
   return desiredCarriers;
-}
-
-function getDesiredRepairerCount(room: Room): number {
-  const target = findBestRepairTarget(room);
-  if (!target) return 0;
-
-  const priority = getRepairPriority(target);
-  if (priority === 1) return 2;
-  if (priority < 5) return 1; // damage worth a dedicated repairer
-  return 0;
 }
 
 interface DiscretionaryPlan {

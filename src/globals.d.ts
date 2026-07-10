@@ -75,6 +75,7 @@ declare global {
     desiredBuilders?: number;
     desiredCarriers?: number;
     desiredUpgraders?: number;
+    towerTargetId?: Id<Creep>;
   }
 
   interface Memory {

@@ -1,5 +1,6 @@
 import {
   hasHostileCombatCreeps,
+  isHostileThreateningCore,
   isPositionInHostileWeaponRange,
 } from "../../hostileTargeting";
 import {
@@ -10,6 +11,7 @@ import {
 import { hasRepairWork } from "../../repairPolicy";
 import { CREEP_ROLE, type CreepRole, type Role } from "../../types";
 import { LOCAL_ENERGY_RANGE } from "../support/localEnergy";
+import { chooseDefenseDeliveryTarget } from "./defenseDelivery";
 import {
   collectResourceLoot,
   collectStorageStagingMineral,
@@ -546,12 +548,15 @@ function findRefuelDeliveryTarget(
 function findTowerDeliveryTarget(
   creep: Creep,
   belowEnergy = TOWER_CAPACITY,
+  allowPartialLoad = false,
 ): StructureTower | null {
   return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
     filter: (structure): structure is StructureTower =>
       structure.structureType === STRUCTURE_TOWER &&
       structure.store[RESOURCE_ENERGY] < belowEnergy &&
-      canTowerAcceptFullCarrierLoad(creep, structure),
+      (allowPartialLoad
+        ? isDeliveryTargetAvailable(creep, structure)
+        : canTowerAcceptFullCarrierLoad(creep, structure)),
   });
 }
 
@@ -665,9 +670,20 @@ function findWorkerDeliveryTarget(creep: Creep): Creep | null {
 }
 
 function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
+  const committedBreach = creep.room
+    .find(FIND_HOSTILE_CREEPS)
+    .some(isHostileThreateningCore);
   const savedTarget = findSavedDeliveryTarget(creep);
-  if (savedTarget) {
-    return savedTarget;
+  const committedEmergencyTower = committedBreach
+    ? findTowerDeliveryTarget(creep, TOWER_WARTIME_RESERVE, true)
+    : null;
+  const defenseTarget = chooseDefenseDeliveryTarget(
+    committedBreach,
+    committedEmergencyTower,
+    savedTarget,
+  );
+  if (defenseTarget) {
+    return rememberDeliveryTarget(creep, defenseTarget);
   }
 
   const refuelTarget = findRefuelDeliveryTarget(creep);

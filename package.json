@@ -19,6 +19,7 @@
     "deploy:screeps": "node scripts/deploy-screeps.mjs",
     "history:inspect": "tsx scripts/inspect-room-history.ts",
     "history:attacks": "tsx scripts/find-attack-windows.ts",
+    "test:defense": "tsx --test scripts/defense-policy.test.mjs",
     "generate:build-plans": "tsx scripts/generate-build-plans.ts",
     "check:build-plan": "tsx scripts/check-build-plan-terrain.ts",
     "inspect:tile": "tsx scripts/inspect-tile.ts",

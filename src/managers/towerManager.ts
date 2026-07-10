@@ -1,5 +1,6 @@
 import {
   findPriorityHostile,
+  getHostilePriority,
   hasHostileCombatCreeps,
   shouldTowersFireAtHostile,
 } from "../hostileTargeting";
@@ -27,9 +28,7 @@ export const towerManager = {
 
     const hostiles = room.find(FIND_HOSTILE_CREEPS);
     const underAttack = hasHostileCombatCreeps(room, hostiles);
-    // Pick one shared target so towers focus fire instead of splitting damage.
-    const target =
-      hostiles.length > 0 ? findPriorityHostile(room, towers[0].pos) : null;
+    const target = findLockedTowerTarget(room, hostiles, towers[0].pos);
     const shouldFire =
       target !== null && shouldTowersFireAtHostile(room, target, hostiles);
 
@@ -70,6 +69,36 @@ export const towerManager = {
     }
   },
 };
+
+export function findLockedTowerTarget(
+  room: Room,
+  hostiles: Creep[],
+  origin: RoomPosition,
+): Creep | null {
+  if (hostiles.length === 0) {
+    delete room.memory.towerTargetId;
+    return null;
+  }
+
+  const highestPriority = hostiles.reduce(
+    (priority, hostile) => Math.min(priority, getHostilePriority(hostile)),
+    Infinity,
+  );
+  const locked = room.memory.towerTargetId
+    ? hostiles.find((hostile) => hostile.id === room.memory.towerTargetId)
+    : undefined;
+  if (locked && getHostilePriority(locked) === highestPriority) {
+    return locked;
+  }
+
+  const target = findPriorityHostile(room, origin);
+  if (target) {
+    room.memory.towerTargetId = target.id;
+  } else {
+    delete room.memory.towerTargetId;
+  }
+  return target;
+}
 
 // The most-damaged rampart an attacker is currently pressing against.
 function findThreatenedRampart(

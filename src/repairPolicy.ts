@@ -10,6 +10,7 @@ export const MAINTENANCE_INFRASTRUCTURE_DAMAGE_RATIO = 0.9;
 export const DEFENSE_TARGET_HITS = 10_000;
 export const DEFENSE_MAINTENANCE_TARGET_HITS = 100_000;
 export const DEFENSE_UPGRADE_TARGET_HITS = 500_000;
+export const DEFENSE_FORTIFICATION_TARGET_HITS = 2_000_000;
 const REPAIR_PRIORITY_WEIGHT = 50;
 
 export type RepairTarget =
@@ -89,6 +90,13 @@ export function getRepairPriority(target: RepairTarget): number {
     return 6;
   }
 
+  if (
+    isDefenseTarget(target) &&
+    target.hits < DEFENSE_FORTIFICATION_TARGET_HITS
+  ) {
+    return 7;
+  }
+
   return Infinity;
 }
 
@@ -99,7 +107,9 @@ function getRepairScore(target: RepairTarget): number {
         ? DEFENSE_TARGET_HITS
         : target.hits < DEFENSE_MAINTENANCE_TARGET_HITS
           ? DEFENSE_MAINTENANCE_TARGET_HITS
-          : DEFENSE_UPGRADE_TARGET_HITS;
+          : target.hits < DEFENSE_UPGRADE_TARGET_HITS
+            ? DEFENSE_UPGRADE_TARGET_HITS
+            : DEFENSE_FORTIFICATION_TARGET_HITS;
 
     return target.hits / targetHits;
   }
@@ -228,4 +238,20 @@ export function findBestRepairTargetForCreep(
 
 export function hasRepairWork(room: Room): boolean {
   return findBestRepairTarget(room) !== null;
+}
+
+export function getDesiredRepairerCount(room: Room): number {
+  const target = findBestRepairTarget(room);
+  if (!target) return 0;
+
+  const priority = getRepairPriority(target);
+  if (priority === 1) return 2;
+  if (priority < 5) return 1;
+
+  const hasFortificationWork = getRoomRepairCache(room).targets.some(
+    (repairTarget) =>
+      isDefenseTarget(repairTarget) &&
+      repairTarget.hits < DEFENSE_FORTIFICATION_TARGET_HITS,
+  );
+  return hasFortificationWork ? 1 : 0;
 }

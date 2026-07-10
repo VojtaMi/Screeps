@@ -66,6 +66,11 @@ export function findPriorityHostile(
       return priorityDifference;
     }
 
+    const hitsDifference = a.hits - b.hits;
+    if (hitsDifference !== 0) {
+      return hitsDifference;
+    }
+
     return origin.getRangeTo(a) - origin.getRangeTo(b);
   })[0];
 }
@@ -86,8 +91,7 @@ export function canTowersOverpowerHostile(
  *
  * Towers fire when the shot can finish the target this tick, or when combined
  * tower damage out-paces incoming hostile healing. When healing wins, towers
- * hold fire to conserve energy unless the hostile is breaching ramparts or
- * threatening core structures, where spending energy is still worthwhile.
+ * hold fire so their energy can heal defenders or shore up the breach.
  */
 export function shouldTowersFireAtHostile(
   room: Room,
@@ -111,9 +115,7 @@ export function shouldTowersFireAtHostile(
     return true;
   }
 
-  // Healing wins the long game; only spend energy if the hostile is breaching
-  // or sitting on/near critical structures.
-  return isHostileThreateningCore(hostile);
+  return false;
 }
 
 /** Hostile is standing on or directly beside one of our ramparts. */
@@ -177,19 +179,34 @@ function getTowerDamageAtRange(range: number): number {
   return Math.floor(TOWER_POWER_ATTACK * (1 - falloff));
 }
 
-function getIncomingHostileHealing(hostile: Creep, hostiles: Creep[]): number {
-  return hostiles.reduce((total, healer) => {
-    const healParts = healer.getActiveBodyparts(HEAL);
-    if (healParts === 0) {
+type HealAction = "heal" | "rangedHeal";
+
+function getEffectiveHealPower(creep: Creep, action: HealAction): number {
+  const basePower = action === "heal" ? HEAL_POWER : RANGED_HEAL_POWER;
+
+  return creep.body.reduce((total, part) => {
+    if (part.type !== HEAL || part.hits <= 0) {
       return total;
     }
 
+    const multiplier = part.boost
+      ? (BOOSTS[HEAL][part.boost]?.[action] ?? 1)
+      : 1;
+    return total + basePower * multiplier;
+  }, 0);
+}
+
+export function getIncomingHostileHealing(
+  hostile: Creep,
+  hostiles: Creep[],
+): number {
+  return hostiles.reduce((total, healer) => {
     if (healer.pos.isNearTo(hostile)) {
-      return total + healParts * HEAL_POWER;
+      return total + getEffectiveHealPower(healer, "heal");
     }
 
     if (healer.pos.inRangeTo(hostile, 3)) {
-      return total + healParts * RANGED_HEAL_POWER;
+      return total + getEffectiveHealPower(healer, "rangedHeal");
     }
 
     return total;

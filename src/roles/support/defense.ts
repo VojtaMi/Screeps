@@ -39,12 +39,17 @@ export function findDefensiveRampart({
   self,
   attackRange,
 }: DefensiveRampartOptions): StructureRampart | null {
-  const cached = getCachedGuardRampart(self);
+  const cached = getCachedGuardRampart(self, target, attackRange);
   if (cached) {
     return cached;
   }
 
-  const pathRampart = findLastFreeRampartOnPath(origin, target, self);
+  const pathRampart = findLastFreeRampartOnPath(
+    origin,
+    target,
+    self,
+    attackRange,
+  );
   if (pathRampart) {
     rememberGuardRampart(self, pathRampart);
     return pathRampart;
@@ -54,6 +59,12 @@ export function findDefensiveRampart({
   if (attackRampart) {
     rememberGuardRampart(self, attackRampart);
     return attackRampart;
+  }
+
+  const fallbackPathRampart = findLastFreeRampartOnPath(origin, target, self);
+  if (fallbackPathRampart) {
+    rememberGuardRampart(self, fallbackPathRampart);
+    return fallbackPathRampart;
   }
 
   const fallbackRampart = findGuardRampart(self.room, target, self);
@@ -98,6 +109,7 @@ function findLastFreeRampartOnPath(
   origin: RoomPosition,
   target: RoomPosition,
   self: Creep,
+  maxTargetRange?: number,
 ): StructureRampart | null {
   if (
     origin.roomName !== self.room.name ||
@@ -113,7 +125,15 @@ function findLastFreeRampartOnPath(
 
   for (let index = path.length - 1; index >= 0; index -= 1) {
     const step = path[index];
-    const rampart = new RoomPosition(step.x, step.y, self.room.name)
+    const position = new RoomPosition(step.x, step.y, self.room.name);
+    if (
+      maxTargetRange !== undefined &&
+      !position.inRangeTo(target, maxTargetRange)
+    ) {
+      continue;
+    }
+
+    const rampart = position
       .lookFor(LOOK_STRUCTURES)
       .find(
         (structure): structure is StructureRampart =>
@@ -131,10 +151,14 @@ function findLastFreeRampartOnPath(
   return null;
 }
 
-function getCachedGuardRampart(self: Creep): StructureRampart | null {
+function getCachedGuardRampart(
+  self: Creep,
+  target: RoomPosition,
+  attackRange: number,
+): StructureRampart | null {
   if (
     self.memory.guardRampartUntil === undefined ||
-    self.memory.guardRampartUntil < Game.time ||
+    self.memory.guardRampartUntil <= Game.time ||
     self.memory.guardRampartX === undefined ||
     self.memory.guardRampartY === undefined ||
     self.memory.guardRampartRoomName !== self.room.name
@@ -154,7 +178,8 @@ function getCachedGuardRampart(self: Creep): StructureRampart | null {
         structure.structureType === STRUCTURE_RAMPART &&
         structure.my &&
         isStandableRampart(structure) &&
-        isRampartFreeForCreep(structure, self),
+        isRampartFreeForCreep(structure, self) &&
+        structure.pos.inRangeTo(target, attackRange),
     );
 
   if (!rampart) {
@@ -162,7 +187,6 @@ function getCachedGuardRampart(self: Creep): StructureRampart | null {
     return null;
   }
 
-  self.memory.guardRampartUntil = Game.time + GUARD_RAMPART_MEMORY_TTL;
   return rampart;
 }
 
