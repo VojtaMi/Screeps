@@ -114,11 +114,6 @@
         "structureType": "STRUCTURE_RAMPART"
       },
       {
-        "x": 45,
-        "y": 27,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
         "x": 31,
         "y": 31,
         "structureType": "STRUCTURE_RAMPART"
@@ -131,11 +126,6 @@
       {
         "x": 30,
         "y": 30,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 30,
-        "y": 29,
         "structureType": "STRUCTURE_RAMPART"
       },
       {
