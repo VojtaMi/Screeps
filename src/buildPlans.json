@@ -2967,6 +2967,16 @@
         "structureType": "STRUCTURE_RAMPART"
       },
       {
+        "x": 46,
+        "y": 22,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 46,
+        "y": 23,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
         "x": 17,
         "y": 20,
         "structureType": "STRUCTURE_RAMPART"
