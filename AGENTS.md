@@ -28,6 +28,8 @@ This repo has a project-local Screeps MCP server in `.codex/config.toml` for Cod
 
 For local setup on each machine, copy `.env.example` to `.env` and set `SCREEPS_MMO_TOKEN`. Use the MCP tools when live game state helps, but do not deploy or take destructive live-game actions unless explicitly requested.
 
+This account's bot runs on `shard3`. `scripts/screeps-mcp.sh` injects that shard into MCP calls that omit one, so pass `shard` only to read a different shard, and never bypass the wrapper by invoking `npx screeps-mcp` directly.
+
 Do not use generic MCP code-publishing tools such as `push_code` for this project. Use `npm run deploy:screeps` for direct local deploys, or commit/push to `development` and let GitHub Actions deploy. MCP should be used for live inspection, side-effect-free console probes, and explicitly authorized one-off live operations.
 
 Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.

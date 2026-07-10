@@ -16,4 +16,7 @@ if [[ -z "${SCREEPS_MMO_TOKEN:-}" ]]; then
 fi
 
 export SCREEPS_MCP_CONFIG=".screeps-mcp/config.json"
-exec npx -y screeps-mcp@latest
+
+# The guard starts screeps-mcp and applies shardDefault, which the server itself
+# ignores. Launching the server directly resolves shard-scoped calls to shard0.
+exec node scripts/screeps-mcp-shard-guard.mjs
