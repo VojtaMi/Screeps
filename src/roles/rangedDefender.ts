@@ -47,11 +47,16 @@ export const rangedDefender: Role = {
       const stagingRampart = target
         ? findStagingRampart(spawn?.pos ?? creep.pos, target.pos, creep)
         : null;
-      if (stagingRampart && !creep.pos.isEqualTo(stagingRampart.pos)) {
-        creep.moveToAvoidingRoomEdges(stagingRampart, {
-          visualizePathStyle: PATH_STYLE,
-        });
-      } else if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
+      if (stagingRampart) {
+        if (!creep.pos.isEqualTo(stagingRampart.pos)) {
+          creep.moveToAvoidingRoomEdges(stagingRampart, {
+            visualizePathStyle: PATH_STYLE,
+          });
+        }
+        return;
+      }
+
+      if (spawn && !creep.pos.inRangeTo(spawn, 3)) {
         creep.moveToAvoidingRoomEdges(spawn, {
           visualizePathStyle: PATH_STYLE,
           range: 3,
