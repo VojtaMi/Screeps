@@ -55,7 +55,9 @@ Role names must stay synchronized across:
 
 The current spawn manager assumes the primary spawn is `Game.spawns.Spawn1`.
 
-Default build plans are room-specific and currently defined in `src/managers/buildPlanManager.ts`. Build plan items may use `purpose: "controllerDelivery"` for special controller-container behavior.
+Default build plans are room-specific data in `src/buildPlans.json` (canonical source) and `src/buildPlans.ts` (generated — do not hand-edit; run `npm run generate:build-plans` after changing the JSON). `src/managers/buildPlanManager.ts` only has the runtime scheduling/placement logic. Build plan items may use `purpose: "controllerDelivery"` for special controller-container behavior.
+
+Room terrain and landmarks are cached per room at `tools/artifacts/terrain/<ROOM>.json` and `tools/artifacts/landmarks/<ROOM>.json` (shard3) — read from there instead of re-fetching live terrain. Validate build plan changes with `npm run check:build-plan -- [room]`, inspect a single tile (plan + terrain + live state) with `npm run inspect:tile -- <room> <x> <y>`, and use `tools/build-plan-editor` (`npm run editor:dev`) to visually review a room's layout and build order.
 
 ## Deployment
 
