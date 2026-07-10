@@ -100,6 +100,7 @@ declare global {
       }
     >;
     ownedRoomLinks?: Record<string, string[]>;
+    ownedRoomRoutes?: Record<string, Record<string, string[]>>;
     ownedRoomLinksVersion?: string;
   }
 
