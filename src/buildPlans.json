@@ -1650,16 +1650,6 @@
         "structureType": "STRUCTURE_RAMPART"
       },
       {
-        "x": 37,
-        "y": 21,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
-        "x": 36,
-        "y": 21,
-        "structureType": "STRUCTURE_RAMPART"
-      },
-      {
         "x": 35,
         "y": 23,
         "structureType": "STRUCTURE_RAMPART"
@@ -2438,6 +2428,91 @@
         "x": 39,
         "y": 30,
         "structureType": "STRUCTURE_LAB"
+      },
+      {
+        "x": 36,
+        "y": 33,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 37,
+        "y": 33,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 38,
+        "y": 32,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 39,
+        "y": 32,
+        "structureType": "STRUCTURE_TOWER"
+      },
+      {
+        "x": 37,
+        "y": 32,
+        "structureType": "STRUCTURE_SPAWN"
+      },
+      {
+        "x": 38,
+        "y": 19,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 37,
+        "y": 20,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 37,
+        "y": 21,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 36,
+        "y": 21,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 35,
+        "y": 34,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 34,
+        "y": 34,
+        "structureType": "STRUCTURE_ROAD"
+      },
+      {
+        "x": 33,
+        "y": 34,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 33,
+        "y": 35,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 34,
+        "y": 35,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 35,
+        "y": 33,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 36,
+        "y": 34,
+        "structureType": "STRUCTURE_EXTENSION"
+      },
+      {
+        "x": 37,
+        "y": 34,
+        "structureType": "STRUCTURE_EXTENSION"
       },
       {
         "x": 38,
