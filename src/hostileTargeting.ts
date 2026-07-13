@@ -1,9 +1,6 @@
 const HOSTILE_CORE_THREAT_RANGE = 3;
 const HOSTILE_MELEE_DANGER_RANGE = 1;
 const HOSTILE_RANGED_DANGER_RANGE = 3;
-// Hostile healers cannot always focus the same target, so let towers test
-// favorable shots against a conservative fraction of their potential healing.
-const TOWER_EXPECTED_HEALING_FACTOR = 0.7;
 const CORE_STRUCTURE_TYPES = new Set<StructureConstant>([
   STRUCTURE_SPAWN,
   STRUCTURE_STORAGE,
@@ -93,9 +90,8 @@ export function canTowersOverpowerHostile(
  * Decide whether the room's towers should spend energy firing at `hostile`.
  *
  * Towers fire when the shot can finish the target this tick, or when combined
- * tower damage out-paces the expected portion of potential hostile healing.
- * When that estimate wins, towers hold fire so their energy can heal defenders
- * or shore up the breach.
+ * tower damage out-paces incoming hostile healing. When healing wins, towers
+ * hold fire so their energy can heal defenders or shore up the breach.
  */
 export function shouldTowersFireAtHostile(
   room: Room,
@@ -107,9 +103,7 @@ export function shouldTowersFireAtHostile(
     return false;
   }
 
-  const incomingHealing =
-    getIncomingHostileHealing(hostile, hostiles) *
-    TOWER_EXPECTED_HEALING_FACTOR;
+  const incomingHealing = getIncomingHostileHealing(hostile, hostiles);
 
   // Already damaged enough to finish despite healing this tick.
   if (towerDamage >= hostile.hits + incomingHealing) {
