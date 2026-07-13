@@ -11,6 +11,7 @@ export const DEFENSE_TARGET_HITS = 10_000;
 export const DEFENSE_MAINTENANCE_TARGET_HITS = 100_000;
 export const DEFENSE_UPGRADE_TARGET_HITS = 500_000;
 export const DEFENSE_FORTIFICATION_TARGET_HITS = 2_000_000;
+const BUILDER_FRESH_DEFENSE_RANGE = 3;
 const REPAIR_PRIORITY_WEIGHT = 50;
 
 export type RepairTarget =
@@ -237,18 +238,25 @@ export function findBestRepairTargetForCreep(
 }
 
 // A rampart or wall exists with 1 hit the tick its construction site completes.
-// Builders top the nearest one up to the emergency floor before starting
-// another site, so a fresh rampart never sits at decay range.
+// The builder that completed it is already within build range, so only nearby
+// builders top it up instead of pulling every builder across the room.
 export function findFreshDefenseForCreep(creep: Creep): RepairTarget | null {
   return getRoomRepairCache(creep.room).targets.reduce<RepairTarget | null>(
     (bestTarget, target) => {
-      if (!isDefenseTarget(target) || target.hits >= DEFENSE_TARGET_HITS) {
+      const targetRange = creep.pos.getRangeTo(target);
+      if (
+        !isDefenseTarget(target) ||
+        target.hits >= DEFENSE_TARGET_HITS ||
+        targetRange > BUILDER_FRESH_DEFENSE_RANGE
+      ) {
         return bestTarget;
       }
 
       if (
         !bestTarget ||
-        creep.pos.getRangeTo(target) < creep.pos.getRangeTo(bestTarget)
+        target.hits < bestTarget.hits ||
+        (target.hits === bestTarget.hits &&
+          targetRange < creep.pos.getRangeTo(bestTarget))
       ) {
         return target;
       }
