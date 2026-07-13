@@ -250,13 +250,13 @@ test("towers repair instead of firing into superior healing", () => {
   };
   const healerA = makeCreep({
     id: "healer-a",
-    body: makeBody(HEAL, 26, "LO"),
+    body: makeBody(HEAL, 36, "LO"),
     x: 10,
     y: 10,
   });
   const healerB = makeCreep({
     id: "healer-b",
-    body: makeBody(HEAL, 26, "LO"),
+    body: makeBody(HEAL, 36, "LO"),
     x: 11,
     y: 10,
   });
@@ -285,13 +285,13 @@ test("towers hold without a repair target and fire a finishable target", () => {
   }));
   const healerA = makeCreep({
     id: "healer-a",
-    body: makeBody(HEAL, 26, "LO"),
+    body: makeBody(HEAL, 36, "LO"),
     x: 10,
     y: 10,
   });
   const healerB = makeCreep({
     id: "healer-b",
-    body: makeBody(HEAL, 26, "LO"),
+    body: makeBody(HEAL, 36, "LO"),
     x: 11,
     y: 10,
   });
@@ -316,6 +316,54 @@ test("towers hold without a repair target and fire a finishable target", () => {
     structures: towers,
     hostiles: [attacker],
   }).find;
+  towerManager.manageRoomTowers(room);
+  assert.deepEqual(actions, ["attack", "attack"]);
+});
+
+test("towers test fire when damage exceeds 70% of potential healing", () => {
+  const actions = [];
+  const towers = [
+    {
+      id: "tower-near",
+      structureType: STRUCTURE_TOWER,
+      hits: 3_000,
+      hitsMax: 3_000,
+      pos: new MockRoomPosition(34, 31),
+      store: { energy: 1_000 },
+      attack: () => actions.push("attack"),
+      heal: () => actions.push("heal"),
+      repair: () => actions.push("repair"),
+    },
+    {
+      id: "tower-far",
+      structureType: STRUCTURE_TOWER,
+      hits: 3_000,
+      hitsMax: 3_000,
+      pos: new MockRoomPosition(31, 39),
+      store: { energy: 1_000 },
+      attack: () => actions.push("attack"),
+      heal: () => actions.push("heal"),
+      repair: () => actions.push("repair"),
+    },
+  ];
+  const healerA = makeCreep({
+    id: "healer-a",
+    body: makeBody(HEAL, 30, "LO"),
+    x: 30,
+    y: 29,
+  });
+  const healerB = makeCreep({
+    id: "healer-b",
+    body: makeBody(HEAL, 30, "LO"),
+    x: 31,
+    y: 29,
+  });
+  const room = makeRoom({
+    name: "tower-test-fire",
+    structures: towers,
+    hostiles: [healerA, healerB],
+  });
+
   towerManager.manageRoomTowers(room);
   assert.deepEqual(actions, ["attack", "attack"]);
 });
