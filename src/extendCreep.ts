@@ -8,6 +8,29 @@ import {
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
 
+function getConstructionPriority(site: ConstructionSite): number {
+  switch (site.structureType) {
+    case STRUCTURE_SPAWN:
+      return 1;
+    case STRUCTURE_TOWER:
+      return 2;
+    case STRUCTURE_RAMPART:
+    case STRUCTURE_WALL:
+      return 3;
+    case STRUCTURE_EXTENSION:
+      return 4;
+    case STRUCTURE_CONTAINER:
+    case STRUCTURE_STORAGE:
+    case STRUCTURE_LINK:
+    case STRUCTURE_TERMINAL:
+      return 5;
+    case STRUCTURE_ROAD:
+      return 6;
+    default:
+      return 7;
+  }
+}
+
 function toMoveToOpts(
   opts?: MoveToAvoidingRoomEdgesOpts,
 ): MoveToOpts | undefined {
@@ -546,10 +569,18 @@ export function extendCreep(): void {
   };
 
   Creep.prototype.findBuildTarget = function (): ConstructionSite | null {
-    return this.pos.findClosestByPath(FIND_CONSTRUCTION_SITES, {
+    const sites = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
       filter: (site) => !isPositionInHostileWeaponRange(site.pos),
-      ignoreCreeps: true,
     });
+    const highestPriority = sites.reduce(
+      (priority, site) => Math.min(priority, getConstructionPriority(site)),
+      Infinity,
+    );
+
+    return this.pos.findClosestByPath(
+      sites.filter((site) => getConstructionPriority(site) === highestPriority),
+      { ignoreCreeps: true },
+    );
   };
 
   Creep.prototype.findAndBuild = function (): boolean {

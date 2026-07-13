@@ -4,6 +4,25 @@ interface BuildPlanItem extends RoomBuildPlanItem {
   priority: number;
 }
 
+interface BuildPlanRoomState {
+  structureCounts: Partial<Record<BuildableStructureConstant, number>>;
+  siteCounts: Partial<Record<BuildableStructureConstant, number>>;
+}
+
+const BUILD_PLAN_RECONCILE_INTERVAL = 100;
+const CRITICAL_CONSTRUCTION_SITE_RESERVE = 10;
+
+function isCriticalConstruction(
+  structureType: BuildableStructureConstant,
+): boolean {
+  return (
+    structureType === STRUCTURE_SPAWN ||
+    structureType === STRUCTURE_TOWER ||
+    structureType === STRUCTURE_RAMPART ||
+    structureType === STRUCTURE_WALL
+  );
+}
+
 function stableBuildPlanValue(value: unknown): unknown {
   if (!value || typeof value !== "object") {
     return value;
@@ -136,8 +155,21 @@ function syncDefaultBuildPlan(room: Room): void {
   room.memory.buildPlanHash = buildPlanHash;
 }
 
-function hasConstructionSite(room: Room): boolean {
-  return room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+function getRoomReconcileOffset(roomName: string): number {
+  let offset = 0;
+  for (const character of roomName) {
+    offset =
+      (offset * 31 + character.charCodeAt(0)) % BUILD_PLAN_RECONCILE_INTERVAL;
+  }
+  return offset;
+}
+
+function shouldReconcileBuildPlan(room: Room): boolean {
+  return (
+    (Game.time + getRoomReconcileOffset(room.name)) %
+      BUILD_PLAN_RECONCILE_INTERVAL ===
+    0
+  );
 }
 
 function removeForeignConstructionSites(room: Room): void {
@@ -184,35 +216,46 @@ function hasConstructionSiteAt(room: Room, plan: RoomBuildPlanItem): boolean {
   );
 }
 
-function countStructures(
-  room: Room,
-  structureType: BuildableStructureConstant,
-): number {
-  return room.find(FIND_STRUCTURES, {
-    filter: (structure) => structure.structureType === structureType,
-  }).length;
-}
+function getBuildPlanRoomState(room: Room): BuildPlanRoomState {
+  const structureCounts: BuildPlanRoomState["structureCounts"] = {};
+  const siteCounts: BuildPlanRoomState["siteCounts"] = {};
 
-function countConstructionSites(
-  room: Room,
-  structureType: BuildableStructureConstant,
-): number {
-  return room.find(FIND_MY_CONSTRUCTION_SITES, {
-    filter: (site) => site.structureType === structureType,
-  }).length;
+  for (const structure of room.find(FIND_STRUCTURES)) {
+    const structureType = structure.structureType as BuildableStructureConstant;
+    structureCounts[structureType] = (structureCounts[structureType] ?? 0) + 1;
+  }
+
+  for (const site of room.find(FIND_MY_CONSTRUCTION_SITES)) {
+    siteCounts[site.structureType] = (siteCounts[site.structureType] ?? 0) + 1;
+  }
+
+  return { structureCounts, siteCounts };
 }
 
 function canBuildAtCurrentControllerLevel(
   room: Room,
   plan: RoomBuildPlanItem,
+  state?: BuildPlanRoomState,
 ): boolean {
   const controllerLevel = room.controller?.level ?? 0;
   const allowed =
     CONTROLLER_STRUCTURES[plan.structureType][controllerLevel] ?? 0;
 
+  if (state) {
+    return (
+      (state.structureCounts[plan.structureType] ?? 0) +
+        (state.siteCounts[plan.structureType] ?? 0) <
+      allowed
+    );
+  }
+
   return (
-    countStructures(room, plan.structureType) +
-      countConstructionSites(room, plan.structureType) <
+    room.find(FIND_STRUCTURES, {
+      filter: (structure) => structure.structureType === plan.structureType,
+    }).length +
+      room.find(FIND_MY_CONSTRUCTION_SITES, {
+        filter: (site) => site.structureType === plan.structureType,
+      }).length <
     allowed
   );
 }
@@ -295,7 +338,7 @@ function destroyBuildPlanBlocker(room: Room, plan: RoomBuildPlanItem): boolean {
   return true;
 }
 
-function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
+function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): boolean {
   const result = room.createConstructionSite(
     plan.x,
     plan.y,
@@ -305,19 +348,23 @@ function placeBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
     console.log(
       `Build plan placed ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}`,
     );
-  } else {
+    return true;
+  }
+
+  if (result !== ERR_FULL) {
     console.log(
       `Build plan failed for ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
     );
   }
+  return false;
 }
 
-function prepareBuildPlanSite(room: Room, plan: RoomBuildPlanItem): void {
+function prepareBuildPlanSite(room: Room, plan: RoomBuildPlanItem): boolean {
   if (destroyBuildPlanBlocker(room, plan)) {
-    return;
+    return false;
   }
 
-  placeBuildPlanSite(room, plan);
+  return placeBuildPlanSite(room, plan);
 }
 
 function executeDestroyPlan(room: Room, plan: RoomBuildPlanItem): void {
@@ -353,34 +400,19 @@ export const buildPlanManager = {
     const primarySpawnPlan = getPrimarySpawnBuildPlan(room);
     if (primarySpawnPlan && shouldPlaceBuildPlanSite(room, primarySpawnPlan)) {
       prepareBuildPlanSite(room, primarySpawnPlan);
+    }
+
+    if (!shouldReconcileBuildPlan(room)) {
       return;
     }
 
-    if (hasConstructionSite(room)) {
-      return;
-    }
-
-    const nextPlan = this.getNextBuildPlan(room);
-    if (!nextPlan) {
-      return;
-    }
-
-    if (nextPlan.action === "destroy") {
-      executeDestroyPlan(room, nextPlan);
-    } else {
-      prepareBuildPlanSite(room, nextPlan);
-    }
-  },
-
-  getNextBuildPlan(room: Room): RoomBuildPlanItem | null {
     const buildPlan = getBuildPlan(room).sort(
       (a, b) => a.priority - b.priority,
     );
-
     const currentRcl = room.controller?.level ?? 0;
+    const state = getBuildPlanRoomState(room);
+    let globalSiteCount = Object.keys(Game.constructionSites).length;
 
-    // Any build plan superseded by an active destroy plan should be skipped —
-    // otherwise the bot rebuilds the structure immediately after destroying it.
     const supersededByDestroy = new Set<string>();
     for (const plan of buildPlan) {
       if (plan.action === "destroy") {
@@ -391,18 +423,12 @@ export const buildPlanManager = {
       }
     }
 
-    for (let i = 0; i < buildPlan.length; i++) {
-      const plan = buildPlan[i];
-
+    for (const plan of buildPlan) {
       if (plan.action === "destroy") {
         if (plan.minRcl !== undefined && currentRcl < plan.minRcl) {
           continue;
         }
-
-        const structureExists = room
-          .lookForAt(LOOK_STRUCTURES, plan.x, plan.y)
-          .some((s) => s.structureType === plan.structureType);
-        if (structureExists) return plan;
+        executeDestroyPlan(room, plan);
         continue;
       }
 
@@ -416,13 +442,23 @@ export const buildPlanManager = {
         continue;
       }
 
-      if (!canBuildAtCurrentControllerLevel(room, plan)) {
+      if (
+        (plan.purpose === "primarySpawn" &&
+          plan.structureType === STRUCTURE_SPAWN) ||
+        globalSiteCount >= MAX_CONSTRUCTION_SITES ||
+        (!isCriticalConstruction(plan.structureType) &&
+          globalSiteCount >=
+            MAX_CONSTRUCTION_SITES - CRITICAL_CONSTRUCTION_SITE_RESERVE) ||
+        !canBuildAtCurrentControllerLevel(room, plan, state)
+      ) {
         continue;
       }
 
-      return plan;
+      if (prepareBuildPlanSite(room, plan)) {
+        state.siteCounts[plan.structureType] =
+          (state.siteCounts[plan.structureType] ?? 0) + 1;
+        globalSiteCount += 1;
+      }
     }
-
-    return null;
   },
 };

@@ -43,33 +43,6 @@ function canRebuildSpawn(creep: Creep): boolean {
   );
 }
 
-function createPrimarySpawnSite(room: Room): void {
-  const plan = getPrimarySpawnBuildPlan(room);
-  if (!plan) {
-    return;
-  }
-
-  if (getPrimarySpawnSite(room)) {
-    return;
-  }
-
-  const result = room.createConstructionSite(
-    plan.x,
-    plan.y,
-    plan.structureType,
-  );
-
-  if (result === OK) {
-    console.log(
-      `Spawn recovery placed ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}`,
-    );
-  } else if (result !== ERR_FULL) {
-    console.log(
-      `Spawn recovery failed for ${plan.structureType} in ${room.name} at ${plan.x},${plan.y}: ${result}`,
-    );
-  }
-}
-
 function convertRebuildersToPioneers(room: Room): void {
   for (const creep of room.find(FIND_MY_CREEPS)) {
     if (
@@ -99,7 +72,6 @@ export const spawnRecoveryManager = {
         continue;
       }
 
-      createPrimarySpawnSite(room);
       convertRebuildersToPioneers(room);
     }
   },
