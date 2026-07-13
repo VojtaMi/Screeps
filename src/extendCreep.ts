@@ -1,3 +1,4 @@
+import { getConstructionPriority } from "./constructionPriority";
 import { isPositionInHostileWeaponRange } from "./hostileTargeting";
 import {
   getRepairPriority,
@@ -7,28 +8,25 @@ import {
 
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
+let extensionCountCacheTick = -1;
+const completedExtensionCountByRoom = new Map<string, number>();
 
-function getConstructionPriority(site: ConstructionSite): number {
-  switch (site.structureType) {
-    case STRUCTURE_SPAWN:
-      return 1;
-    case STRUCTURE_TOWER:
-      return 2;
-    case STRUCTURE_RAMPART:
-    case STRUCTURE_WALL:
-      return 3;
-    case STRUCTURE_EXTENSION:
-      return 4;
-    case STRUCTURE_CONTAINER:
-    case STRUCTURE_STORAGE:
-    case STRUCTURE_LINK:
-    case STRUCTURE_TERMINAL:
-      return 5;
-    case STRUCTURE_ROAD:
-      return 6;
-    default:
-      return 7;
+function getCompletedExtensionCount(room: Room): number {
+  if (extensionCountCacheTick !== Game.time) {
+    completedExtensionCountByRoom.clear();
+    extensionCountCacheTick = Game.time;
   }
+
+  const cachedCount = completedExtensionCountByRoom.get(room.name);
+  if (cachedCount !== undefined) {
+    return cachedCount;
+  }
+
+  const count = room.find(FIND_MY_STRUCTURES, {
+    filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
+  }).length;
+  completedExtensionCountByRoom.set(room.name, count);
+  return count;
 }
 
 function toMoveToOpts(
@@ -572,13 +570,24 @@ export function extendCreep(): void {
     const sites = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
       filter: (site) => !isPositionInHostileWeaponRange(site.pos),
     });
+    const completedExtensionCount = getCompletedExtensionCount(this.room);
     const highestPriority = sites.reduce(
-      (priority, site) => Math.min(priority, getConstructionPriority(site)),
+      (priority, site) =>
+        Math.min(
+          priority,
+          getConstructionPriority(site.structureType, completedExtensionCount),
+        ),
       Infinity,
     );
 
     return this.pos.findClosestByPath(
-      sites.filter((site) => getConstructionPriority(site) === highestPriority),
+      sites.filter(
+        (site) =>
+          getConstructionPriority(
+            site.structureType,
+            completedExtensionCount,
+          ) === highestPriority,
+      ),
       { ignoreCreeps: true },
     );
   };

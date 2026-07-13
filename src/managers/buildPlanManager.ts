@@ -1,4 +1,5 @@
 import { DEFAULT_BUILD_PLANS } from "../buildPlans";
+import { getConstructionPriority } from "../constructionPriority";
 
 interface BuildPlanItem extends RoomBuildPlanItem {
   priority: number;
@@ -10,18 +11,7 @@ interface BuildPlanRoomState {
 }
 
 const BUILD_PLAN_RECONCILE_INTERVAL = 100;
-const CRITICAL_CONSTRUCTION_SITE_RESERVE = 10;
-
-function isCriticalConstruction(
-  structureType: BuildableStructureConstant,
-): boolean {
-  return (
-    structureType === STRUCTURE_SPAWN ||
-    structureType === STRUCTURE_TOWER ||
-    structureType === STRUCTURE_RAMPART ||
-    structureType === STRUCTURE_WALL
-  );
-}
+const MAX_ROOM_CONSTRUCTION_SITES = 10;
 
 function stableBuildPlanValue(value: unknown): unknown {
   if (!value || typeof value !== "object") {
@@ -412,6 +402,10 @@ export const buildPlanManager = {
     const currentRcl = room.controller?.level ?? 0;
     const state = getBuildPlanRoomState(room);
     let globalSiteCount = Object.keys(Game.constructionSites).length;
+    let roomSiteCount = Object.values(state.siteCounts).reduce(
+      (count, typeCount) => count + (typeCount ?? 0),
+      0,
+    );
 
     const supersededByDestroy = new Set<string>();
     for (const plan of buildPlan) {
@@ -429,34 +423,63 @@ export const buildPlanManager = {
           continue;
         }
         executeDestroyPlan(room, plan);
-        continue;
+      }
+    }
+
+    const candidates = buildPlan.filter(
+      (plan) =>
+        plan.action !== "destroy" &&
+        !(
+          plan.purpose === "primarySpawn" &&
+          plan.structureType === STRUCTURE_SPAWN
+        ) &&
+        !supersededByDestroy.has(`${plan.x},${plan.y},${plan.structureType}`) &&
+        !isBuilt(room, plan) &&
+        !hasConstructionSiteAt(room, plan) &&
+        canBuildAtCurrentControllerLevel(room, plan, state),
+    );
+
+    while (
+      candidates.length > 0 &&
+      roomSiteCount < MAX_ROOM_CONSTRUCTION_SITES &&
+      globalSiteCount < MAX_CONSTRUCTION_SITES
+    ) {
+      const establishedExtensionCount =
+        (state.structureCounts[STRUCTURE_EXTENSION] ?? 0) +
+        (state.siteCounts[STRUCTURE_EXTENSION] ?? 0);
+      let bestCandidateIndex = 0;
+
+      for (let index = 1; index < candidates.length; index += 1) {
+        const candidate = candidates[index];
+        const bestCandidate = candidates[bestCandidateIndex];
+        const candidatePriority = getConstructionPriority(
+          candidate.structureType,
+          establishedExtensionCount,
+        );
+        const bestPriority = getConstructionPriority(
+          bestCandidate.structureType,
+          establishedExtensionCount,
+        );
+
+        if (
+          candidatePriority < bestPriority ||
+          (candidatePriority === bestPriority &&
+            candidate.priority < bestCandidate.priority)
+        ) {
+          bestCandidateIndex = index;
+        }
       }
 
-      if (
-        supersededByDestroy.has(`${plan.x},${plan.y},${plan.structureType}`)
-      ) {
-        continue;
-      }
+      const [plan] = candidates.splice(bestCandidateIndex, 1);
 
-      if (isBuilt(room, plan) || hasConstructionSiteAt(room, plan)) {
-        continue;
-      }
-
-      if (
-        (plan.purpose === "primarySpawn" &&
-          plan.structureType === STRUCTURE_SPAWN) ||
-        globalSiteCount >= MAX_CONSTRUCTION_SITES ||
-        (!isCriticalConstruction(plan.structureType) &&
-          globalSiteCount >=
-            MAX_CONSTRUCTION_SITES - CRITICAL_CONSTRUCTION_SITE_RESERVE) ||
-        !canBuildAtCurrentControllerLevel(room, plan, state)
-      ) {
+      if (!canBuildAtCurrentControllerLevel(room, plan, state)) {
         continue;
       }
 
       if (prepareBuildPlanSite(room, plan)) {
         state.siteCounts[plan.structureType] =
           (state.siteCounts[plan.structureType] ?? 0) + 1;
+        roomSiteCount += 1;
         globalSiteCount += 1;
       }
     }
