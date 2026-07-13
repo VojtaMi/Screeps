@@ -540,6 +540,34 @@ function clearDeliveryTarget(creep: Creep): void {
   delete creep.memory.deliveryTargetId;
 }
 
+function isWorkerDeliveryTarget(target: EnergyDeliveryTarget): target is Creep {
+  return target instanceof Creep && WORKER_REFUEL_ROLES.has(target.memory.role);
+}
+
+function canContinueWorkerDelivery(creep: Creep, target: Creep): boolean {
+  return (
+    target.my &&
+    isTargetInCreepRoom(creep, target) &&
+    canRefuelWorkerRole(creep.room, target.memory.role) &&
+    !isPositionInHostileWeaponRange(target.pos)
+  );
+}
+
+function canContinueSavedDelivery(
+  creep: Creep,
+  target: EnergyDeliveryTarget,
+): boolean {
+  if (isWorkerDeliveryTarget(target)) {
+    return canContinueWorkerDelivery(creep, target);
+  }
+
+  if (isStorageTarget(target)) {
+    return isStorageDeliveryTargetAvailable(creep, target);
+  }
+
+  return isDeliveryTargetAvailable(creep, target);
+}
+
 function findSavedDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   if (!creep.memory.deliveryTargetId || !creep.hasEnergy()) {
     clearDeliveryTarget(creep);
@@ -550,9 +578,7 @@ function findSavedDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   if (
     savedTarget &&
     isTargetInCreepRoom(creep, savedTarget) &&
-    (isStorageTarget(savedTarget)
-      ? isStorageDeliveryTargetAvailable(creep, savedTarget)
-      : isDeliveryTargetAvailable(creep, savedTarget))
+    canContinueSavedDelivery(creep, savedTarget)
   ) {
     return savedTarget;
   }
@@ -715,16 +741,19 @@ function findCarrierDeliveryTarget(creep: Creep): EnergyDeliveryTarget | null {
   const committedEmergencyTower = committedBreach
     ? findTowerDeliveryTarget(creep, TOWER_WARTIME_RESERVE, true)
     : null;
+  const refuelTarget = findRefuelDeliveryTarget(creep);
   const defenseTarget = chooseDefenseDeliveryTarget(
     committedBreach,
     committedEmergencyTower,
     savedTarget,
   );
-  if (defenseTarget) {
+  if (
+    defenseTarget &&
+    (!isWorkerDeliveryTarget(defenseTarget) || !refuelTarget)
+  ) {
     return rememberDeliveryTarget(creep, defenseTarget);
   }
 
-  const refuelTarget = findRefuelDeliveryTarget(creep);
   if (refuelTarget) {
     return rememberDeliveryTarget(creep, refuelTarget);
   }
@@ -803,6 +832,13 @@ function deliverEnergy(
     creep.store[RESOURCE_ENERGY],
     deliveryTarget.store.getFreeCapacity(RESOURCE_ENERGY),
   );
+  if (amount === 0 && isWorkerDeliveryTarget(deliveryTarget)) {
+    if (!creep.pos.isNearTo(deliveryTarget)) {
+      creep.moveToAvoidingRoomEdges(deliveryTarget, CARRIER_DELIVERY_MOVE_OPTS);
+    }
+    return true;
+  }
+
   const result = creep.transfer(deliveryTarget, RESOURCE_ENERGY, amount);
 
   if (result === ERR_NOT_IN_RANGE) {
