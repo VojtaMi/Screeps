@@ -757,6 +757,46 @@
         "x": 23,
         "y": 38,
         "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 20,
+        "y": 46,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 20,
+        "y": 45,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 20,
+        "y": 43,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 20,
+        "y": 44,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 20,
+        "y": 47,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 20,
+        "y": 48,
+        "structureType": "STRUCTURE_WALL"
+      },
+      {
+        "x": 21,
+        "y": 45,
+        "structureType": "STRUCTURE_RAMPART"
+      },
+      {
+        "x": 21,
+        "y": 46,
+        "structureType": "STRUCTURE_RAMPART"
       }
     ]
   },
