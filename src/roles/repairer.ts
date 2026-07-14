@@ -1,5 +1,5 @@
 import type { Role } from "../types";
-import { shelterIfUnderAttack } from "./support/civilianSafety";
+import { standDownIfUnderAttack } from "./support/civilianSafety";
 import {
   clearRepairTarget,
   moveToBestRepairTargetForCreep,
@@ -20,9 +20,9 @@ export const repairer: Role = {
     }
 
     // A repairer is a soft target whose work sits exactly where the fighting is.
-    // Towers cover repair under fire, so it drops the job for the whole attack
-    // rather than shuttling in and out of the breach.
-    if (shelterIfUnderAttack(creep)) {
+    // Towers cover repair under fire, so it drops the job and recycles instead
+    // of shuttling in and out of the breach.
+    if (standDownIfUnderAttack(creep)) {
       clearRepairTarget(creep);
       return;
     }

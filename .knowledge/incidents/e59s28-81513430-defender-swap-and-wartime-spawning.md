@@ -43,7 +43,8 @@ ranged fire at tick 81513433.
 
 ## Decision And Implementation
 
-Commit `de060ec` implemented the policy on 2026-07-14:
+Commit `de060ec` implemented the policy on 2026-07-14, with the civilian
+standdown revised immediately afterwards (see below):
 
 - An assigned defender holding its tactical tile does not yield to swaps while
   combat hostiles are present. Peaceful traffic swaps remain enabled.
@@ -53,14 +54,39 @@ Commit `de060ec` implemented the policy on 2026-07-14:
   the intentional wartime target of three carriers, fills the defense squad,
   and otherwise holds energy instead of spawning discretionary or cross-room
   creeps. An unaffordable defender produces an explicit hold decision.
-- Existing builders and repairers shelter near a same-room spawn for the whole
-  unsafe attack. Carriers remain active to supply towers and spawning.
+- Existing builders and repairers stand down for the whole unsafe attack: they
+  walk to a same-room spawn and are recycled there. Carriers remain active to
+  supply towers and spawning.
+
+A first pass had the two roles shelter beside the spawn instead of recycling.
+That was replaced the same day, because an idle civilian is not neutral: it
+loiters on the tiles the carriers use to keep the towers loaded and the
+defenders use to reach their ramparts, which is the busiest traffic in the room
+precisely when traffic matters most. Recycling removes the congestion, returns
+most of the body cost as energy the spawn can immediately turn into defenders,
+and is self-limiting because the discretionary builder probe and the desired
+repairer count rebuild the roles once the attack ends. The trade accepted is the
+full respawn cost afterwards, and the loss of building and repair the room could
+in principle still have done safely during the attack.
+
+Standing civilians down also removed the need for the follow-up this incident
+originally recommended. Danger-aware builder retreat and safe construction path
+selection are not required: a creep that does no work during an unsafe attack
+cannot route itself through a hostile's weapon range, so there is no cost matrix
+to build and no retreat boundary to damp.
+
+The swap protection is not made redundant by the standdown. Carriers are exempt
+from it by design, and they are the creeps that thread the base during an
+attack, so they are now the likeliest requester to try to displace a defender
+from its rampart.
 
 ## Verification Status
 
 `npm run ci`, the existing `npm run test:defense` suite, and `npm run build`
-passed locally on 2026-07-14. The historical replay confirms the original
-failure but cannot validate the changed code. No deployment or meaningful live
-combat verification was performed; observe the next unsafe attack for spawn
-holds, civilian sheltering, three-carrier wartime logistics, and stable defender
-assignments.
+pass locally on 2026-07-14. The historical replay confirms the original failure
+but cannot validate the changed code, and the defense test suite is deliberately
+kept minimal, so swap rejection, the hold decision, and the civilian standdown
+carry no direct test coverage. No deployment or live combat verification was
+performed; observe the next unsafe attack for spawn holds, builders and
+repairers recycling instead of loitering, three-carrier wartime logistics, and
+stable defender assignments.
