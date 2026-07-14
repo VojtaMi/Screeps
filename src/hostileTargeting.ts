@@ -23,6 +23,25 @@ export function hasHostileCombatCreeps(
   return hostiles.some(isHostileCombatCreep);
 }
 
+/**
+ * The room is facing an attack its towers cannot simply shrug off: at least one
+ * combat hostile out-heals or out-ranges what the towers can do to it.
+ *
+ * This is the room's single "we are in trouble" signal. Spawn policy switches to
+ * wartime priorities on it, and soft civilian creeps stand down on it, so both
+ * agree on when the attack starts and ends. Hostiles the towers can delete on
+ * their own deliberately do not trip it: the economy keeps running through a
+ * lone invader.
+ */
+export function isRoomUnderUnsafeAttack(
+  room: Room,
+  hostiles = room.find(FIND_HOSTILE_CREEPS),
+): boolean {
+  return hostiles
+    .filter(isHostileCombatCreep)
+    .some((hostile) => !canTowersOverpowerHostile(room, hostile, hostiles));
+}
+
 export function isPositionInHostileWeaponRange(
   position: RoomPosition,
   hostiles = Game.rooms[position.roomName]?.find(FIND_HOSTILE_CREEPS) ?? [],

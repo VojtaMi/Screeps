@@ -20,6 +20,15 @@ export interface SpawnRequest {
   memory?: Partial<CreepMemory>;
 }
 
+/**
+ * Spawn nothing this tick and keep the room's energy for the creep the room
+ * actually needs. Distinct from `null`, which means "no request from this
+ * policy" and lets the next policy (including cross-room help) have a turn.
+ */
+export const SPAWN_HOLD = "hold" as const;
+
+export type SpawnDecision = SpawnRequest | typeof SPAWN_HOLD | null;
+
 export interface Role {
   run(creep: Creep): void;
 }

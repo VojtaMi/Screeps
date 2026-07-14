@@ -1,12 +1,15 @@
 import { bodyCost, buildBodyFromMaxPattern, CREEP_BODY } from "../creepBodies";
 import { getDesiredDefenseSquadSize } from "../defenseSquad";
 import { findReadyBoostLab } from "../empire/labPlans";
-import {
-  canTowersOverpowerHostile,
-  isHostileCombatCreep,
-} from "../hostileTargeting";
+import { isRoomUnderUnsafeAttack } from "../hostileTargeting";
 import { getDesiredRepairerCount } from "../repairPolicy";
-import { CREEP_ROLE, type CreepRole, type SpawnRequest } from "../types";
+import {
+  CREEP_ROLE,
+  type CreepRole,
+  SPAWN_HOLD,
+  type SpawnDecision,
+  type SpawnRequest,
+} from "../types";
 import { getControllerDeliveryContainer } from "./buildPlanManager";
 import { expansionManager } from "./expansionManager";
 import { labManager } from "./labManager";
@@ -73,14 +76,22 @@ export const spawnManager = {
       const sources = room.find(FIND_SOURCES);
       const hostiles = room.find(FIND_HOSTILE_CREEPS);
 
-      const request =
-        this.getSpawnRequest({
-          room,
-          creeps,
-          creepsByRole,
-          sources,
-          hostiles,
-        }) ?? getCrossRoomHarvesterRequest(spawn);
+      const decision = this.getSpawnRequest({
+        room,
+        creeps,
+        creepsByRole,
+        sources,
+        hostiles,
+      });
+
+      // A hold reserves the room's energy for a creep it cannot pay for yet, so
+      // it must not fall through to the cross-room harvester either: a besieged
+      // room does not spend its defense budget staffing a neighbor's source.
+      if (decision === SPAWN_HOLD) {
+        continue;
+      }
+
+      const request = decision ?? getCrossRoomHarvesterRequest(spawn);
 
       if (!request || !canAfford(spawn, request.body)) {
         continue;
@@ -100,7 +111,7 @@ export const spawnManager = {
     }
   },
 
-  getSpawnRequest(context: SpawnContext): SpawnRequest | null {
+  getSpawnRequest(context: SpawnContext): SpawnDecision {
     const { room, creeps, creepsByRole, sources, hostiles } = context;
 
     const harvesters = creepsByRole(CREEP_ROLE.HARVESTER);
@@ -123,28 +134,11 @@ export const spawnManager = {
       };
     }
 
-    // Only combat creeps warrant defenders; a lone scout (common at low RCL
-    // with no towers) must not trigger defender spawning.
-    const combatHostiles = hostiles.filter(isHostileCombatCreep);
-    const hasUnsafeHostiles = combatHostiles.some(
-      (hostile) => !canTowersOverpowerHostile(room, hostile, hostiles),
-    );
-    if (hasUnsafeHostiles) {
-      if (carriers.length < ATTACK_CARRIER_TARGET) {
-        return {
-          role: CREEP_ROLE.CARRIER,
-          body: buildBodyFromMaxPattern({
-            maxBody: CREEP_BODY.CARRIER,
-            energyBudget: capacityEnergy,
-          }),
-          memory: { working: false },
-        };
-      }
-
-      const defenderRequest = getDefenderRequest(context);
-      if (defenderRequest) {
-        return defenderRequest;
-      }
+    // Only combat creeps the towers cannot handle warrant wartime spawning; a
+    // lone scout (common at low RCL with no towers) must not trigger it. Roles
+    // stand their civilians down on this same signal.
+    if (isRoomUnderUnsafeAttack(room, hostiles)) {
+      return getUnsafeAttackDecision(context);
     }
 
     if (harvesters.length > 0 && carriers.length === 0) {
@@ -302,10 +296,57 @@ function canAfford(spawn: StructureSpawn, body: BodyPartConstant[]): boolean {
   return spawn.room.energyAvailable >= bodyCost(body);
 }
 
-// During an unsafe attack, assemble a full ranged-defense squad. Members stage
-// behind the perimeter until the squad is complete, so the spawn does not feed
-// partial defenders into a ranged kill zone.
-function getDefenderRequest(context: SpawnContext): SpawnRequest | null {
+/**
+ * Spawn policy while hostiles the towers cannot beat are in the room. The room
+ * is buying survival, so the order is fixed and everything discretionary waits:
+ * minimum energy production, wartime hauling, then the defense squad. Creeps
+ * already alive keep doing their jobs; this only decides what the spawn builds
+ * next.
+ */
+function getUnsafeAttackDecision(context: SpawnContext): SpawnDecision {
+  const { creepsByRole, room } = context;
+
+  // Recovery comes first: without any harvester the room cannot refill the
+  // spawn, towers, or extensions needed to sustain the defense. Only replace
+  // the first harvester here; normal economy scaling waits for peace.
+  const economyRequest = getEssentialEconomyRequest(context);
+  if (economyRequest) {
+    return economyRequest;
+  }
+
+  // Once income exists, ATTACK_CARRIER_TARGET keeps one carrier above the
+  // peacetime baseline so towers and extensions stay fed while under fire.
+  if (creepsByRole(CREEP_ROLE.CARRIER).length < ATTACK_CARRIER_TARGET) {
+    return {
+      role: CREEP_ROLE.CARRIER,
+      body: buildBodyFromMaxPattern({
+        maxBody: CREEP_BODY.CARRIER,
+        energyBudget: room.energyCapacityAvailable,
+      }),
+      memory: { working: false },
+    };
+  }
+
+  const defenderDecision = getDefenderDecision(context);
+  if (defenderDecision !== null && defenderDecision !== SPAWN_HOLD) {
+    return defenderDecision;
+  }
+
+  // Squad complete, or short a defender we are still saving up for. Either way
+  // the energy stays in the room instead of buying a builder or an upgrader.
+  return SPAWN_HOLD;
+}
+
+/**
+ * The next member of the ranged-defense squad, `SPAWN_HOLD` while the room is
+ * short one it cannot pay for this tick, or `null` once the squad is complete.
+ *
+ * Holding matters: the defender body is sized to the room's full energy
+ * capacity, so a room mid-refill is only ever temporarily short of it. Spending
+ * that partial energy on a cheaper civilian is how a room ends up with a half
+ * defense and a builder walking into a ranged kill zone.
+ */
+function getDefenderDecision(context: SpawnContext): SpawnDecision {
   const { creepsByRole, hostiles, room } = context;
   const rangedDefenders = creepsByRole(CREEP_ROLE.RANGED_DEFENDER);
   const squadSize = getDesiredDefenseSquadSize(hostiles);
@@ -320,13 +361,43 @@ function getDefenderRequest(context: SpawnContext): SpawnRequest | null {
     sortBody: sortCombatBody,
   });
   if (room.energyAvailable < bodyCost(body)) {
-    return null;
+    return SPAWN_HOLD;
   }
 
   return {
     role: CREEP_ROLE.RANGED_DEFENDER,
     body,
-    memory: getDefenderBoostMemory(context.room, body),
+    memory: getDefenderBoostMemory(room, body),
+  };
+}
+
+/**
+ * The energy production a besieged room cannot survive without. A room with no
+ * harvester at all has no income and cannot rebuild its defense, so it still
+ * gets one; a room merely short its second harvester waits for the attack to
+ * end. The body is sized to energy on hand, matching the empty-room path, so a
+ * low-RCL room recovering under attack can always afford what it asks for.
+ */
+function getEssentialEconomyRequest(
+  context: SpawnContext,
+): SpawnRequest | null {
+  const { creepsByRole, room } = context;
+  if (creepsByRole(CREEP_ROLE.HARVESTER).length > 0) {
+    return null;
+  }
+
+  const source = findUnclaimedHarvesterSource(room);
+  if (!source) {
+    return null;
+  }
+
+  return {
+    role: CREEP_ROLE.HARVESTER,
+    body: buildBodyFromMaxPattern({
+      maxBody: CREEP_BODY.HARVESTER,
+      energyBudget: room.energyAvailable,
+    }),
+    memory: { sourceId: source.id },
   };
 }
 

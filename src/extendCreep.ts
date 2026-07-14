@@ -5,6 +5,7 @@ import {
   isRepairTarget,
   type RepairTarget,
 } from "./repairPolicy";
+import { canYieldPosition } from "./tacticalReservation";
 
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
@@ -177,7 +178,8 @@ function requestSwapWithBlockingCreep(
       (blockingCreep) =>
         blockingCreep.my &&
         blockingCreep.name !== creep.name &&
-        blockingCreep.fatigue === 0,
+        blockingCreep.fatigue === 0 &&
+        canYieldPosition(blockingCreep),
     );
   if (!blocker) {
     return;
@@ -375,6 +377,15 @@ export function extendCreep(): void {
     delete this.memory.swapRequest;
 
     if (!request || Game.time - request.tick > SWAP_REQUEST_TTL) {
+      return false;
+    }
+
+    // A request can outlive the situation it was made in: it is written after
+    // the blocker already ran this tick, so it is consumed a tick later, by
+    // which time the blocker may have taken up a tactical position. Rejecting
+    // here (the request is already cleared above) returns the tick to the
+    // creep's own role instead of spending it on a step aside.
+    if (!canYieldPosition(this)) {
       return false;
     }
 
