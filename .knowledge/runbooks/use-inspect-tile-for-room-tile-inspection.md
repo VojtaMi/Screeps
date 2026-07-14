@@ -2,7 +2,7 @@
 type: runbook-note
 title: Use Inspect Tile For Room Tile Inspection
 description: The inspect-tile script is the preferred way to inspect one Screeps room tile across terrain, build plans, landmarks, validation, and live objects.
-resource: scripts/inspect-tile.mjs
+resource: scripts/inspect-tile.ts
 tags:
   - screeps
   - build-plan

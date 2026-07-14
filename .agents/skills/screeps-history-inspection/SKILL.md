@@ -17,7 +17,7 @@ any question about what happened in a room across a tick range — defensive
 - Follow project instructions from `AGENTS.md`.
 - Do not deploy, mutate live Memory, run side-effecting console commands, or
   change active Screeps state.
-- Treat static history URLs and `scripts/inspect-room-history.mjs` as read-only.
+- Treat static history URLs and the `npm run history:inspect` helper as read-only.
 - Tie claims to concrete shard, room, tick, object position, creep name, or
   structure type.
 - Preserve uncertainty when there are gaps between inspected history windows.
@@ -27,7 +27,7 @@ any question about what happened in a room across a tick range — defensive
 Run the helper from the repository root:
 
 ```bash
-node scripts/inspect-room-history.mjs --shard shard3 --room E58S28 --from 81080300 --to 81080499 --ticks 81080300,81080373,81080400,81080437,81080450
+npm run history:inspect -- --shard shard3 --room E58S28 --from 81080300 --to 81080499 --ticks 81080300,81080373,81080400,81080437,81080450
 ```
 
 Useful options:

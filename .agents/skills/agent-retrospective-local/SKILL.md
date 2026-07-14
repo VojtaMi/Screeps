@@ -58,6 +58,7 @@ Start from the user's description, then inspect available artifacts as needed:
    - Include exact files or folders.
    - Draft text or patch ideas when useful.
    - Call out when an OKF note is not the right destination.
+   - Recommend tests or live verification only when they would produce meaningful evidence at a reasonable maintenance cost.
 
 ## OKF-Style Project Knowledge
 
@@ -72,6 +73,9 @@ Before adding a note:
   agent diary entries.
 - Prefer `AGENTS.md` for mandatory repo rules and skills for repeatable
   workflows.
+- Use an incident note when a concrete room/tick observation explains why a
+  durable behavior or policy changed; do not create a general changelog entry
+  for routine edits.
 
 Recommended frontmatter:
 
@@ -90,9 +94,13 @@ timestamp: YYYY-MM-DDTHH:MM:SSZ
 
 Recommended body:
 
-- Explain the durable fact.
+- Record the observed shard, room, tick range, actors, and outcome when known.
+- Explain the cause, decision, and durable behavior that changed.
+- Distinguish the historical observation from the implementation date and any
+  later deployment or verification tick.
 - Link it to relevant files, scripts, skills, rooms, or ticks.
-- State what future agents should check or avoid.
+- State what future agents should check or avoid and whether live verification
+  is complete, smoke-only, or deferred until the condition recurs.
 - Keep it short enough to scan.
 
 ## Output Shape

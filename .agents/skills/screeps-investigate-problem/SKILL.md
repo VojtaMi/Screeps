@@ -15,7 +15,8 @@ Use this read-only workflow to turn a Screeps bot symptom into a clear diagnosis
 - Prefer discovering code context before asking questions; ask only when intent or expected behavior cannot be inferred.
 - Use live Screeps checks only when current game state would materially improve the diagnosis, and keep them read-only.
 - Look beyond the nearest local fix when the surrounding design is likely causing repeated complexity, duplicated rules, or fragile behavior.
-- End with analysis and a concrete proposed `$screeps-live-loop` goal; do not start implementation unless the user asks to continue.
+- End with analysis and a concrete implementation handoff; do not start implementation unless the user asks to continue.
+- Treat `$screeps-live-loop` as an optional tool, not a completion gate. Recommend it only when the user requests deployment and the relevant behavior can be meaningfully observed live.
 
 ## Investigation Workflow
 
@@ -43,10 +44,13 @@ Use this read-only workflow to turn a Screeps bot symptom into a clear diagnosis
    - Compare the narrow fix against any cleaner architecture or point-of-view change that would simplify future logic.
    - Recommend the smallest solution that actually improves the underlying model, not just the observed symptom.
    - Call out any architectural or strategy decision the user should choose before implementation.
+   - Recommend tests only when the behavior is consequential and stable and a lightweight test seam already exists; do not require a broad Screeps mock environment by default.
 
 5. Hand off cleanly.
-   - Propose a concise `$screeps-live-loop` goal with the recommended solution shape, success criteria, and verification steps.
-   - Ask whether the user wants to continue with `$screeps-live-loop`.
+   - Propose a concise implementation goal with the recommended solution shape and success criteria.
+   - Choose useful verification: local checks, focused tests, live observation, or deferred manual observation during the next real occurrence.
+   - For historical or intermittent conditions that are no longer present, state that a deployment can provide only a smoke check and preserve the future observable checks instead of requiring a live loop.
+   - Ask whether the user wants to continue with implementation. Mention `$screeps-live-loop` only when its deployment and live checks would add meaningful evidence.
    - If the diagnosis is not strong enough, ask the smallest useful question or recommend one more read-only check.
 
 ## Output Shape
@@ -55,4 +59,4 @@ Use this read-only workflow to turn a Screeps bot symptom into a clear diagnosis
 - **Context:** relevant code paths and optional live observations.
 - **Likely Cause:** best-supported explanation plus alternatives if meaningful.
 - **Solution Shape:** narrow fix, broader simplification if useful, and recommended path.
-- **Loop Handoff:** implementation goal, success criteria, and verification approach for `$screeps-live-loop`.
+- **Handoff:** implementation goal, success criteria, and the verification approach that best fits the evidence currently available.

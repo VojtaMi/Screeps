@@ -17,6 +17,7 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
 - Automatically fix routine failures: typecheck, lint, build, obvious deploy-log failures, and clear live-verification mismatches.
 - Ask the user before non-obvious Screeps strategy, architecture, or product-behavior decisions.
 - Keep observations tied to concrete Screeps ticks, room names, creep names, branch names, workflow run IDs, or timestamps.
+- Before deployment, identify the live condition that would demonstrate the requested behavior. If that condition is absent, describe the deployment as a smoke check, do not claim behavioral verification, and record what must be observed during the next real occurrence.
 - Do not report success until local checks pass and, when deployed, live Screeps state confirms the goal or the remaining uncertainty is clearly stated.
 
 ## Efficient Live MCP Use
@@ -68,6 +69,7 @@ Use this goal-driven workflow to connect local code changes, authorized publish/
    - After deploy completes or the code fingerprint appears, wait long enough for Screeps to tick and load the new code.
    - Use read-only MCP tools or side-effect-free console expressions to inspect branch/code state, console output, CPU, room objects, creeps, spawns, and Memory related to the change.
    - If behavior depends on multiple ticks, sample more than once and compare before/after observations.
+   - If the triggering condition is absent, verify only code load, console health, CPU, and unaffected current behavior. Do not wait indefinitely or manufacture unrelated live state to claim the requested behavior worked.
    - Iterate automatically on clear live-verification mismatches that have an obvious local fix and are covered by the original authorization. Rebuild and redeploy through `npm run deploy:screeps` for each iteration; a new behavioral decision still requires asking the user.
 
 6. Publish the verified change.

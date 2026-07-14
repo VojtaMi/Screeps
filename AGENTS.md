@@ -34,6 +34,8 @@ Do not use generic MCP code-publishing tools such as `push_code` for this projec
 
 Use the repo-local `screeps-live-loop` skill when the user asks for a full edit, deploy, and live-game verification loop.
 
+Treat live verification as one optional validation tool, not a gate for every behavior change. For historical or intermittent behavior such as attacks, use a live loop only when the user requests deployment and the relevant condition is currently observable. Otherwise run appropriate local checks and record what should be verified during the next real occurrence.
+
 Use the repo-local `agent-retrospective-local` skill when the user asks why an agent got stuck, made a wrong assumption, needed manual correction, lacked tools/context, or should suggest Screeps-specific improvements for future runs.
 
 The `.knowledge/` directory stores OKF-style Markdown notes for durable project knowledge. Prefer `AGENTS.md` for mandatory repo-wide rules and skills for repeatable workflows; use `.knowledge/` for retrievable facts, decisions, incidents, and failure modes that are useful but not themselves commands.
@@ -72,5 +74,7 @@ Do not deploy, push, commit, or modify Git history unless explicitly requested.
 Preserve existing user changes in the working tree. If files are already modified, inspect them and work with the current state rather than reverting.
 
 Prefer existing project patterns over new abstractions. Keep Screeps logic simple and tick-conscious. Avoid adding dependencies unless they clearly improve the bot or tooling.
+
+Treat tests as a selective investment rather than a default requirement. Add focused tests when behavior is consequential and stable enough to protect, and when an existing lightweight seam or pure function makes the test cheap to maintain. Do not build broad Screeps game mocks merely to satisfy a testing checkbox; prefer typecheck/build validation plus explicit deferred manual or live observation when that provides better value.
 
 Do not break scalability. New behavior must work across the bot's full lifecycle, not just the current room's state. Screeps Bot Must Recover From Low RCL; for details, follow `.knowledge/invariants/recovery-must-degrade-gracefully.md`.
