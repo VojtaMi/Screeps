@@ -262,8 +262,8 @@ function findFreeCoreRampart(
   );
 }
 
-/** A rampart is backed when an adjacent standable rampart sits farther from the
- * hostile, giving the defender a fallback tile the enemy cannot flank around. */
+/** A rampart is backed when an adjacent standable rampart is no closer to the
+ * hostile, giving the defender a fallback tile without stepping toward it. */
 function isRampartBacked(
   room: Room,
   position: RoomPosition,
@@ -273,7 +273,7 @@ function isRampartBacked(
   return ownedStandableRamparts(room).some(
     (rampart) =>
       position.getRangeTo(rampart) === 1 &&
-      rampart.pos.getRangeTo(target) > ownRange,
+      rampart.pos.getRangeTo(target) >= ownRange,
   );
 }
 

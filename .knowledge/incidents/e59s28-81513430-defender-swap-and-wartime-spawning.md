@@ -80,6 +80,26 @@ from it by design, and they are the creeps that thread the base during an
 attack, so they are now the likeliest requester to try to displace a defender
 from its rampart.
 
+### Follow-up: adjacent defender formation
+
+The same raid exposed a second positioning issue. At tick 81513536, the hostile
+squad occupied 30-31,10-11. One ranged defender held the northern rampart at
+37,16, while another remained on the core rampart at 34,21 even though 38,16
+was a free adjacent fighting position and 38,17 was a free support rampart.
+
+The position was rejected by the backing predicate because Screeps range is
+Chebyshev distance. From 38,16 and 38,17 to each member of that hostile squad,
+the dominant horizontal distance was equal. Consequently, 38,17 was not
+strictly farther away even though it was the intended inward support tile for
+the adjacent formation slot.
+
+The backing rule now accepts an adjacent rampart whose hostile range is equal
+to or greater than the candidate's range. This permits the second defender to
+hold 38,16 without assigning it to 38,17; the latter remains available for
+support, retreat, or traffic. This is intentionally a narrow policy adjustment.
+If practical observation shows that sideways, equal-range ramparts validate
+unsafe positions, replace it with explicit rampart-cluster formation logic.
+
 ## Verification Status
 
 `npm run ci`, the existing `npm run test:defense` suite, and `npm run build`
@@ -89,4 +109,6 @@ kept minimal, so swap rejection, the hold decision, and the civilian standdown
 carry no direct test coverage. No deployment or live combat verification was
 performed; observe the next unsafe attack for spawn holds, builders and
 repairers recycling instead of loitering, three-carrier wartime logistics, and
-stable defender assignments.
+stable defender assignments. Also confirm that multiple defenders fill adjacent
+frontline ramparts such as 37,16 and 38,16 before remaining on core ramparts,
+without selecting exposed equal-range positions elsewhere in the room.
