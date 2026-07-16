@@ -1,4 +1,5 @@
 import {
+  findDefenderAttack,
   findPriorityHostile,
   getHostilePriority,
   hasHostileCombatCreeps,
@@ -28,9 +29,27 @@ export const towerManager = {
 
     const hostiles = room.find(FIND_HOSTILE_CREEPS);
     const underAttack = hasHostileCombatCreeps(room, hostiles);
-    const target = findLockedTowerTarget(room, hostiles, towers[0].pos);
+    const defenderAttack = findDefenderAttack(room, hostiles);
+    const towerTarget = findLockedTowerTarget(room, hostiles, towers[0].pos);
+    const defenderTarget = defenderAttack?.target ?? null;
+    const target =
+      defenderTarget &&
+      shouldTowersFireAtHostile(
+        room,
+        defenderTarget,
+        hostiles,
+        defenderAttack?.damage ?? 0,
+      )
+        ? defenderTarget
+        : towerTarget;
     const shouldFire =
-      target !== null && shouldTowersFireAtHostile(room, target, hostiles);
+      target !== null &&
+      shouldTowersFireAtHostile(
+        room,
+        target,
+        hostiles,
+        target === defenderTarget ? (defenderAttack?.damage ?? 0) : 0,
+      );
 
     // While holding fire during an attack, the breached rampart is the thing
     // actually failing. Towers repair it (800/tick, and never walk into danger)

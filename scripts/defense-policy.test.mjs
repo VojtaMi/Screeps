@@ -53,6 +53,7 @@ Object.assign(globalThis, {
   LOOK_CREEPS: "creeps",
   LOOK_STRUCTURES: "structures",
   RANGED_ATTACK: "ranged_attack",
+  RANGED_ATTACK_POWER: 10,
   RANGED_HEAL_POWER: 4,
   RESOURCE_ENERGY: "energy",
   RoomPosition: MockRoomPosition,
@@ -318,6 +319,45 @@ test("towers hold without a repair target and fire a finishable target", () => {
   }).find;
   towerManager.manageRoomTowers(room);
   assert.deepEqual(actions, ["attack", "attack"]);
+});
+
+test("towers join an in-range defender when combined damage beats healing", () => {
+  const actions = [];
+  const towers = [0, 1].map((index) => ({
+    id: `tower-${index}`,
+    structureType: STRUCTURE_TOWER,
+    hits: 3_000,
+    hitsMax: 3_000,
+    pos: new MockRoomPosition(30 - index * 3, 9 + index * 3),
+    store: { energy: 1_000 },
+    attack: (target) => actions.push(["attack", target.id]),
+    heal: () => actions.push(["heal"]),
+    repair: () => actions.push(["repair"]),
+  }));
+  const healer = makeCreep({
+    id: "healer-target",
+    body: makeBody(HEAL, 3),
+    x: 10,
+    y: 10,
+  });
+  const defender = makeCreep({
+    id: "defender",
+    body: makeBody(RANGED_ATTACK, 9),
+    x: 13,
+    y: 10,
+  });
+  const room = makeRoom({
+    name: "tower-defender-focus",
+    structures: towers,
+    hostiles: [healer],
+    friendlies: [defender],
+  });
+
+  towerManager.manageRoomTowers(room);
+  assert.deepEqual(actions, [
+    ["attack", "healer-target"],
+    ["attack", "healer-target"],
+  ]);
 });
 
 function placeRampart(x, y, roomName = "E58S28") {

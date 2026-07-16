@@ -94,6 +94,19 @@ export function findPriorityHostile(
   })[0];
 }
 
+/** Choose the weakest hostile at the highest combat priority. */
+export function pickHostileTarget(hostiles: Creep[]): Creep | null {
+  return (
+    [...hostiles].sort((left, right) => {
+      const priorityDifference =
+        getHostilePriority(left) - getHostilePriority(right);
+      return priorityDifference !== 0
+        ? priorityDifference
+        : left.hits - right.hits;
+    })[0] ?? null
+  );
+}
+
 export function canTowersOverpowerHostile(
   room: Room,
   hostile: Creep,
@@ -116,6 +129,7 @@ export function shouldTowersFireAtHostile(
   room: Room,
   hostile: Creep,
   hostiles = room.find(FIND_HOSTILE_CREEPS),
+  additionalDamage = 0,
 ): boolean {
   const towerDamage = getTowerDamageAtPosition(room, hostile.pos);
   if (towerDamage === 0) {
@@ -125,16 +139,56 @@ export function shouldTowersFireAtHostile(
   const incomingHealing = getIncomingHostileHealing(hostile, hostiles);
 
   // Already damaged enough to finish despite healing this tick.
-  if (towerDamage >= hostile.hits + incomingHealing) {
+  const totalDamage = towerDamage + additionalDamage;
+
+  if (totalDamage >= hostile.hits + incomingHealing) {
     return true;
   }
 
   // We out-damage their healing, so firing makes real progress.
-  if (towerDamage > incomingHealing) {
+  if (totalDamage > incomingHealing) {
     return true;
   }
 
   return false;
+}
+
+/**
+ * Return the hostile a ranged defender would select this tick, together with
+ * the damage the in-range ranged defenders can contribute to that target.
+ * This mirrors roles/support/defense.ts without making tower logic depend on
+ * role execution order.
+ */
+export function findDefenderAttack(
+  room: Room,
+  hostiles = room.find(FIND_HOSTILE_CREEPS),
+): { target: Creep; damage: number } | null {
+  const defenders = room
+    .find(FIND_MY_CREEPS)
+    .filter((creep) => creep.getActiveBodyparts(RANGED_ATTACK) > 0);
+  const attacks = new Map<string, { target: Creep; damage: number }>();
+
+  for (const defender of defenders) {
+    const target = pickHostileTarget(
+      hostiles.filter((hostile) => defender.pos.inRangeTo(hostile, 3)),
+    );
+
+    if (!target) {
+      continue;
+    }
+
+    const current = attacks.get(target.id);
+    const damage = getEffectiveRangedAttackPower(defender);
+    attacks.set(target.id, {
+      target,
+      damage: (current?.damage ?? 0) + damage,
+    });
+  }
+
+  const target = pickHostileTarget(
+    [...attacks.values()].map((attack) => attack.target),
+  );
+  return target ? (attacks.get(target.id) ?? null) : null;
 }
 
 /** Hostile is standing on or directly beside one of our ramparts. */
@@ -212,6 +266,19 @@ function getEffectiveHealPower(creep: Creep, action: HealAction): number {
       ? (BOOSTS[HEAL][part.boost]?.[action] ?? 1)
       : 1;
     return total + basePower * multiplier;
+  }, 0);
+}
+
+function getEffectiveRangedAttackPower(creep: Creep): number {
+  return creep.body.reduce((total, part) => {
+    if (part.type !== RANGED_ATTACK || part.hits <= 0) {
+      return total;
+    }
+
+    const multiplier = part.boost
+      ? (BOOSTS[RANGED_ATTACK][part.boost]?.rangedAttack ?? 1)
+      : 1;
+    return total + RANGED_ATTACK_POWER * multiplier;
   }, 0);
 }
 

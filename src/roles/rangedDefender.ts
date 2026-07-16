@@ -1,8 +1,7 @@
-import { findPriorityHostile } from "../hostileTargeting";
+import { findPriorityHostile, pickHostileTarget } from "../hostileTargeting";
 import { getDefenseAssignment } from "../managers/defenseAssignmentManager";
 import type { Role } from "../types";
 import { seekBoost } from "./support/boost";
-import { pickAttackTarget } from "./support/defense";
 import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff8800" };
@@ -25,7 +24,7 @@ export const rangedDefender: Role = {
     // Focus one target so defenders and towers can remove a healer instead of
     // spreading damage that the hostile squad immediately restores.
     const inRange = creep.pos.findInRange(hostiles, RANGED_RANGE);
-    const attackTarget = pickAttackTarget(inRange);
+    const attackTarget = pickHostileTarget(inRange);
     if (attackTarget) {
       creep.rangedAttack(attackTarget);
     }
@@ -44,7 +43,7 @@ export const rangedDefender: Role = {
 
     // No rampart available: kite at range instead of diving into melee.
     const target =
-      pickAttackTarget(hostiles) ?? findPriorityHostile(creep.room, creep.pos);
+      pickHostileTarget(hostiles) ?? findPriorityHostile(creep.room, creep.pos);
     const spawn = findSameRoomSpawn(creep);
     if (target) {
       const range = creep.pos.getRangeTo(target);
