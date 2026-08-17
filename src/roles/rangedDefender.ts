@@ -6,6 +6,7 @@ import { findSameRoomSpawn } from "./support/spawns";
 
 const PATH_STYLE: PolyStyle = { stroke: "#ff8800" };
 const RANGED_RANGE = 3;
+const FORMATION_APPROACH_RANGE = 5;
 
 export const rangedDefender: Role = {
   run(creep: Creep): void {
@@ -36,6 +37,11 @@ export const rangedDefender: Role = {
       if (!creep.pos.isEqualTo(assignment)) {
         creep.moveToAvoidingRoomEdges(assignment, {
           visualizePathStyle: PATH_STYLE,
+          // Refresh around the compact gate every tick so a newly anchored
+          // defender cannot leave followers reusing a path through its tile.
+          reusePath: creep.pos.inRangeTo(assignment, FORMATION_APPROACH_RANGE)
+            ? 0
+            : 5,
         });
       }
       return;

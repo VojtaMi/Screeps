@@ -97,6 +97,7 @@ const {
 const { getIncomingHostileHealing } = await import("../src/hostileTargeting.ts");
 const { buildDefensePlan, isDefensePlanValid, getDefenseAssignment } =
   await import("../src/managers/defenseAssignmentManager.ts");
+const { applyTacticalReservations } = await import("../src/tacticalReservation.ts");
 const { findLockedTowerTarget, towerManager } = await import(
   "../src/managers/towerManager.ts"
 );
@@ -575,6 +576,72 @@ test("defenders consume only their assigned plan position", () => {
   assert.equal(assigned.y, 30);
   assert.equal(assigned.roomName, "E58S28");
   assert.equal(getDefenseAssignment({ name: "d2", room }), null);
+});
+
+test("pathfinding blocks a defender holding an assigned rampart during combat", () => {
+  const held = {
+    name: "held",
+    memory: { role: "rangedDefender" },
+    pos: new MockRoomPosition(16, 21, "E59S29"),
+  };
+  const approaching = {
+    name: "approaching",
+    memory: { role: "rangedDefender" },
+    pos: new MockRoomPosition(17, 20, "E59S29"),
+  };
+  const hostile = {
+    getActiveBodyparts: (type) => (type === ATTACK ? 1 : 0),
+  };
+  const room = makeRoom({
+    name: "E59S29",
+    hostiles: [hostile],
+    friendlies: [held, approaching],
+  });
+  room.memory.defensePlan = {
+    targetId: "h1",
+    targetX: 17,
+    targetY: 25,
+    updatedAt: 1_000,
+    roster: ["approaching", "held"],
+    assignments: {
+      held: { x: 16, y: 21 },
+      approaching: { x: 15, y: 21 },
+    },
+  };
+  held.room = room;
+  approaching.room = room;
+
+  const blocked = [];
+  applyTacticalReservations(room, {
+    set: (x, y, cost) => blocked.push([x, y, cost]),
+  });
+
+  assert.deepEqual(blocked, [[16, 21, 255]]);
+});
+
+test("held rampart path reservations disappear when combat ends", () => {
+  const held = {
+    name: "held",
+    memory: { role: "rangedDefender" },
+    pos: new MockRoomPosition(16, 21, "E59S29"),
+  };
+  const room = makeRoom({ name: "E59S29", friendlies: [held] });
+  room.memory.defensePlan = {
+    targetId: "h1",
+    targetX: 17,
+    targetY: 25,
+    updatedAt: 1_000,
+    roster: ["held"],
+    assignments: { held: { x: 16, y: 21 } },
+  };
+  held.room = room;
+
+  const blocked = [];
+  applyTacticalReservations(room, {
+    set: (x, y, cost) => blocked.push([x, y, cost]),
+  });
+
+  assert.deepEqual(blocked, []);
 });
 
 test("committed breaches override saved economy delivery targets", () => {

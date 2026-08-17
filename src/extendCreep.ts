@@ -5,7 +5,10 @@ import {
   isRepairTarget,
   type RepairTarget,
 } from "./repairPolicy";
-import { canYieldPosition } from "./tacticalReservation";
+import {
+  applyTacticalReservations,
+  canYieldPosition,
+} from "./tacticalReservation";
 
 const SWAP_STUCK_THRESHOLD = 2;
 const SWAP_REQUEST_TTL = 1;
@@ -84,6 +87,8 @@ function withRoomEdgeAvoidance(
         costs.set(0, coord, 255);
         costs.set(49, coord, 255);
       }
+
+      applyTacticalReservations(creep.room, costs);
 
       return costs;
     },
